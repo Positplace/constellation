@@ -1,8 +1,50 @@
 import React, { useMemo } from "react";
 import * as THREE from "three";
 
-const WorkingWorldMap: React.FC = () => {
+interface ToggleableWorkingWorldMapProps {
+  showContinents: boolean;
+}
+
+const ToggleableWorkingWorldMap: React.FC<ToggleableWorkingWorldMapProps> = ({
+  showContinents,
+}) => {
   const { worldMapTexture, displacementMap } = useMemo(() => {
+    if (!showContinents) {
+      // Return a simple ocean texture when continents are hidden
+      const canvas = document.createElement("canvas");
+      canvas.width = 2048;
+      canvas.height = 1024;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) return { worldMapTexture: null, displacementMap: null };
+
+      // Fill with beautiful ocean blue only
+      ctx.fillStyle = "#1e90ff";
+      ctx.fillRect(0, 0, 2048, 1024);
+
+      const worldMapTexture = new THREE.CanvasTexture(canvas);
+      worldMapTexture.wrapS = THREE.RepeatWrapping;
+      worldMapTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+      // No displacement when continents are hidden
+      const displacementCanvas = document.createElement("canvas");
+      displacementCanvas.width = 2048;
+      displacementCanvas.height = 1024;
+      const dispCtx = displacementCanvas.getContext("2d");
+
+      if (!dispCtx) return { worldMapTexture, displacementMap: null };
+
+      // Fill with black (no displacement)
+      dispCtx.fillStyle = "#000000";
+      dispCtx.fillRect(0, 0, 2048, 1024);
+
+      const displacementMap = new THREE.CanvasTexture(displacementCanvas);
+      displacementMap.wrapS = THREE.RepeatWrapping;
+      displacementMap.wrapT = THREE.ClampToEdgeWrapping;
+
+      return { worldMapTexture, displacementMap };
+    }
+
     // Create world map texture with doubled resolution
     const canvas = document.createElement("canvas");
     canvas.width = 2048;
@@ -236,6 +278,19 @@ const WorkingWorldMap: React.FC = () => {
     ctx.lineTo(1600, 580);
     ctx.lineTo(1580, 540);
     ctx.closePath();
+    ctx.fill();
+
+    // Add snow caps at North and South poles
+    ctx.fillStyle = "#FFFFFF"; // Pure white for snow
+
+    // North Pole snow cap
+    ctx.beginPath();
+    ctx.arc(1024, 50, 80, 0, Math.PI * 2);
+    ctx.fill();
+
+    // South Pole snow cap
+    ctx.beginPath();
+    ctx.arc(1024, 974, 80, 0, Math.PI * 2);
     ctx.fill();
 
     const worldMapTexture = new THREE.CanvasTexture(canvas);
@@ -477,12 +532,23 @@ const WorkingWorldMap: React.FC = () => {
     dispCtx.closePath();
     dispCtx.fill();
 
+    // Add snow caps elevation at North and South poles
+    // North Pole snow cap elevation
+    dispCtx.beginPath();
+    dispCtx.arc(1024, 50, 80, 0, Math.PI * 2);
+    dispCtx.fill();
+
+    // South Pole snow cap elevation
+    dispCtx.beginPath();
+    dispCtx.arc(1024, 974, 80, 0, Math.PI * 2);
+    dispCtx.fill();
+
     const displacementMap = new THREE.CanvasTexture(displacementCanvas);
     displacementMap.wrapS = THREE.RepeatWrapping;
     displacementMap.wrapT = THREE.ClampToEdgeWrapping;
 
     return { worldMapTexture, displacementMap };
-  }, []);
+  }, [showContinents]);
 
   if (!worldMapTexture || !displacementMap) return null;
 
@@ -492,7 +558,7 @@ const WorkingWorldMap: React.FC = () => {
       <meshPhongMaterial
         map={worldMapTexture}
         displacementMap={displacementMap}
-        displacementScale={0.05}
+        displacementScale={showContinents ? 0.05 : 0}
         transparent
         opacity={0.9}
         shininess={0}
@@ -502,4 +568,4 @@ const WorkingWorldMap: React.FC = () => {
   );
 };
 
-export default WorkingWorldMap;
+export default ToggleableWorkingWorldMap;

@@ -18,6 +18,16 @@ interface GameStore {
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
   currentTurn: number;
+  isPlaying: boolean;
+  gameTime: number; // Real-time game time in seconds
+
+  // Layer visibility state
+  layers: {
+    continents: boolean;
+    cities: boolean;
+    atmosphere: boolean;
+    clouds: boolean;
+  };
 
   // UI state
   selectedCountry: Country | null;
@@ -29,6 +39,9 @@ interface GameStore {
   addSolarSystem: (system: SolarSystem) => void;
   addTunnel: (tunnel: Tunnel) => void;
   nextTurn: () => void;
+  togglePlayPause: () => void;
+  updateGameTime: (time: number) => void;
+  toggleLayer: (layer: keyof GameStore["layers"]) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -39,6 +52,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   solarSystems: [],
   tunnels: [],
   currentTurn: 1,
+  isPlaying: false,
+  gameTime: 0,
+  layers: {
+    continents: true,
+    cities: true,
+    atmosphere: true,
+    clouds: true,
+  },
   selectedCountry: null,
 
   // Actions
@@ -73,5 +94,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextTurn: () =>
     set((state) => ({
       currentTurn: state.currentTurn + 1,
+    })),
+
+  togglePlayPause: () =>
+    set((state) => ({
+      isPlaying: !state.isPlaying,
+    })),
+
+  updateGameTime: (time) => set({ gameTime: time }),
+
+  toggleLayer: (layer) =>
+    set((state) => ({
+      layers: {
+        ...state.layers,
+        [layer]: !state.layers[layer],
+      },
     })),
 }));

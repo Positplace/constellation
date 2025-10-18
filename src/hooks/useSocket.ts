@@ -5,7 +5,13 @@ import { useMultiplayerStore } from "../store/multiplayerStore";
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
-  const { setSelectedCountry, updateCountry, setActiveView } = useGameStore();
+  const {
+    setSelectedCountry,
+    updateCountry,
+    setActiveView,
+    togglePlayPause,
+    updateGameTime,
+  } = useGameStore();
   const { setConnected, setCurrentRoom, addPlayer, removePlayer } =
     useMultiplayerStore();
 
@@ -68,6 +74,16 @@ export const useSocket = () => {
       // Update turn counter
     });
 
+    socket.on("play-state-changed", (data) => {
+      console.log("Play state changed:", data.isPlaying);
+      // Sync play state with server
+    });
+
+    socket.on("game-time-updated", (data) => {
+      console.log("Game time updated:", data.gameTime);
+      updateGameTime(data.gameTime);
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -75,6 +91,8 @@ export const useSocket = () => {
     setSelectedCountry,
     updateCountry,
     setActiveView,
+    togglePlayPause,
+    updateGameTime,
     setConnected,
     setCurrentRoom,
     addPlayer,
@@ -117,6 +135,18 @@ export const useSocket = () => {
     }
   };
 
+  const togglePlayPauseSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("toggle-play-pause");
+    }
+  };
+
+  const updateGameTimeSocket = (gameTime: number) => {
+    if (socketRef.current) {
+      socketRef.current.emit("update-game-time", { gameTime });
+    }
+  };
+
   return {
     joinRoom,
     selectCountry,
@@ -124,6 +154,8 @@ export const useSocket = () => {
     changeView,
     constructTunnel,
     nextTurn,
+    togglePlayPauseSocket,
+    updateGameTimeSocket,
     isConnected: socketRef.current?.connected || false,
   };
 };

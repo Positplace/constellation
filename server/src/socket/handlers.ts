@@ -106,6 +106,28 @@ export function setupSocketHandlers(
     }
   });
 
+  // Handle play/pause toggle
+  socket.on("toggle-play-pause", () => {
+    const room = getPlayerRoom(socket, gameRooms);
+    if (room) {
+      room.togglePlayPause();
+      socket.to(room.id).emit("play-state-changed", {
+        isPlaying: room.gameState.isPlaying,
+      });
+    }
+  });
+
+  // Handle game time updates
+  socket.on("update-game-time", (data: { gameTime: number }) => {
+    const room = getPlayerRoom(socket, gameRooms);
+    if (room) {
+      room.updateGameTime(data.gameTime);
+      socket.to(room.id).emit("game-time-updated", {
+        gameTime: room.gameState.gameTime,
+      });
+    }
+  });
+
   // Handle disconnection
   socket.on("disconnect", () => {
     const room = getPlayerRoom(socket, gameRooms);

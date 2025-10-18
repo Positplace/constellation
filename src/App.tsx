@@ -10,10 +10,14 @@ import CountryPanel from "./components/UI/CountryPanel";
 import ConnectionDialog from "./components/UI/ConnectionDialog";
 import { useGameStore } from "./store/gameStore";
 import { useMultiplayerStore } from "./store/multiplayerStore";
+import { useGameLoop } from "./hooks/useGameLoop";
 
 function App() {
   const { activeView } = useGameStore();
   const { isConnected } = useMultiplayerStore();
+
+  // Start the game loop
+  useGameLoop();
 
   const renderScene = () => {
     switch (activeView) {
@@ -37,8 +41,8 @@ function App() {
         <Suspense fallback={null}>{renderScene()}</Suspense>
       </Canvas>
 
-      {isConnected && <ViewToggle />}
-      {isConnected && <HUD />}
+      <ViewToggle />
+      <HUD />
       {isConnected && <CountryPanel />}
       <ConnectionDialog />
     </div>

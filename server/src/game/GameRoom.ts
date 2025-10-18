@@ -26,6 +26,8 @@ export class GameRoom {
       solarSystems: [],
       tunnels: [],
       currentTurn: 1,
+      isPlaying: false,
+      gameTime: 0,
       activeView: "earth",
     };
   }
@@ -72,6 +74,14 @@ export class GameRoom {
 
   nextTurn(): void {
     this.gameState.currentTurn++;
+  }
+
+  togglePlayPause(): void {
+    this.gameState.isPlaying = !this.gameState.isPlaying;
+  }
+
+  updateGameTime(time: number): void {
+    this.gameState.gameTime = time;
   }
 
   private generatePlayerColor(): string {
