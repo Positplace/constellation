@@ -1,80 +1,147 @@
-import React, { useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls, Sphere } from "@react-three/drei";
 import * as THREE from "three";
 import PlanetOrbit from "./PlanetOrbit";
+import ProceduralPlanetOrbit from "../Planets/ProceduralPlanetOrbit";
+import { createPlanet } from "../../utils/planetFactory";
+import { useGameStore } from "../../store/gameStore";
+import { useGameLoop } from "../../hooks/useGameLoop";
 
 const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
+  const controlsRef = useRef<any>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPos, setSelectedPos] = useState<THREE.Vector3 | null>(null);
+  const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
+  const { isPlaying, gameTime } = useGameStore();
+
+  // Start the game loop so gameTime advances when playing
+  useGameLoop();
 
   // Rotate Sun slowly
   useFrame((state, delta) => {
-    if (sunRef.current) {
+    if (sunRef.current && isPlaying) {
       sunRef.current.rotation.y += delta * 0.2;
     }
   });
 
-  const planets = [
-    { name: "Mercury", distance: 1.5, size: 0.1, color: "#8c7853", speed: 0.8 },
-    { name: "Venus", distance: 2.0, size: 0.15, color: "#ffc649", speed: 0.6 },
-    { name: "Earth", distance: 2.5, size: 0.16, color: "#4a90e2", speed: 0.5 },
-    { name: "Mars", distance: 3.0, size: 0.12, color: "#cd5c5c", speed: 0.4 },
-    { name: "Jupiter", distance: 4.5, size: 0.4, color: "#d2691e", speed: 0.2 },
-    {
-      name: "Saturn",
-      distance: 6.0,
-      size: 0.35,
-      color: "#f4a460",
-      speed: 0.15,
-    },
-    { name: "Uranus", distance: 7.5, size: 0.2, color: "#40e0d0", speed: 0.1 },
-    {
-      name: "Neptune",
-      distance: 9.0,
-      size: 0.2,
-      color: "#4169e1",
-      speed: 0.08,
-    },
-  ];
+  useEffect(() => {
+    if (controlsRef.current && selectedPos) {
+      // Center on selected planet
+      controlsRef.current.target.copy(selectedPos);
+
+      // If we have a desired viewing distance, place camera accordingly
+      if (selectedDistance != null) {
+        const cam = controlsRef.current.object as THREE.PerspectiveCamera;
+        const currentTarget = controlsRef.current.target as THREE.Vector3;
+        const dir = cam.position.clone().sub(currentTarget).normalize();
+        const desiredPos = selectedPos
+          .clone()
+          .add(dir.multiplyScalar(selectedDistance));
+        cam.position.copy(desiredPos);
+      }
+
+      controlsRef.current.update();
+    }
+  }, [selectedPos, selectedDistance]);
+
+  // Static planet specs - do not change across renders
+  const planetSpecs = useMemo(
+    () => [
+      { type: "terrestrial" as const, distance: 1.5, speed: 0.8, seed: 101 },
+      { type: "desert_world" as const, distance: 2.0, speed: 0.6, seed: 202 },
+      { type: "ocean_world" as const, distance: 2.5, speed: 0.5, seed: 303 },
+      { type: "ice_world" as const, distance: 3.0, speed: 0.4, seed: 404 },
+      { type: "gas_giant" as const, distance: 4.5, speed: 0.2, seed: 505 },
+    ],
+    []
+  );
+
+  // Generate planets once
+  const generated = useMemo(
+    () =>
+      planetSpecs.map((p, idx) => ({
+        planet: createPlanet({
+          type: p.type,
+          size: "medium",
+          age: "mature",
+          habitability: "marginal",
+          seed: p.seed,
+        }),
+        distance: p.distance,
+        speed: p.speed,
+        angle: (idx * Math.PI) / 4,
+      })),
+    [planetSpecs]
+  );
+
+  // Visual radius for the sun (scene units)
+  const SUN_RADIUS_UNITS = 0.6; // larger sun
 
   return (
-    <>
+    <group
+      onPointerMissed={() => {
+        setSelectedId(null);
+        setSelectedPos(null);
+      }}
+    >
       <OrbitControls
+        ref={controlsRef}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
-        minDistance={2}
+        minDistance={0.3}
         maxDistance={20}
         autoRotate={false}
       />
 
       {/* Sun */}
-      <Sphere ref={sunRef} args={[0.3, 32, 32]} position={[0, 0, 0]}>
+      <Sphere
+        ref={sunRef}
+        args={[SUN_RADIUS_UNITS, 32, 32]}
+        position={[0, 0, 0]}
+      >
         <meshBasicMaterial color="#ffd700" />
       </Sphere>
 
       {/* Sun glow effect */}
-      <Sphere args={[0.4, 32, 32]} position={[0, 0, 0]}>
+      <Sphere args={[SUN_RADIUS_UNITS * 1.2, 32, 32]} position={[0, 0, 0]}>
         <meshBasicMaterial color="#ffd700" transparent opacity={0.3} />
       </Sphere>
 
-      {/* Planets */}
-      {planets.map((planet, index) => (
-        <PlanetOrbit
-          key={planet.name}
-          name={planet.name}
-          distance={planet.distance}
-          size={planet.size}
-          color={planet.color}
-          speed={planet.speed}
-          angle={(index * Math.PI) / 4} // Start at different positions
-        />
-      ))}
+      {/* Procedurally generated planets */}
+      {generated.map((g, index) => {
+        const renderScale = Math.min(
+          0.16,
+          (SUN_RADIUS_UNITS * 0.7) / Math.max(0.001, g.planet.radius / 6371)
+        );
+        const radiusUnits = (g.planet.radius / 6371) * renderScale;
+        const viewDistance = Math.max(0.4, Math.min(5, radiusUnits * 2.2));
+
+        return (
+          <ProceduralPlanetOrbit
+            key={g.planet.id}
+            planet={g.planet}
+            distance={g.distance}
+            speed={g.speed}
+            angle={g.angle}
+            paused={!!selectedId || !isPlaying}
+            selectedId={selectedId || undefined}
+            onSelect={(id, pos) => {
+              setSelectedId(id);
+              setSelectedPos(pos.clone());
+              setSelectedDistance(viewDistance);
+            }}
+            renderScale={renderScale}
+          />
+        );
+      })}
 
       {/* Lighting */}
       <ambientLight intensity={0.2} />
       <pointLight position={[0, 0, 0]} intensity={2} color="#ffd700" />
-    </>
+    </group>
   );
 };
 

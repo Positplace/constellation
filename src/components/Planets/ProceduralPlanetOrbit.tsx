@@ -1,0 +1,89 @@
+import React, { useEffect, useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import PlanetRenderer from "./PlanetRenderer";
+import { PlanetData } from "../../types/planet.types";
+
+interface ProceduralPlanetOrbitProps {
+  planet: PlanetData;
+  distance: number;
+  speed: number;
+  angle: number;
+  paused?: boolean;
+  selectedId?: string;
+  onSelect?: (planetId: string, worldPos: THREE.Vector3) => void;
+  renderScale?: number;
+}
+
+const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
+  planet,
+  distance,
+  speed,
+  angle,
+  paused = false,
+  selectedId,
+  onSelect,
+  renderScale,
+}) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
+
+  // Ensure an initial position even when paused so planets are visible immediately
+  useEffect(() => {
+    if (groupRef.current) {
+      const x0 = Math.cos(angle) * distance;
+      const z0 = Math.sin(angle) * distance;
+      groupRef.current.position.set(x0, 0, z0);
+    }
+  }, [angle, distance]);
+
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      if (!paused) {
+        const time = state.clock.getElapsedTime();
+        const x = Math.cos(time * speed + angle) * distance;
+        const z = Math.sin(time * speed + angle) * distance;
+        groupRef.current.position.set(x, 0, z);
+      }
+
+      // Apply planet self spin using axis stored by renderer
+      const axis: THREE.Vector3 | undefined = (
+        groupRef.current.children[0] as any
+      )?.userData?.spinAxis;
+      const spinSpeed: number | undefined = (
+        groupRef.current.children[0] as any
+      )?.userData?.spinSpeed;
+      if (axis && spinSpeed) {
+        groupRef.current.children[0].rotateOnAxis(axis, spinSpeed * delta);
+      }
+    }
+  });
+
+  return (
+    <group>
+      {/* Orbital path */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[distance - 0.01, distance + 0.01, 64]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.1} />
+      </mesh>
+
+      {/* Planet at animated position */}
+      <group
+        ref={groupRef}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!groupRef.current) return;
+          const world = new THREE.Vector3();
+          groupRef.current.getWorldPosition(world);
+          onSelect && onSelect(planet.id, world);
+        }}
+      >
+        <PlanetRenderer planet={planet} renderScale={renderScale} />
+      </group>
+    </group>
+  );
+};
+
+export default ProceduralPlanetOrbit;

@@ -57,240 +57,407 @@ const ToggleableWorkingWorldMap: React.FC<ToggleableWorkingWorldMapProps> = ({
     ctx.fillStyle = "#1e90ff";
     ctx.fillRect(0, 0, 2048, 1024);
 
-    // Draw continents as recognizable shapes
-    ctx.fillStyle = "#32CD32"; // Brighter, more vibrant green for land
+    // Draw continents as recognizable shapes with varied terrain
+    // We'll use different colors for different terrain types
 
-    // North America - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(200, 120);
-    ctx.lineTo(300, 100);
-    ctx.lineTo(400, 120);
-    ctx.lineTo(500, 160);
-    ctx.lineTo(560, 240);
-    ctx.lineTo(540, 360);
-    ctx.lineTo(480, 440);
-    ctx.lineTo(400, 480);
-    ctx.lineTo(320, 460);
-    ctx.lineTo(260, 400);
-    ctx.lineTo(220, 320);
-    ctx.lineTo(200, 240);
-    ctx.lineTo(190, 180);
-    ctx.closePath();
-    ctx.fill();
+    // Function to create gradient-filled continent
+    const drawContinentWithGradient = (
+      path: () => void,
+      centerX: number,
+      centerY: number,
+      terrainType: "forest" | "grassland" | "desert" | "tundra" | "tropical"
+    ) => {
+      // Create gradient based on terrain type
+      let gradient;
+      if (terrainType === "forest") {
+        gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          200
+        );
+        gradient.addColorStop(0, "#228B22"); // Forest green center
+        gradient.addColorStop(0.7, "#32CD32"); // Lime green
+        gradient.addColorStop(1, "#90EE90"); // Light green edges
+      } else if (terrainType === "grassland") {
+        gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          200
+        );
+        gradient.addColorStop(0, "#9ACD32"); // Yellow green center
+        gradient.addColorStop(0.7, "#ADFF2F"); // Green yellow
+        gradient.addColorStop(1, "#F0E68C"); // Khaki edges
+      } else if (terrainType === "desert") {
+        gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          200
+        );
+        gradient.addColorStop(0, "#D2B48C"); // Tan center
+        gradient.addColorStop(0.7, "#F4A460"); // Sandy brown
+        gradient.addColorStop(1, "#DEB887"); // Burlywood edges
+      } else if (terrainType === "tundra") {
+        gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          200
+        );
+        gradient.addColorStop(0, "#8FBC8F"); // Dark sea green center
+        gradient.addColorStop(0.7, "#98FB98"); // Pale green
+        gradient.addColorStop(1, "#F0FFF0"); // Honeydew edges
+      } else {
+        // tropical
+        gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          200
+        );
+        gradient.addColorStop(0, "#006400"); // Dark green center
+        gradient.addColorStop(0.7, "#228B22"); // Forest green
+        gradient.addColorStop(1, "#32CD32"); // Lime green edges
+      }
 
-    // Alaska
-    ctx.beginPath();
-    ctx.moveTo(100, 80);
-    ctx.lineTo(200, 60);
-    ctx.lineTo(250, 100);
-    ctx.lineTo(240, 140);
-    ctx.lineTo(180, 160);
-    ctx.lineTo(120, 140);
-    ctx.closePath();
-    ctx.fill();
+      ctx.fillStyle = gradient;
+      path();
+      ctx.fill();
+    };
 
-    // South America - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(400, 440);
-    ctx.lineTo(440, 480);
-    ctx.lineTo(460, 560);
-    ctx.lineTo(440, 640);
-    ctx.lineTo(400, 720);
-    ctx.lineTo(360, 800);
-    ctx.lineTo(320, 820);
-    ctx.lineTo(280, 800);
-    ctx.lineTo(260, 720);
-    ctx.lineTo(280, 640);
-    ctx.lineTo(300, 560);
-    ctx.lineTo(320, 480);
-    ctx.lineTo(360, 440);
-    ctx.closePath();
-    ctx.fill();
+    // North America - highly detailed realistic shape with forest/grassland gradient
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(200, 120);
+        ctx.lineTo(300, 100);
+        ctx.lineTo(400, 120);
+        ctx.lineTo(500, 160);
+        ctx.lineTo(560, 240);
+        ctx.lineTo(540, 360);
+        ctx.lineTo(480, 440);
+        ctx.lineTo(400, 480);
+        ctx.lineTo(320, 460);
+        ctx.lineTo(260, 400);
+        ctx.lineTo(220, 320);
+        ctx.lineTo(200, 240);
+        ctx.lineTo(190, 180);
+        ctx.closePath();
+      },
+      380,
+      300,
+      "forest"
+    );
 
-    // Europe - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(960, 200);
-    ctx.lineTo(1000, 160);
-    ctx.lineTo(1060, 180);
-    ctx.lineTo(1120, 220);
-    ctx.lineTo(1160, 280);
-    ctx.lineTo(1140, 340);
-    ctx.lineTo(1100, 380);
-    ctx.lineTo(1040, 400);
-    ctx.lineTo(980, 380);
-    ctx.lineTo(940, 340);
-    ctx.lineTo(920, 280);
-    ctx.lineTo(940, 220);
-    ctx.closePath();
-    ctx.fill();
+    // Alaska - tundra terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(100, 80);
+        ctx.lineTo(200, 60);
+        ctx.lineTo(250, 100);
+        ctx.lineTo(240, 140);
+        ctx.lineTo(180, 160);
+        ctx.lineTo(120, 140);
+        ctx.closePath();
+      },
+      175,
+      110,
+      "tundra"
+    );
 
-    // British Isles
-    ctx.beginPath();
-    ctx.moveTo(920, 240);
-    ctx.lineTo(940, 220);
-    ctx.lineTo(960, 240);
-    ctx.lineTo(960, 260);
-    ctx.lineTo(940, 280);
-    ctx.lineTo(920, 260);
-    ctx.closePath();
-    ctx.fill();
+    // South America - tropical terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(400, 440);
+        ctx.lineTo(440, 480);
+        ctx.lineTo(460, 560);
+        ctx.lineTo(440, 640);
+        ctx.lineTo(400, 720);
+        ctx.lineTo(360, 800);
+        ctx.lineTo(320, 820);
+        ctx.lineTo(280, 800);
+        ctx.lineTo(260, 720);
+        ctx.lineTo(280, 640);
+        ctx.lineTo(300, 560);
+        ctx.lineTo(320, 480);
+        ctx.lineTo(360, 440);
+        ctx.closePath();
+      },
+      360,
+      630,
+      "tropical"
+    );
 
-    // Ireland
-    ctx.beginPath();
-    ctx.moveTo(900, 260);
-    ctx.lineTo(920, 240);
-    ctx.lineTo(920, 280);
-    ctx.lineTo(900, 300);
-    ctx.closePath();
-    ctx.fill();
+    // Europe - grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(960, 200);
+        ctx.lineTo(1000, 160);
+        ctx.lineTo(1060, 180);
+        ctx.lineTo(1120, 220);
+        ctx.lineTo(1160, 280);
+        ctx.lineTo(1140, 340);
+        ctx.lineTo(1100, 380);
+        ctx.lineTo(1040, 400);
+        ctx.lineTo(980, 380);
+        ctx.lineTo(940, 340);
+        ctx.lineTo(920, 280);
+        ctx.lineTo(940, 220);
+        ctx.closePath();
+      },
+      1040,
+      280,
+      "grassland"
+    );
 
-    // Asia - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(1160, 160);
-    ctx.lineTo(1300, 140);
-    ctx.lineTo(1440, 160);
-    ctx.lineTo(1560, 200);
-    ctx.lineTo(1640, 260);
-    ctx.lineTo(1720, 340);
-    ctx.lineTo(1740, 440);
-    ctx.lineTo(1720, 540);
-    ctx.lineTo(1640, 620);
-    ctx.lineTo(1560, 680);
-    ctx.lineTo(1440, 700);
-    ctx.lineTo(1300, 680);
-    ctx.lineTo(1160, 640);
-    ctx.lineTo(1080, 560);
-    ctx.lineTo(1040, 460);
-    ctx.lineTo(1060, 360);
-    ctx.lineTo(1100, 260);
-    ctx.closePath();
-    ctx.fill();
+    // British Isles - grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(920, 240);
+        ctx.lineTo(940, 220);
+        ctx.lineTo(960, 240);
+        ctx.lineTo(960, 260);
+        ctx.lineTo(940, 280);
+        ctx.lineTo(920, 260);
+        ctx.closePath();
+      },
+      940,
+      250,
+      "grassland"
+    );
 
-    // India subcontinent
-    ctx.beginPath();
-    ctx.moveTo(1300, 400);
-    ctx.lineTo(1400, 380);
-    ctx.lineTo(1500, 400);
-    ctx.lineTo(1560, 460);
-    ctx.lineTo(1540, 520);
-    ctx.lineTo(1480, 560);
-    ctx.lineTo(1400, 540);
-    ctx.lineTo(1320, 500);
-    ctx.lineTo(1280, 440);
-    ctx.closePath();
-    ctx.fill();
+    // Ireland - grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(900, 260);
+        ctx.lineTo(920, 240);
+        ctx.lineTo(920, 280);
+        ctx.lineTo(900, 300);
+        ctx.closePath();
+      },
+      910,
+      270,
+      "grassland"
+    );
 
-    // Africa - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(1000, 400);
-    ctx.lineTo(1040, 360);
-    ctx.lineTo(1080, 380);
-    ctx.lineTo(1120, 440);
-    ctx.lineTo(1140, 520);
-    ctx.lineTo(1120, 600);
-    ctx.lineTo(1080, 680);
-    ctx.lineTo(1040, 760);
-    ctx.lineTo(1000, 800);
-    ctx.lineTo(960, 760);
-    ctx.lineTo(920, 680);
-    ctx.lineTo(900, 600);
-    ctx.lineTo(920, 520);
-    ctx.lineTo(940, 440);
-    ctx.lineTo(960, 380);
-    ctx.closePath();
-    ctx.fill();
+    // Asia - mixed terrain (forest/grassland)
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1160, 160);
+        ctx.lineTo(1300, 140);
+        ctx.lineTo(1440, 160);
+        ctx.lineTo(1560, 200);
+        ctx.lineTo(1640, 260);
+        ctx.lineTo(1720, 340);
+        ctx.lineTo(1740, 440);
+        ctx.lineTo(1720, 540);
+        ctx.lineTo(1640, 620);
+        ctx.lineTo(1560, 680);
+        ctx.lineTo(1440, 700);
+        ctx.lineTo(1300, 680);
+        ctx.lineTo(1160, 640);
+        ctx.lineTo(1080, 560);
+        ctx.lineTo(1040, 460);
+        ctx.lineTo(1060, 360);
+        ctx.lineTo(1100, 260);
+        ctx.closePath();
+      },
+      1400,
+      420,
+      "forest"
+    );
 
-    // Madagascar
-    ctx.beginPath();
-    ctx.moveTo(1200, 600);
-    ctx.lineTo(1240, 580);
-    ctx.lineTo(1280, 600);
-    ctx.lineTo(1300, 660);
-    ctx.lineTo(1280, 720);
-    ctx.lineTo(1240, 740);
-    ctx.lineTo(1200, 720);
-    ctx.lineTo(1180, 660);
-    ctx.closePath();
-    ctx.fill();
+    // India subcontinent - tropical terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1300, 400);
+        ctx.lineTo(1400, 380);
+        ctx.lineTo(1500, 400);
+        ctx.lineTo(1560, 460);
+        ctx.lineTo(1540, 520);
+        ctx.lineTo(1480, 560);
+        ctx.lineTo(1400, 540);
+        ctx.lineTo(1320, 500);
+        ctx.lineTo(1280, 440);
+        ctx.closePath();
+      },
+      1420,
+      470,
+      "tropical"
+    );
 
-    // Australia - highly detailed realistic shape
-    ctx.beginPath();
-    ctx.moveTo(1500, 700);
-    ctx.lineTo(1560, 680);
-    ctx.lineTo(1620, 700);
-    ctx.lineTo(1660, 740);
-    ctx.lineTo(1680, 800);
-    ctx.lineTo(1660, 860);
-    ctx.lineTo(1620, 900);
-    ctx.lineTo(1560, 920);
-    ctx.lineTo(1500, 900);
-    ctx.lineTo(1460, 860);
-    ctx.lineTo(1440, 800);
-    ctx.lineTo(1460, 740);
-    ctx.closePath();
-    ctx.fill();
+    // Africa - mixed terrain (desert/grassland)
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1000, 400);
+        ctx.lineTo(1040, 360);
+        ctx.lineTo(1080, 380);
+        ctx.lineTo(1120, 440);
+        ctx.lineTo(1140, 520);
+        ctx.lineTo(1120, 600);
+        ctx.lineTo(1080, 680);
+        ctx.lineTo(1040, 760);
+        ctx.lineTo(1000, 800);
+        ctx.lineTo(960, 760);
+        ctx.lineTo(920, 680);
+        ctx.lineTo(900, 600);
+        ctx.lineTo(920, 520);
+        ctx.lineTo(940, 440);
+        ctx.lineTo(960, 380);
+        ctx.closePath();
+      },
+      1020,
+      580,
+      "desert"
+    );
 
-    // New Zealand North Island
-    ctx.beginPath();
-    ctx.moveTo(1800, 800);
-    ctx.lineTo(1840, 780);
-    ctx.lineTo(1880, 800);
-    ctx.lineTo(1880, 840);
-    ctx.lineTo(1840, 860);
-    ctx.lineTo(1800, 840);
-    ctx.closePath();
-    ctx.fill();
+    // Madagascar - tropical terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1200, 600);
+        ctx.lineTo(1240, 580);
+        ctx.lineTo(1280, 600);
+        ctx.lineTo(1300, 660);
+        ctx.lineTo(1280, 720);
+        ctx.lineTo(1240, 740);
+        ctx.lineTo(1200, 720);
+        ctx.lineTo(1180, 660);
+        ctx.closePath();
+      },
+      1240,
+      660,
+      "tropical"
+    );
 
-    // New Zealand South Island
-    ctx.beginPath();
-    ctx.moveTo(1820, 860);
-    ctx.lineTo(1860, 840);
-    ctx.lineTo(1900, 860);
-    ctx.lineTo(1920, 920);
-    ctx.lineTo(1900, 980);
-    ctx.lineTo(1860, 1000);
-    ctx.lineTo(1820, 980);
-    ctx.lineTo(1800, 920);
-    ctx.closePath();
-    ctx.fill();
+    // Australia - desert/grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1500, 700);
+        ctx.lineTo(1560, 680);
+        ctx.lineTo(1620, 700);
+        ctx.lineTo(1660, 740);
+        ctx.lineTo(1680, 800);
+        ctx.lineTo(1660, 860);
+        ctx.lineTo(1620, 900);
+        ctx.lineTo(1560, 920);
+        ctx.lineTo(1500, 900);
+        ctx.lineTo(1460, 860);
+        ctx.lineTo(1440, 800);
+        ctx.lineTo(1460, 740);
+        ctx.closePath();
+      },
+      1560,
+      800,
+      "desert"
+    );
 
-    // Japan
-    ctx.beginPath();
-    ctx.moveTo(1700, 300);
-    ctx.lineTo(1740, 280);
-    ctx.lineTo(1780, 300);
-    ctx.lineTo(1800, 340);
-    ctx.lineTo(1780, 380);
-    ctx.lineTo(1740, 400);
-    ctx.lineTo(1700, 380);
-    ctx.lineTo(1680, 340);
-    ctx.closePath();
-    ctx.fill();
+    // New Zealand North Island - grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1800, 800);
+        ctx.lineTo(1840, 780);
+        ctx.lineTo(1880, 800);
+        ctx.lineTo(1880, 840);
+        ctx.lineTo(1840, 860);
+        ctx.lineTo(1800, 840);
+        ctx.closePath();
+      },
+      1840,
+      820,
+      "grassland"
+    );
 
-    // Philippines
-    ctx.beginPath();
-    ctx.moveTo(1600, 500);
-    ctx.lineTo(1640, 480);
-    ctx.lineTo(1680, 500);
-    ctx.lineTo(1700, 540);
-    ctx.lineTo(1680, 580);
-    ctx.lineTo(1640, 600);
-    ctx.lineTo(1600, 580);
-    ctx.lineTo(1580, 540);
-    ctx.closePath();
-    ctx.fill();
+    // New Zealand South Island - grassland terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1820, 860);
+        ctx.lineTo(1860, 840);
+        ctx.lineTo(1900, 860);
+        ctx.lineTo(1920, 920);
+        ctx.lineTo(1900, 980);
+        ctx.lineTo(1860, 1000);
+        ctx.lineTo(1820, 980);
+        ctx.lineTo(1800, 920);
+        ctx.closePath();
+      },
+      1860,
+      920,
+      "grassland"
+    );
 
-    // Add snow caps at North and South poles
+    // Japan - forest terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1700, 300);
+        ctx.lineTo(1740, 280);
+        ctx.lineTo(1780, 300);
+        ctx.lineTo(1800, 340);
+        ctx.lineTo(1780, 380);
+        ctx.lineTo(1740, 400);
+        ctx.lineTo(1700, 380);
+        ctx.lineTo(1680, 340);
+        ctx.closePath();
+      },
+      1740,
+      340,
+      "forest"
+    );
+
+    // Philippines - tropical terrain
+    drawContinentWithGradient(
+      () => {
+        ctx.beginPath();
+        ctx.moveTo(1600, 500);
+        ctx.lineTo(1640, 480);
+        ctx.lineTo(1680, 500);
+        ctx.lineTo(1700, 540);
+        ctx.lineTo(1680, 580);
+        ctx.lineTo(1640, 600);
+        ctx.lineTo(1600, 580);
+        ctx.lineTo(1580, 540);
+        ctx.closePath();
+      },
+      1640,
+      540,
+      "tropical"
+    );
+
+    // Add snow caps at North and South poles (smaller to avoid overlapping with British Isles)
     ctx.fillStyle = "#FFFFFF"; // Pure white for snow
 
-    // North Pole snow cap
+    // North Pole snow cap (smaller radius)
     ctx.beginPath();
-    ctx.arc(1024, 50, 80, 0, Math.PI * 2);
+    ctx.arc(1024, 50, 50, 0, Math.PI * 2);
     ctx.fill();
 
-    // South Pole snow cap
+    // South Pole snow cap (smaller radius)
     ctx.beginPath();
-    ctx.arc(1024, 974, 80, 0, Math.PI * 2);
+    ctx.arc(1024, 974, 50, 0, Math.PI * 2);
     ctx.fill();
 
     const worldMapTexture = new THREE.CanvasTexture(canvas);
@@ -532,15 +699,15 @@ const ToggleableWorkingWorldMap: React.FC<ToggleableWorkingWorldMapProps> = ({
     dispCtx.closePath();
     dispCtx.fill();
 
-    // Add snow caps elevation at North and South poles
+    // Add snow caps elevation at North and South poles (smaller to match texture)
     // North Pole snow cap elevation
     dispCtx.beginPath();
-    dispCtx.arc(1024, 50, 80, 0, Math.PI * 2);
+    dispCtx.arc(1024, 50, 50, 0, Math.PI * 2);
     dispCtx.fill();
 
     // South Pole snow cap elevation
     dispCtx.beginPath();
-    dispCtx.arc(1024, 974, 80, 0, Math.PI * 2);
+    dispCtx.arc(1024, 974, 50, 0, Math.PI * 2);
     dispCtx.fill();
 
     const displacementMap = new THREE.CanvasTexture(displacementCanvas);
@@ -558,7 +725,7 @@ const ToggleableWorkingWorldMap: React.FC<ToggleableWorkingWorldMapProps> = ({
       <meshPhongMaterial
         map={worldMapTexture}
         displacementMap={displacementMap}
-        displacementScale={showContinents ? 0.05 : 0}
+        displacementScale={showContinents ? 0.015 : 0}
         transparent
         opacity={0.9}
         shininess={0}

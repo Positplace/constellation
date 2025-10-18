@@ -1,0 +1,164 @@
+{
+  "planets": {
+    "prefixes": [
+      "Astra",
+      "Vela",
+      "Orion",
+      "Cygn",
+      "Lyra",
+      "Draco",
+      "Seren",
+      "Altair",
+      "Ceres",
+      "Nexa",
+      "Zeta",
+      "Kappa",
+      "Rhea",
+      "Teth",
+      "Galva",
+      "Vesper",
+      "Umbra",
+      "Nova",
+      "Arden",
+      "Kepla"
+    ],
+    "cores": [
+      "dor",
+      "thar",
+      "mir",
+      "lon",
+      "var",
+      "thal",
+      "nex",
+      "tor",
+      "vyn",
+      "mer",
+      "sol",
+      "gai",
+      "zan",
+      "vok",
+      "renn",
+      "syl",
+      "drax",
+      "quor",
+      "phas",
+      "tarn"
+    ],
+    "suffixes": [
+      "os",
+      "on",
+      "ar",
+      "or",
+      "es",
+      "eus",
+      "en",
+      "eth",
+      "um",
+      "un",
+      "yx",
+      "is",
+      "as",
+      "orbis",
+      "ion",
+      "ara"
+    ],
+    "rules": {
+      "allowRepeatedSuffix": false,
+      "avoidSuffix": ["ia"],
+      "maxVowelRun": 2
+    }
+  },
+  "continents": {
+    "prefixes": [
+      "North",
+      "South",
+      "East",
+      "West",
+      "New",
+      "Great",
+      "Upper",
+      "Lower",
+      "Grand",
+      "Old"
+    ],
+    "cores": [
+      "Aurel",
+      "Caled",
+      "Verden",
+      "Valen",
+      "Noran",
+      "Kareth",
+      "Eldor",
+      "Myrr",
+      "Tirion",
+      "Zorlan",
+      "Arkan",
+      "Rhyss",
+      "Damar",
+      "Selian"
+    ],
+    "suffixes": [
+      "land",
+      "mark",
+      "holm",
+      "reach",
+      "haven",
+      "realm",
+      "feld",
+      "via",
+      "bar",
+      "grad"
+    ],
+    "rules": {
+      "disallowDuplicatePrefix": true,
+      "avoidSuffix": ["ia"],
+      "maxVowelRun": 2
+    }
+  },
+  "cities": {
+    "prefixes": [
+      "Port",
+      "Fort",
+      "New",
+      "Lake",
+      "Mount",
+      "San",
+      "Saint",
+      "El",
+      "Al",
+      "Aqua"
+    ],
+    "cores": [
+      "var",
+      "mar",
+      "dor",
+      "ver",
+      "lin",
+      "tan",
+      "vyr",
+      "sol",
+      "kan",
+      "bel",
+      "sor",
+      "lor",
+      "tor",
+      "rion"
+    ],
+    "suffixes": [
+      "ton",
+      "burg",
+      "grad",
+      "mouth",
+      "field",
+      "vale",
+      "port",
+      "ford",
+      "side",
+      "gate"
+    ],
+    "rules": {
+      "avoidSuffix": ["ia"],
+      "maxVowelRun": 2
+    }
+  }
+}
