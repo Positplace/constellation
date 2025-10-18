@@ -10,8 +10,10 @@ const ConnectionDialog: React.FC = () => {
   const { joinRoom } = useSocket();
   const {
     isConnected,
+    showConnectionDialog,
     setPlayerName: setStorePlayerName,
     setCurrentRoom,
+    setShowConnectionDialog,
   } = useMultiplayerStore();
 
   const handleConnect = async () => {
@@ -29,15 +31,24 @@ const ConnectionDialog: React.FC = () => {
     }, 1000);
   };
 
-  // Hide the dialog if we're connected and in a room
-  if (isConnected) return null;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && playerName.trim() && !isConnecting) {
+      handleConnect();
+    }
+  };
+
+  // Hide the dialog if we're connected or not showing
+  if (isConnected || !showConnectionDialog) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="glass-panel p-8 w-96 space-y-6">
+      <div
+        className="glass-panel p-8 w-96 space-y-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Constellation</h1>
-          <p className="text-white/70">Join the space exploration game</p>
+          <p className="text-white/70">Join multiplayer game</p>
         </div>
 
         <div className="space-y-4">
@@ -49,9 +60,11 @@ const ConnectionDialog: React.FC = () => {
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Enter your name"
               className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:outline-none focus:border-space-400"
               maxLength={20}
+              autoFocus
             />
           </div>
 
@@ -63,6 +76,7 @@ const ConnectionDialog: React.FC = () => {
               type="text"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Leave empty for default room"
               className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:outline-none focus:border-space-400"
             />

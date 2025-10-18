@@ -1,6 +1,7 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { Line } from "@react-three/drei";
 
 interface TunnelConnectionProps {
   from: [number, number, number];
@@ -13,54 +14,38 @@ const TunnelConnection: React.FC<TunnelConnectionProps> = ({
   to,
   status,
 }) => {
-  const tunnelRef = useRef<THREE.Mesh>(null);
+  const lineRef = useRef<THREE.Line>(null);
 
-  // Calculate tunnel geometry
-  const direction = new THREE.Vector3().subVectors(
-    new THREE.Vector3(...to),
-    new THREE.Vector3(...from)
-  );
-  const length = direction.length();
-  const midpoint = new THREE.Vector3()
-    .addVectors(new THREE.Vector3(...from), new THREE.Vector3(...to))
-    .multiplyScalar(0.5);
+  // Determine color and opacity based on status
+  const { color, opacity } = useMemo(() => {
+    switch (status) {
+      case "active":
+        return { color: "#ffffff", opacity: 0.8 };
+      case "under_construction":
+        return { color: "#ffaa00", opacity: 0.5 };
+      case "planned":
+        return { color: "#666666", opacity: 0.3 };
+      default:
+        return { color: "#ffffff", opacity: 0.8 };
+    }
+  }, [status]);
 
-  // Create tunnel tube geometry
-  const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
-  const material = new THREE.MeshBasicMaterial({
-    color:
-      status === "active"
-        ? "#00ff00"
-        : status === "under_construction"
-        ? "#ffaa00"
-        : "#666666",
-    transparent: true,
-    opacity: status === "active" ? 0.8 : 0.4,
-  });
-
-  // Animate tunnel based on status
+  // Animate active tunnels with pulsing effect
   useFrame((state) => {
-    if (tunnelRef.current && status === "active") {
-      // Pulsing effect for active tunnels
-      const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.1 + 0.9;
-      tunnelRef.current.material.opacity = pulse * 0.8;
+    if (lineRef.current && status === "active") {
+      const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.2 + 0.8;
+      (lineRef.current.material as THREE.LineBasicMaterial).opacity = pulse;
     }
   });
 
   return (
-    <mesh
-      ref={tunnelRef}
-      position={midpoint}
-      geometry={geometry}
-      material={material}
-      rotation={[
-        Math.atan2(direction.z, direction.x) + Math.PI / 2,
-        0,
-        Math.atan2(
-          direction.y,
-          Math.sqrt(direction.x * direction.x + direction.z * direction.z)
-        ),
-      ]}
+    <Line
+      ref={lineRef}
+      points={[from, to]}
+      color={color}
+      lineWidth={2}
+      transparent
+      opacity={opacity}
     />
   );
 };

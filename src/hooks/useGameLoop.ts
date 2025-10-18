@@ -3,7 +3,6 @@ import { useGameStore } from "../store/gameStore";
 import { useSocket } from "./useSocket";
 
 export const useGameLoop = () => {
-  const { isPlaying, gameTime, updateGameTime, timeScale, setTimeScale } = useGameStore();
   const { updateGameTimeSocket } = useSocket();
   const lastTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>();
@@ -11,6 +10,14 @@ export const useGameLoop = () => {
 
   useEffect(() => {
     const gameLoop = (currentTime: number) => {
+      // Get fresh values from the store each frame
+      const store = useGameStore.getState();
+      const isPlaying = store.isPlaying;
+      const gameTime = store.gameTime;
+      const timeScale = store.timeScale;
+      const updateGameTime = store.updateGameTime;
+      const setTimeScale = store.setTimeScale;
+
       // Smoothly ease timeScale toward target (1 when playing, 0 when paused)
       const target = isPlaying ? 1 : 0;
       const easeSpeed = 3; // higher = snappier
@@ -49,9 +56,10 @@ export const useGameLoop = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, gameTime, updateGameTime, updateGameTimeSocket]);
+  }, [updateGameTimeSocket]);
 
   // Reset lastTime when play state changes
+  const isPlaying = useGameStore((state) => state.isPlaying);
   useEffect(() => {
     lastTimeRef.current = performance.now();
     lastSyncTimeRef.current = performance.now();

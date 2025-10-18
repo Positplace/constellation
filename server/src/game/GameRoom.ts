@@ -14,14 +14,34 @@ export class GameRoom {
   }
 
   private initializeGameState(): GameState {
+    // Create a simple initial solar system
+    const homeSystem: SolarSystem = {
+      id: "sol-system",
+      name: "Sol",
+      position: [0, 0, 0] as [number, number, number],
+      star: {
+        name: "Sol",
+        type: "yellow_star",
+        color: "#FDB813",
+        mass: 1.0,
+        radius: 1.0,
+      },
+      planets: [],
+      connections: [],
+      colonized: true,
+      discovered: true,
+      seed: 1000,
+    };
+
     return {
       players: [],
-      solarSystems: [],
+      solarSystems: [homeSystem],
       tunnels: [],
       currentTurn: 1,
       isPlaying: false,
       gameTime: 0,
       activeView: "solar",
+      currentSystemId: homeSystem.id,
     };
   }
 

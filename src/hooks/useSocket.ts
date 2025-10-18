@@ -6,11 +6,16 @@ import { useMultiplayerStore } from "../store/multiplayerStore";
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
   const { setActiveView, togglePlayPause, updateGameTime } = useGameStore();
-  const { setConnected, setCurrentRoom, addPlayer, removePlayer } =
-    useMultiplayerStore();
+  const {
+    setConnected,
+    setCurrentRoom,
+    addPlayer,
+    removePlayer,
+    showConnectionDialog,
+  } = useMultiplayerStore();
 
   useEffect(() => {
-    // Connect to server
+    // Always connect to server for multiplayer
     socketRef.current = io("http://localhost:3001");
 
     const socket = socketRef.current;
@@ -31,11 +36,26 @@ export const useSocket = () => {
       console.log("Joined room:", data.roomId);
       setCurrentRoom(data.roomId);
       // Update game state with server data
-      if (data.gameState && data.gameState.players) {
-        // Add all players from the server state
-        data.gameState.players.forEach((player: any) => {
-          addPlayer(player);
-        });
+      if (data.gameState) {
+        // Sync full game state from server
+        if (data.gameState.players) {
+          data.gameState.players.forEach((player: any) => {
+            addPlayer(player);
+          });
+        }
+        if (
+          data.gameState.solarSystems &&
+          data.gameState.solarSystems.length > 0
+        ) {
+          // Update solar systems from server
+          useGameStore.setState({
+            solarSystems: data.gameState.solarSystems,
+            tunnels: data.gameState.tunnels || [],
+            currentSystemId:
+              data.gameState.currentSystemId ||
+              data.gameState.solarSystems[0]?.id,
+          });
+        }
       }
     });
 
@@ -74,8 +94,32 @@ export const useSocket = () => {
       updateGameTime(data.gameTime);
     });
 
+    socket.on("system-generated", (data) => {
+      console.log("System generated:", data.system);
+      // Add the system to the game state
+      useGameStore.getState().addSolarSystem(data.system);
+    });
+
+    socket.on("current-system-changed", (data) => {
+      console.log("Current system changed:", data.systemId);
+      useGameStore.getState().setCurrentSystem(data.systemId);
+    });
+
+    socket.on("planet-selected", (data) => {
+      console.log("Planet selected:", data.planetId);
+      useGameStore.getState().setSelectedPlanet(data.planetId);
+    });
+
+    socket.on("game-state-synced", (data) => {
+      console.log("Game state synced from server");
+      // Sync the entire game state
+      useGameStore.setState(data.gameState);
+    });
+
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, [
     setActiveView,
@@ -123,6 +167,30 @@ export const useSocket = () => {
     }
   };
 
+  const emitSystemGenerated = (system: any, fromSystemId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit("system-generated", { system, fromSystemId });
+    }
+  };
+
+  const emitCurrentSystemChanged = (systemId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit("current-system-changed", { systemId });
+    }
+  };
+
+  const emitPlanetSelected = (planetId: string | null) => {
+    if (socketRef.current) {
+      socketRef.current.emit("planet-selected", { planetId });
+    }
+  };
+
+  const syncGameState = (gameState: any) => {
+    if (socketRef.current) {
+      socketRef.current.emit("sync-game-state", { gameState });
+    }
+  };
+
   return {
     joinRoom,
     changeView,
@@ -130,5 +198,9 @@ export const useSocket = () => {
     nextTurn,
     togglePlayPauseSocket,
     updateGameTimeSocket,
+    emitSystemGenerated,
+    emitCurrentSystemChanged,
+    emitPlanetSelected,
+    syncGameState,
   };
 };

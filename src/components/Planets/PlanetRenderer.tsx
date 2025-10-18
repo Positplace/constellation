@@ -23,21 +23,7 @@ const PlanetRenderer: React.FC<PlanetRendererProps> = ({
   const radiusUnits = (planet.radius / EARTH_RADIUS_KM) * renderScale;
 
   return (
-    <group
-      rotation={new THREE.Euler(0, 0, 0)}
-      // apply spin axis by using quaternion in onUpdate to preserve axis
-      onUpdate={(obj) => {
-        const g = obj as THREE.Group;
-        const axis = new THREE.Vector3(
-          planet.spinAxis[0],
-          planet.spinAxis[1],
-          planet.spinAxis[2]
-        ).normalize();
-        // store axis on userData for external animation (set by parent)
-        (g.userData as any).spinAxis = axis;
-        (g.userData as any).spinSpeed = planet.spinSpeed * planet.spinDirection;
-      }}
-    >
+    <group rotation={new THREE.Euler(0, 0, 0)}>
       <mesh>
         <sphereGeometry args={[radiusUnits, 128, 128]} />
         <meshPhongMaterial

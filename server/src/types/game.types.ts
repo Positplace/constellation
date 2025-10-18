@@ -10,9 +10,18 @@ export interface SolarSystem {
   id: string;
   name: string;
   position: [number, number, number];
+  star: {
+    name: string;
+    type: string;
+    color: string;
+    mass: number;
+    radius: number;
+  };
   planets: Planet[];
+  connections: string[];
   discovered: boolean;
   colonized: boolean;
+  seed: number;
 }
 
 export interface Planet {
@@ -43,6 +52,7 @@ export interface GameState {
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
   activeView: "solar" | "constellation";
+  currentSystemId?: string;
 }
 
 export type ViewType = "solar" | "constellation";

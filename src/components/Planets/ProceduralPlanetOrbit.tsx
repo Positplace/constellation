@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import PlanetRenderer from "./PlanetRenderer";
@@ -32,7 +32,6 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
   timeScale = 1,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
   // Track accumulated orbital phase using timeScale-aware delta
   const phaseRef = useRef(0);
 
@@ -45,7 +44,7 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
     }
   }, [angle, distance]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (groupRef.current) {
       // Accumulate phase using timeScale so pausing/playing is smooth
       phaseRef.current += delta * speed * timeScale;
@@ -54,17 +53,22 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
       groupRef.current.position.set(x, 0, z);
 
       // Apply planet self spin scaled by timeScale
-      const axis: THREE.Vector3 | undefined = (
-        groupRef.current.children[0] as any
-      )?.userData?.spinAxis;
-      const spinSpeed: number | undefined = (
-        groupRef.current.children[0] as any
-      )?.userData?.spinSpeed;
-      if (axis && spinSpeed) {
-        groupRef.current.children[0].rotateOnAxis(
-          axis,
-          spinSpeed * delta * timeScale
-        );
+      const axis = new THREE.Vector3(
+        planet.spinAxis[0],
+        planet.spinAxis[1],
+        planet.spinAxis[2]
+      ).normalize();
+      const spinSpeed = planet.spinSpeed * planet.spinDirection;
+
+      // Navigate to the actual planet mesh: outer group -> PlanetRenderer group -> mesh
+      const planetRendererGroup = groupRef.current.children[0];
+
+      if (planetRendererGroup && planetRendererGroup instanceof THREE.Group) {
+        // Apply rotation scaled by timeScale (so planets stop spinning when paused)
+        const rotationAmount = spinSpeed * delta * timeScale;
+
+        // Rotate the entire PlanetRenderer group (which contains the sphere mesh and atmosphere)
+        planetRendererGroup.rotateOnAxis(axis, rotationAmount);
       }
 
       // When this planet is selected, continuously emit its world position so the camera can track it while the system keeps spinning
@@ -94,8 +98,6 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
       {/* Planet at animated position */}
       <group
         ref={groupRef}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
         onClick={(e) => {
           e.stopPropagation();
           if (!groupRef.current) return;

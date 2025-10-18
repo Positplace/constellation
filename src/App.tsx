@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
 import SolarSystemView from "./components/SolarSystem/SolarSystemView";
@@ -11,7 +11,13 @@ import { useMultiplayerStore } from "./store/multiplayerStore";
 import { useGameLoop } from "./hooks/useGameLoop";
 
 function App() {
-  const { activeView, togglePlayPause } = useGameStore();
+  const { activeView, togglePlayPause, initializeGame } = useGameStore();
+  const { showConnectionDialog, isConnected } = useMultiplayerStore();
+
+  // Initialize game on mount
+  useEffect(() => {
+    initializeGame();
+  }, [initializeGame]);
 
   // Start the game loop
   useGameLoop();
@@ -48,17 +54,24 @@ function App() {
     }
   };
 
+  const dialogVisible = showConnectionDialog && !isConnected;
+
   return (
     <div className="w-full h-full relative space-gradient">
       <Canvas
         camera={{ position: [0, 0, 5], fov: 60 }}
-        style={{ background: "transparent" }}
+        style={{
+          background: "transparent",
+          pointerEvents: dialogVisible ? "none" : "auto",
+        }}
       >
         <Suspense fallback={null}>{renderScene()}</Suspense>
       </Canvas>
 
-      <ViewToggle />
-      <HUD />
+      <div style={{ pointerEvents: dialogVisible ? "none" : "auto" }}>
+        <ViewToggle />
+        <HUD />
+      </div>
       <ConnectionDialog />
     </div>
   );

@@ -6,6 +6,7 @@ interface MultiplayerStore {
   currentRoom: string | null;
   playerName: string;
   players: Player[];
+  showConnectionDialog: boolean;
 
   // Actions
   setConnected: (connected: boolean) => void;
@@ -14,6 +15,7 @@ interface MultiplayerStore {
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
+  setShowConnectionDialog: (show: boolean) => void;
 }
 
 export const useMultiplayerStore = create<MultiplayerStore>((set, get) => ({
@@ -21,10 +23,12 @@ export const useMultiplayerStore = create<MultiplayerStore>((set, get) => ({
   currentRoom: null,
   playerName: "",
   players: [],
+  showConnectionDialog: true,
 
   setConnected: (connected) => set({ isConnected: connected }),
   setCurrentRoom: (roomId) => set({ currentRoom: roomId }),
   setPlayerName: (name) => set({ playerName: name }),
+  setShowConnectionDialog: (show) => set({ showConnectionDialog: show }),
 
   addPlayer: (player) =>
     set((state) => ({

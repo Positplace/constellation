@@ -28,9 +28,19 @@ export function createPlanet(
   customName?: string
 ): PlanetData {
   const seed = params.seed ?? Math.floor(Math.random() * 1e9);
-  const type: PlanetType = params.type;
+  let type: PlanetType = params.type;
+
+  // Fallback for missing planet types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cfg: any = (configs as any)[type];
+  let cfg: any = (configs as any)[type];
+  if (!cfg) {
+    console.warn(
+      `Planet type "${type}" not found in configs, falling back to "terrestrial"`
+    );
+    type = "terrestrial";
+    cfg = (configs as any)[type];
+  }
+
   const name = customName ?? generatePlanetName(seed);
 
   // Physical
@@ -70,7 +80,7 @@ export function createPlanet(
     Math.sin(axisTheta) * Math.sin(axisPhi),
   ];
   const spinDirection: 1 | -1 = Math.random() < 0.2 ? -1 : 1; // 20% retrograde
-  const spinSpeed = randomRange(0.1, 0.6, seed + 503); // rad/s
+  const spinSpeed = randomRange(0.5, 1.5, seed + 503); // rad/s - visible but natural rotation speed
 
   // Orbit (simple plausible ranges)
   const orbitalDistance = randomRange(0.3, 15, seed + 6); // AU

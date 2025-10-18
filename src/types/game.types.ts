@@ -1,3 +1,5 @@
+import { PlanetData } from "./planet.types";
+
 export interface Player {
   id: string;
   name: string;
@@ -6,13 +8,35 @@ export interface Player {
   tunnelCapacity: number;
 }
 
+export type StarType =
+  | "red_dwarf"
+  | "orange_star"
+  | "yellow_star"
+  | "white_star"
+  | "blue_giant"
+  | "red_giant"
+  | "white_dwarf";
+
+export interface StarData {
+  type: StarType;
+  name: string;
+  color: string;
+  glowColor: string;
+  size: number;
+  temperature: number;
+  luminosity: number;
+}
+
 export interface SolarSystem {
   id: string;
   name: string;
   position: [number, number, number];
-  planets: Planet[];
+  star: StarData;
+  planets: PlanetData[]; // Use full PlanetData instead of simple Planet
+  connections: string[]; // IDs of connected systems
   discovered: boolean;
   colonized: boolean;
+  seed: number;
 }
 
 export interface Planet {
