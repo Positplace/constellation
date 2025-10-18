@@ -195,6 +195,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       );
       homeSystem.colonized = true;
 
+      // Mark the first earth-like or habitable planet as colonized (home planet)
+      const homePlanet =
+        homeSystem.planets.find((p: any) => p.type === "earth_like") ||
+        homeSystem.planets.find((p: any) =>
+          ["earth_like", "terrestrial", "ocean_world"].includes(p.type)
+        ) ||
+        homeSystem.planets[0];
+
+      if (homePlanet) {
+        (homePlanet as any).colonized = true;
+      }
+
       set({
         solarSystems: [homeSystem],
         currentSystemId: homeSystem.id,

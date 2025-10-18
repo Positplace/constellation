@@ -114,12 +114,16 @@ const SolarSystemView: React.FC = () => {
           };
         }
       }
-      setSelectedId(null);
+      setSelectedPlanet(null);
       setSelectedPos(new THREE.Vector3(0, 0, 0));
+      // Emit to server if connected
+      if (isConnected) {
+        emitPlanetSelected(null);
+      }
     };
     window.addEventListener("resetSolarView", handleReset);
     return () => window.removeEventListener("resetSolarView", handleReset);
-  }, []);
+  }, [isConnected, emitPlanetSelected]);
 
   // Rotate Sun slowly
   useFrame((_state, delta) => {
@@ -210,11 +214,11 @@ const SolarSystemView: React.FC = () => {
     const handleFocusHome = () => {
       if (!currentSystem) return;
 
-      // Focus on the first colonized planet or first planet
+      // Focus on the home planet - prioritize colonized earth-like planets
       const homePlanet =
-        currentSystem.planets.find(
-          (p) => p.type === "earth_like" || currentSystem.colonized
-        ) || currentSystem.planets[0];
+        currentSystem.planets.find((p) => p.colonized) ||
+        currentSystem.planets.find((p) => p.type === "earth_like") ||
+        currentSystem.planets[0];
 
       if (homePlanet) {
         const SUN_RADIUS_UNITS = currentSystem.star.size;
@@ -234,12 +238,16 @@ const SolarSystemView: React.FC = () => {
         pendingFocusDistanceRef.current = focusDistance;
 
         // Set selected ID - the frame loop will update position via onSelectedFrame
-        setSelectedId(homePlanet.id);
+        setSelectedPlanet(homePlanet.id);
+        // Emit to server if connected
+        if (isConnected) {
+          emitPlanetSelected(homePlanet.id);
+        }
       }
     };
     window.addEventListener("focusHomePlanet", handleFocusHome);
     return () => window.removeEventListener("focusHomePlanet", handleFocusHome);
-  }, [currentSystem]);
+  }, [currentSystem, isConnected, emitPlanetSelected]);
 
   // Visual radius for the sun (scene units) - from star data
   const SUN_RADIUS_UNITS = currentSystem?.star.size ?? 0.6;
