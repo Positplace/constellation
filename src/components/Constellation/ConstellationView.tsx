@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import TunnelConnection from "./TunnelConnection";
@@ -8,7 +8,6 @@ import { useSocket } from "../../hooks/useSocket";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
 
 const ConstellationView: React.FC = () => {
-  const groupRef = useRef<THREE.Group>(null);
   const {
     solarSystems,
     tunnels,
@@ -17,19 +16,18 @@ const ConstellationView: React.FC = () => {
     setActiveView,
     generateAndAddSystem,
     canAddConnection,
+    updateSystemPosition,
   } = useGameStore();
   const { emitSystemGenerated, emitCurrentSystemChanged, changeView } =
     useSocket();
   const { isConnected } = useMultiplayerStore();
 
   const [hoveredSystemId, setHoveredSystemId] = useState<string | null>(null);
-
-  // Rotate the entire constellation slowly
-  useFrame((_state, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.05;
-    }
-  });
+  const [draggingSystemId, setDraggingSystemId] = useState<string | null>(null);
+  const orbitControlsRef = useRef<any>(null);
+  const { camera, raycaster, gl } = useThree();
+  const dragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
+  const dragPointRef = useRef(new THREE.Vector3());
 
   const handleExplore = () => {
     if (!currentSystemId) return;
@@ -52,6 +50,7 @@ const ConstellationView: React.FC = () => {
   };
 
   const handleSystemClick = (systemId: string) => {
+    if (draggingSystemId) return; // Don't select if we're dragging
     setCurrentSystem(systemId);
     setActiveView("solar");
     // Emit to server if connected
@@ -61,12 +60,69 @@ const ConstellationView: React.FC = () => {
     }
   };
 
+  const handlePointerDown = (e: any, systemId: string) => {
+    e.stopPropagation();
+    setDraggingSystemId(systemId);
+
+    // Change cursor to pointer hand
+    document.body.style.cursor = "pointer";
+
+    // Disable orbit controls while dragging
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.enabled = false;
+    }
+  };
+
+  const handlePointerMove = (e: any) => {
+    if (!draggingSystemId) return;
+    e.stopPropagation();
+
+    // Calculate intersection with drag plane
+    const pointer = new THREE.Vector2(
+      (e.clientX / gl.domElement.clientWidth) * 2 - 1,
+      -(e.clientY / gl.domElement.clientHeight) * 2 + 1
+    );
+
+    raycaster.setFromCamera(pointer, camera);
+
+    // Update drag plane to be perpendicular to camera
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    dragPlaneRef.current.setFromNormalAndCoplanarPoint(
+      cameraDirection,
+      new THREE.Vector3(0, 0, 0)
+    );
+
+    if (
+      raycaster.ray.intersectPlane(dragPlaneRef.current, dragPointRef.current)
+    ) {
+      updateSystemPosition(draggingSystemId, [
+        dragPointRef.current.x,
+        dragPointRef.current.y,
+        dragPointRef.current.z,
+      ]);
+    }
+  };
+
+  const handlePointerUp = () => {
+    setDraggingSystemId(null);
+
+    // Reset cursor
+    document.body.style.cursor = "default";
+
+    // Re-enable orbit controls
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.enabled = true;
+    }
+  };
+
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
   const canExplore = currentSystemId && canAddConnection(currentSystemId);
 
   return (
     <>
       <OrbitControls
+        ref={orbitControlsRef}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
@@ -75,11 +131,12 @@ const ConstellationView: React.FC = () => {
         autoRotate={false}
       />
 
-      <group ref={groupRef}>
+      <group onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         {/* Solar Systems */}
         {solarSystems.map((system) => {
           const isSelected = system.id === currentSystemId;
           const isHovered = system.id === hoveredSystemId;
+          const isDragging = system.id === draggingSystemId;
           const starColor = system.star.color;
 
           return (
@@ -90,29 +147,48 @@ const ConstellationView: React.FC = () => {
                 e.stopPropagation();
                 handleSystemClick(system.id);
               }}
-              onPointerEnter={() => setHoveredSystemId(system.id)}
-              onPointerLeave={() => setHoveredSystemId(null)}
+              onPointerDown={(e) => handlePointerDown(e, system.id)}
+              onPointerEnter={(e) => {
+                if (!draggingSystemId) {
+                  setHoveredSystemId(system.id);
+                  document.body.style.cursor = "pointer";
+                }
+              }}
+              onPointerLeave={(e) => {
+                setHoveredSystemId(null);
+                document.body.style.cursor = "default";
+              }}
             >
               {/* System node */}
-              <Sphere args={[isSelected ? 0.25 : 0.2, 16, 16]}>
+              <Sphere
+                args={[isDragging ? 0.3 : isSelected ? 0.25 : 0.2, 16, 16]}
+              >
                 <meshBasicMaterial color={starColor} />
               </Sphere>
 
               {/* System glow */}
-              <Sphere args={[isSelected ? 0.4 : 0.3, 16, 16]}>
+              <Sphere
+                args={[isDragging ? 0.5 : isSelected ? 0.4 : 0.3, 16, 16]}
+              >
                 <meshBasicMaterial
                   color={starColor}
                   transparent
-                  opacity={isSelected ? 0.5 : 0.3}
+                  opacity={isDragging ? 0.7 : isSelected ? 0.5 : 0.3}
                 />
               </Sphere>
 
               {/* Hover/selection indicator ring */}
-              {(isSelected || isHovered) && (
+              {(isSelected || isHovered || isDragging) && (
                 <mesh rotation={[Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[0.35, 0.4, 32]} />
                   <meshBasicMaterial
-                    color={isSelected ? "#00ff00" : "#ffffff"}
+                    color={
+                      isDragging
+                        ? "#ffff00"
+                        : isSelected
+                        ? "#00ff00"
+                        : "#ffffff"
+                    }
                     transparent
                     opacity={0.8}
                   />
@@ -120,7 +196,7 @@ const ConstellationView: React.FC = () => {
               )}
 
               {/* System label */}
-              {(isHovered || isSelected) && (
+              {(isHovered || isSelected || isDragging) && (
                 <Html position={[0, 0.6, 0]} center>
                   <div
                     style={{
@@ -141,6 +217,11 @@ const ConstellationView: React.FC = () => {
                     {system.colonized && (
                       <div style={{ fontSize: "10px", color: "#00ff00" }}>
                         Colonized
+                      </div>
+                    )}
+                    {isDragging && (
+                      <div style={{ fontSize: "10px", color: "#ffff00" }}>
+                        Dragging...
                       </div>
                     )}
                   </div>

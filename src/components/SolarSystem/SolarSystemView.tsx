@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { OrbitControls, Sphere } from "@react-three/drei";
+import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import Planet from "../Planets/Planet";
+import TunnelGate from "./TunnelGate";
+import TravelAnimation from "./TravelAnimation";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
 import { useSocket } from "../../hooks/useSocket";
@@ -12,6 +14,16 @@ const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
   const controlsRef = useRef<any>(null);
   const [selectedPos, setSelectedPos] = useState<THREE.Vector3 | null>(null);
+  const [travelState, setTravelState] = useState<{
+    active: boolean;
+    fromSystemId: string;
+    toSystemId: string;
+    gatePosition: [number, number, number];
+    phase: "approach" | "warp" | "exit";
+    startTime: number;
+    initialCameraPos?: THREE.Vector3;
+    initialCameraTarget?: THREE.Vector3;
+  } | null>(null);
   // Track selection; camera distance should remain user-controlled
   const {
     isPlaying,
@@ -20,8 +32,11 @@ const SolarSystemView: React.FC = () => {
     currentSystemId,
     selectedPlanetId,
     setSelectedPlanet,
+    setCurrentSystem,
+    setActiveView,
   } = useGameStore();
-  const { emitPlanetSelected } = useSocket();
+  const { emitPlanetSelected, emitCurrentSystemChanged, changeView } =
+    useSocket();
   const { isConnected } = useMultiplayerStore();
 
   const selectedId = selectedPlanetId;
@@ -129,6 +144,101 @@ const SolarSystemView: React.FC = () => {
   useFrame((_state, delta) => {
     if (sunRef.current && isPlaying) {
       sunRef.current.rotation.y += delta * 0.2;
+    }
+
+    // Handle approach and exit phases of travel animation
+    if (travelState && controlsRef.current) {
+      const elapsed = Date.now() - travelState.startTime;
+      const controls = controlsRef.current;
+      const cam = controls.object as THREE.PerspectiveCamera;
+
+      if (travelState.phase === "approach") {
+        // Phase 1: Fly to the gate (1.5 seconds)
+        const duration = 1500;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        // Calculate target position near the gate
+        const gatePos = new THREE.Vector3(...travelState.gatePosition);
+        const directionToGate = gatePos
+          .clone()
+          .sub(travelState.initialCameraPos || cam.position)
+          .normalize();
+        const targetPos = gatePos
+          .clone()
+          .sub(directionToGate.multiplyScalar(3)); // Stop 3 units before gate
+
+        // Animate camera to gate
+        if (travelState.initialCameraPos) {
+          cam.position.lerpVectors(
+            travelState.initialCameraPos,
+            targetPos,
+            eased
+          );
+        }
+
+        // Look at the gate
+        controls.target.copy(gatePos);
+        controls.update();
+
+        if (progress >= 1) {
+          // Switch to warp phase
+          setTravelState((prev) =>
+            prev ? { ...prev, phase: "warp", startTime: Date.now() } : null
+          );
+        }
+      } else if (travelState.phase === "exit") {
+        // Phase 3: Exit from gate to overview (1.5 seconds)
+        const duration = 1500;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        // Get the exit gate position
+        const exitGatePos = new THREE.Vector3(...travelState.gatePosition);
+        const finalTarget = new THREE.Vector3(0, 0, 0);
+
+        // Calculate final position to maintain original camera angle and distance
+        let finalPos = new THREE.Vector3(0, 12, 0);
+        if (travelState.initialCameraPos && travelState.initialCameraTarget) {
+          // Calculate the original offset from center
+          const originalOffset = travelState.initialCameraPos
+            .clone()
+            .sub(travelState.initialCameraTarget);
+          // Apply same offset to new system's center
+          finalPos = finalTarget.clone().add(originalOffset);
+        }
+
+        // Start slightly ahead of the gate
+        const startPos = exitGatePos
+          .clone()
+          .add(
+            new THREE.Vector3(
+              -travelState.gatePosition[0] * 0.1,
+              0,
+              -travelState.gatePosition[2] * 0.1
+            )
+          );
+
+        // Interpolate position
+        cam.position.lerpVectors(startPos, finalPos, eased);
+
+        // Look at interpolated target
+        const currentTarget = new THREE.Vector3();
+        currentTarget.lerpVectors(exitGatePos, finalTarget, eased);
+        controls.target.copy(currentTarget);
+        controls.update();
+
+        if (progress >= 1) {
+          // Complete the travel
+          completeTravelAnimation();
+        }
+      }
     }
   });
 
@@ -297,9 +407,107 @@ const SolarSystemView: React.FC = () => {
         toTarget: targetTarget,
       };
     }
-    setSelectedId(null);
+    setSelectedPlanet(null);
     setSelectedPos(new THREE.Vector3(0, 0, 0));
   };
+
+  const handleTravelToSystem = (
+    toSystemId: string,
+    gatePosition: [number, number, number]
+  ) => {
+    if (!currentSystemId || !controlsRef.current) return;
+
+    const controls = controlsRef.current;
+    const cam = controls.object as THREE.PerspectiveCamera;
+
+    // Start travel animation with approach phase
+    setTravelState({
+      active: true,
+      fromSystemId: currentSystemId,
+      toSystemId: toSystemId,
+      gatePosition,
+      phase: "approach",
+      startTime: Date.now(),
+      initialCameraPos: cam.position.clone(),
+      initialCameraTarget: controls.target.clone(),
+    });
+  };
+
+  const completeTravelAnimation = () => {
+    // Clear travel state
+    setTravelState(null);
+  };
+
+  // Calculate tunnel gate data for connected systems
+  const tunnelGates = useMemo(() => {
+    if (!currentSystem) return [];
+
+    return currentSystem.connections
+      .map((connectedSystemId, index) => {
+        const connectedSystem = solarSystems.find(
+          (s) => s.id === connectedSystemId
+        );
+        if (!connectedSystem) return null;
+
+        // Calculate position for tunnel gate (evenly spaced around the system)
+        const angleStep = (Math.PI * 2) / currentSystem.connections.length;
+        const angle = index * angleStep;
+        const gateDistance = 15; // Distance from sun
+        const position: [number, number, number] = [
+          Math.cos(angle) * gateDistance,
+          0,
+          Math.sin(angle) * gateDistance,
+        ];
+
+        return {
+          id: connectedSystemId,
+          position,
+          connectedSystemName: connectedSystem.name,
+          connectedStarColor: connectedSystem.star.color,
+        };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      position: [number, number, number];
+      connectedSystemName: string;
+      connectedStarColor: string;
+    }>;
+  }, [currentSystem, solarSystems]);
+
+  // Determine if we're in the tunnel phase
+  const isInTunnelPhase = travelState?.active && travelState.phase === "warp";
+
+  // If in tunnel warp phase, show only the tunnel animation
+  if (isInTunnelPhase) {
+    const fromSystem = solarSystems.find(
+      (s) => s.id === travelState.fromSystemId
+    );
+    const toSystem = solarSystems.find((s) => s.id === travelState.toSystemId);
+
+    if (fromSystem && toSystem) {
+      return (
+        <TravelAnimation
+          fromSystemName={fromSystem.name}
+          toSystemName={toSystem.name}
+          fromStarColor={fromSystem.star.color}
+          toStarColor={toSystem.star.color}
+          onComplete={() => {
+            // Switch to new system and move to exit phase
+            if (travelState.toSystemId !== currentSystemId) {
+              setCurrentSystem(travelState.toSystemId);
+              // Emit to server if connected
+              if (isConnected) {
+                emitCurrentSystemChanged(travelState.toSystemId);
+              }
+            }
+            setTravelState((prev) =>
+              prev ? { ...prev, phase: "exit", startTime: Date.now() } : null
+            );
+          }}
+        />
+      );
+    }
+  }
 
   return (
     <group onPointerMissed={handleResetView}>
@@ -434,6 +642,63 @@ const SolarSystemView: React.FC = () => {
           />
         );
       })}
+
+      {/* Tunnel Gates for connected systems */}
+      {tunnelGates.map((gate) => (
+        <TunnelGate
+          key={gate.id}
+          position={gate.position}
+          connectedSystemName={gate.connectedSystemName}
+          connectedStarColor={gate.connectedStarColor}
+          onClick={() => handleTravelToSystem(gate.id, gate.position)}
+        />
+      ))}
+
+      {/* Star Name Display - Top of screen */}
+      <Html fullscreen>
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(20,20,40,0.85) 100%)",
+              color: "white",
+              padding: "12px 24px",
+              borderRadius: "12px",
+              fontSize: "20px",
+              fontWeight: "bold",
+              whiteSpace: "nowrap",
+              border: `2px solid ${SUN_COLOR}`,
+              boxShadow: `0 0 20px ${SUN_COLOR}60, 0 4px 15px rgba(0,0,0,0.5)`,
+              textAlign: "center",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "22px", marginBottom: "2px" }}>
+                {currentSystem.name}
+              </div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: SUN_COLOR,
+                  opacity: 0.9,
+                  fontWeight: "normal",
+                }}
+              >
+                {currentSystem.star.name}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Html>
 
       {/* Lighting */}
       <ambientLight intensity={0.2} />

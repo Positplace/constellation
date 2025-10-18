@@ -44,6 +44,7 @@ interface GameStore {
   updateGameTime: (time: number) => void;
   setTimeScale: (scale: number) => void;
   setSelectedPlanet: (planetId: string | null) => void;
+  updateSystemPosition: (systemId: string, position: [number, number, number]) => void;
   initializeGame: () => void;
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
@@ -180,6 +181,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setTimeScale: (scale) => set({ timeScale: Math.max(0, Math.min(1, scale)) }),
 
   setSelectedPlanet: (planetId) => set({ selectedPlanetId: planetId }),
+
+  updateSystemPosition: (systemId, position) => {
+    set((state) => ({
+      solarSystems: state.solarSystems.map((system) =>
+        system.id === systemId ? { ...system, position } : system
+      ),
+    }));
+    get().saveToLocalStorage();
+  },
 
   initializeGame: () => {
     // Try to load from localStorage first
