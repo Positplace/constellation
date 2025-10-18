@@ -23,12 +23,15 @@ function noiseDefaults(seed: number): NoiseConfig {
   };
 }
 
-export function createPlanet(params: PlanetGenerationParams): PlanetData {
+export function createPlanet(
+  params: PlanetGenerationParams,
+  customName?: string
+): PlanetData {
   const seed = params.seed ?? Math.floor(Math.random() * 1e9);
   const type: PlanetType = params.type;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cfg: any = (configs as any)[type];
-  const name = generatePlanetName(seed);
+  const name = customName ?? generatePlanetName(seed);
 
   // Physical
   const radiusEarth = randomRange(

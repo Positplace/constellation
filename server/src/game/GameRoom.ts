@@ -28,7 +28,7 @@ export class GameRoom {
       currentTurn: 1,
       isPlaying: false,
       gameTime: 0,
-      activeView: "earth",
+      activeView: "solar",
     };
   }
 

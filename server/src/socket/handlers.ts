@@ -61,16 +61,13 @@ export function setupSocketHandlers(
   });
 
   // Handle view changes
-  socket.on(
-    "change-view",
-    (data: { view: "earth" | "solar" | "constellation" }) => {
-      const room = getPlayerRoom(socket, gameRooms);
-      if (room) {
-        room.gameState.activeView = data.view;
-        socket.to(room.id).emit("view-changed", { view: data.view });
-      }
+  socket.on("change-view", (data: { view: "solar" | "constellation" }) => {
+    const room = getPlayerRoom(socket, gameRooms);
+    if (room) {
+      room.gameState.activeView = data.view;
+      socket.to(room.id).emit("view-changed", { view: data.view });
     }
-  );
+  });
 
   // Handle tunnel construction
   socket.on("construct-tunnel", (data: { from: string; to: string }) => {

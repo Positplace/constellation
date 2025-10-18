@@ -6,9 +6,26 @@ import { ViewType } from "../../types/game.types";
 const ViewToggle: React.FC = () => {
   const { activeView, setActiveView } = useGameStore();
   const { changeView } = useSocket();
+  const [isHomeFocused, setIsHomeFocused] = React.useState(false);
 
-  const views: { key: ViewType; label: string; icon: string }[] = [
-    { key: "earth", label: "Home", icon: "🌍" },
+  // Listen for Home focus state changes
+  React.useEffect(() => {
+    const handleHomeFocus = () => setIsHomeFocused(true);
+    const handleResetFocus = () => setIsHomeFocused(false);
+
+    window.addEventListener("focusHomePlanet", handleHomeFocus);
+    window.addEventListener("resetSolarView", handleResetFocus);
+    window.addEventListener("resetHomeFocus", handleResetFocus);
+
+    return () => {
+      window.removeEventListener("focusHomePlanet", handleHomeFocus);
+      window.removeEventListener("resetSolarView", handleResetFocus);
+      window.removeEventListener("resetHomeFocus", handleResetFocus);
+    };
+  }, []);
+
+  const views: { key: ViewType | "home"; label: string; icon: string }[] = [
+    { key: "home", label: "Home", icon: "🌍" },
     { key: "solar", label: "System", icon: "☀️" },
     { key: "constellation", label: "Constellation", icon: "🌌" },
   ];
@@ -20,15 +37,34 @@ const ViewToggle: React.FC = () => {
           <button
             key={view.key}
             onClick={() => {
-              // If clicking the active System tab, emit reset event
-              if (view.key === "solar" && activeView === "solar") {
-                window.dispatchEvent(new CustomEvent("resetSolarView"));
+              if (view.key === "home") {
+                // Focus on Home planet in solar system
+                setActiveView("solar");
+                changeView("solar");
+                window.dispatchEvent(new CustomEvent("focusHomePlanet"));
+              } else {
+                // If clicking the active System tab, emit reset event
+                if (view.key === "solar" && activeView === "solar") {
+                  window.dispatchEvent(new CustomEvent("resetSolarView"));
+                }
+                // Reset home focus when switching views
+                if (view.key !== "solar") {
+                  setIsHomeFocused(false);
+                }
+                setActiveView(view.key);
+                changeView(view.key);
               }
-              setActiveView(view.key);
-              changeView(view.key);
             }}
             className={`px-4 py-2 rounded-md transition-all duration-200 flex items-center gap-2 ${
-              activeView === view.key
+              (view.key === "home" &&
+                isHomeFocused &&
+                activeView === "solar") ||
+              (view.key === "solar" &&
+                activeView === "solar" &&
+                !isHomeFocused) ||
+              (view.key !== "home" &&
+                view.key !== "solar" &&
+                activeView === view.key)
                 ? "bg-space-600 text-white"
                 : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
             }`}

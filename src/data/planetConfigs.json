@@ -309,5 +309,58 @@
         "emission": { "min": 0.1, "max": 0.5, "default": 0.3 }
       }
     }
+  },
+  "earth_like": {
+    "name": "Earth-Like World",
+    "description": "A habitable world similar to Earth with oceans, continents, and atmosphere",
+    "baseProperties": {
+      "radius": { "min": 1.0, "max": 1.0, "unit": "earth_radius" },
+      "mass": { "min": 1.0, "max": 1.0, "unit": "earth_mass" },
+      "gravity": { "min": 1.0, "max": 1.0, "unit": "g" },
+      "rotationSpeed": { "min": 24, "max": 24, "unit": "hours" },
+      "axialTilt": { "min": 23.5, "max": 23.5, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": { "min": 0.7, "max": 0.71, "default": 0.71 },
+        "land": { "min": 0.29, "max": 0.3, "default": 0.29 },
+        "ice": { "min": 0.03, "max": 0.05, "default": 0.04 },
+        "desert": { "min": 0.08, "max": 0.1, "default": 0.09 },
+        "forest": { "min": 0.3, "max": 0.35, "default": 0.31 },
+        "mountains": { "min": 0.1, "max": 0.15, "default": 0.12 },
+        "plains": { "min": 0.2, "max": 0.25, "default": 0.22 }
+      },
+      "elevation": {
+        "minHeight": { "min": -11000, "max": -10000, "unit": "meters" },
+        "maxHeight": { "min": 8000, "max": 9000, "unit": "meters" },
+        "roughness": { "min": 0.4, "max": 0.5, "default": 0.45 }
+      },
+      "continentCount": { "min": 7, "max": 7, "default": 7 },
+      "cityDensity": { "min": 0.05, "max": 0.08, "default": 0.06 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.78, "max": 0.78, "default": 0.78 },
+        "oxygen": { "min": 0.21, "max": 0.21, "default": 0.21 },
+        "carbonDioxide": { "min": 0.0004, "max": 0.0004, "default": 0.0004 },
+        "argon": { "min": 0.0093, "max": 0.0093, "default": 0.0093 }
+      },
+      "pressure": { "min": 1.0, "max": 1.0, "unit": "atm" },
+      "height": { "min": 100, "max": 100, "unit": "km" },
+      "color": "#87CEEB",
+      "opacity": { "min": 0.25, "max": 0.3, "default": 0.27 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#1E90FF", "#4A90E2", "#0077BE"],
+        "secondary": ["#228B22", "#2E8B57", "#3CB371"],
+        "accent": ["#8B4513", "#A0522D", "#CD853F"]
+      },
+      "surface": {
+        "albedo": { "min": 0.3, "max": 0.35, "default": 0.32 },
+        "roughness": { "min": 0.5, "max": 0.6, "default": 0.55 }
+      }
+    }
   }
 }

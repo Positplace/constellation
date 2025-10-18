@@ -23,6 +23,8 @@ const SolarSystemView: React.FC = () => {
     fromDistance: number;
     toDistance: number;
     dir: THREE.Vector3;
+    fromTarget?: THREE.Vector3;
+    toTarget?: THREE.Vector3;
   }>({
     active: false,
     start: 0,
@@ -31,6 +33,8 @@ const SolarSystemView: React.FC = () => {
     toDistance: 0,
     dir: new THREE.Vector3(0, 0, 1),
   });
+  // Track pending focus distance for zoom animation
+  const pendingFocusDistanceRef = useRef<number | null>(null);
 
   // Start the game loop so gameTime advances when playing
   useGameLoop();
@@ -49,15 +53,53 @@ const SolarSystemView: React.FC = () => {
   // Listen for reset solar view event (from clicking active System tab)
   useEffect(() => {
     const handleReset = () => {
-      setSelectedId(null);
-      setSelectedPos(new THREE.Vector3(0, 0, 0));
       if (controlsRef.current) {
         const controls = controlsRef.current;
         const cam = controls.object as THREE.PerspectiveCamera;
-        controls.target.set(0, 0, 0);
-        cam.position.set(0, 12, 0);
-        controls.update();
+
+        // Current state
+        const currentTarget = controls.target.clone();
+        const currentOffset = cam.position.clone().sub(currentTarget);
+        const currentDistance = currentOffset.length();
+        const targetDistance = 12; // Overview distance
+
+        // Target state (overview from above)
+        const targetTarget = new THREE.Vector3(0, 0, 0);
+        const targetDir = new THREE.Vector3(0, 1, 0); // top-down view
+
+        // If we're already roughly at the overview, just snap
+        if (
+          Math.abs(currentDistance - targetDistance) < 1 &&
+          currentTarget.distanceTo(targetTarget) < 0.5
+        ) {
+          controls.target.copy(targetTarget);
+          cam.position.set(0, 12, 0);
+          controls.update();
+        } else {
+          // Otherwise, animate smoothly from current position to overview
+          // Keep the current view direction initially, will interpolate to top-down
+          const fromDir =
+            currentOffset.length() > 0
+              ? currentOffset.clone().normalize()
+              : new THREE.Vector3(0, 1, 0);
+
+          // Blend the direction during animation
+          const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
+
+          zoomAnimRef.current = {
+            active: true,
+            start: performance.now(),
+            duration: 700,
+            fromDistance: currentDistance,
+            toDistance: targetDistance,
+            dir: blendedDir,
+            fromTarget: currentTarget,
+            toTarget: targetTarget,
+          };
+        }
       }
+      setSelectedId(null);
+      setSelectedPos(new THREE.Vector3(0, 0, 0));
     };
     window.addEventListener("resetSolarView", handleReset);
     return () => window.removeEventListener("resetSolarView", handleReset);
@@ -93,7 +135,7 @@ const SolarSystemView: React.FC = () => {
   useFrame(() => {
     if (!controlsRef.current) return;
     const anim = zoomAnimRef.current;
-    if (!anim.active || !selectedPos) return;
+    if (!anim.active) return;
 
     const now = performance.now();
     const t = Math.min(1, (now - anim.start) / anim.duration);
@@ -102,12 +144,32 @@ const SolarSystemView: React.FC = () => {
     const controls = controlsRef.current;
     const cam = controls.object as THREE.PerspectiveCamera;
 
-    // Keep tracking the moving selected planet
-    controls.target.copy(selectedPos);
-    const dist = anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
-    cam.position.copy(
-      selectedPos.clone().add(anim.dir.clone().multiplyScalar(dist))
-    );
+    // If animating to/from specific targets (zoom out to overview)
+    if (anim.fromTarget && anim.toTarget) {
+      // Interpolate target position
+      const currentTarget = new THREE.Vector3().lerpVectors(
+        anim.fromTarget,
+        anim.toTarget,
+        k
+      );
+      controls.target.copy(currentTarget);
+
+      // Interpolate distance
+      const dist =
+        anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
+      cam.position.copy(
+        currentTarget.clone().add(anim.dir.clone().multiplyScalar(dist))
+      );
+    } else if (selectedPos) {
+      // Keep tracking the moving selected planet (zoom in)
+      controls.target.copy(selectedPos);
+      const dist =
+        anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
+      cam.position.copy(
+        selectedPos.clone().add(anim.dir.clone().multiplyScalar(dist))
+      );
+    }
+
     controls.update();
 
     if (t >= 1) {
@@ -118,11 +180,41 @@ const SolarSystemView: React.FC = () => {
   // Static planet specs - do not change across renders
   const planetSpecs = useMemo(
     () => [
-      { type: "terrestrial" as const, distance: 1.5, speed: 0.8, seed: 101 },
-      { type: "desert_world" as const, distance: 2.0, speed: 0.6, seed: 202 },
-      { type: "ocean_world" as const, distance: 2.5, speed: 0.5, seed: 303 },
-      { type: "ice_world" as const, distance: 3.0, speed: 0.4, seed: 404 },
-      { type: "gas_giant" as const, distance: 4.5, speed: 0.2, seed: 505 },
+      {
+        type: "terrestrial" as const,
+        distance: 1.5,
+        speed: 0.8,
+        seed: 101,
+        name: undefined,
+      },
+      {
+        type: "desert_world" as const,
+        distance: 2.0,
+        speed: 0.6,
+        seed: 202,
+        name: undefined,
+      },
+      {
+        type: "earth_like" as const,
+        distance: 2.5,
+        speed: 0.5,
+        seed: 303,
+        name: "Home",
+      },
+      {
+        type: "ice_world" as const,
+        distance: 3.0,
+        speed: 0.4,
+        seed: 404,
+        name: undefined,
+      },
+      {
+        type: "gas_giant" as const,
+        distance: 4.5,
+        speed: 0.2,
+        seed: 505,
+        name: undefined,
+      },
     ],
     []
   );
@@ -131,13 +223,16 @@ const SolarSystemView: React.FC = () => {
   const generated = useMemo(
     () =>
       planetSpecs.map((p, idx) => ({
-        planet: createPlanet({
-          type: p.type,
-          size: "medium",
-          age: "mature",
-          habitability: "marginal",
-          seed: p.seed,
-        }),
+        planet: createPlanet(
+          {
+            type: p.type,
+            size: "medium",
+            age: "mature",
+            habitability: p.type === "earth_like" ? "ideal" : "marginal",
+            seed: p.seed,
+          },
+          p.name
+        ),
         distance: p.distance,
         // Slow down orbital speed to make clicking easier
         speed: p.speed * 0.2,
@@ -146,31 +241,79 @@ const SolarSystemView: React.FC = () => {
     [planetSpecs]
   );
 
+  // Listen for focus Home planet event (from clicking Home button)
+  useEffect(() => {
+    const handleFocusHome = () => {
+      const homePlanetIndex = generated.findIndex(
+        (g) => g.planet.name === "Home"
+      );
+      if (homePlanetIndex !== -1) {
+        const homePlanetData = generated[homePlanetIndex];
+        const renderScale = Math.min(
+          0.16,
+          (0.6 * 0.7) / Math.max(0.001, homePlanetData.planet.radius / 6371)
+        );
+        const radiusUnits = (homePlanetData.planet.radius / 6371) * renderScale;
+        const atmosphereRadius = radiusUnits * 1.06;
+        const minSafeDistance = (atmosphereRadius * 2) / 0.6;
+        const focusDistance = Math.max(
+          minSafeDistance,
+          Math.min(4, radiusUnits * 2.5)
+        );
+
+        // Store the focus distance for when we get the position update
+        pendingFocusDistanceRef.current = focusDistance;
+
+        // Set selected ID - the frame loop will update position via onSelectedFrame
+        setSelectedId(homePlanetData.planet.id);
+      }
+    };
+    window.addEventListener("focusHomePlanet", handleFocusHome);
+    return () => window.removeEventListener("focusHomePlanet", handleFocusHome);
+  }, [generated]);
+
   // Visual radius for the sun (scene units)
   const SUN_RADIUS_UNITS = 0.6; // larger sun
 
   return (
     <group
       onPointerMissed={() => {
-        // Reset selection and recenter on the sun
-        setSelectedId(null);
-        setSelectedPos(new THREE.Vector3(0, 0, 0));
+        // Reset selection and smoothly zoom back to overview
         if (controlsRef.current) {
           const controls = controlsRef.current;
           const cam = controls.object as THREE.PerspectiveCamera;
-          // Keep current distance, look at sun
-          const offset = cam.position.clone().sub(controls.target);
-          const distance = offset.length();
-          const dir =
-            offset.length() > 0
-              ? offset.normalize()
-              : new THREE.Vector3(0, 0, 1);
-          controls.target.set(0, 0, 0);
-          cam.position.copy(
-            new THREE.Vector3(0, 0, 0).add(dir.multiplyScalar(distance))
-          );
-          controls.update();
+
+          // Current state
+          const currentTarget = controls.target.clone();
+          const currentOffset = cam.position.clone().sub(currentTarget);
+          const currentDistance = currentOffset.length();
+          const targetDistance = 12; // Overview distance
+
+          // Target state (overview from above)
+          const targetTarget = new THREE.Vector3(0, 0, 0);
+          const targetDir = new THREE.Vector3(0, 1, 0);
+
+          // Animate smoothly from current position to overview
+          const fromDir =
+            currentOffset.length() > 0
+              ? currentOffset.clone().normalize()
+              : new THREE.Vector3(0, 1, 0);
+
+          const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
+
+          zoomAnimRef.current = {
+            active: true,
+            start: performance.now(),
+            duration: 700,
+            fromDistance: currentDistance,
+            toDistance: targetDistance,
+            dir: blendedDir,
+            fromTarget: currentTarget,
+            toTarget: targetTarget,
+          };
         }
+        setSelectedId(null);
+        setSelectedPos(new THREE.Vector3(0, 0, 0));
       }}
     >
       <OrbitControls
@@ -190,15 +333,41 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          setSelectedId(null);
-          setSelectedPos(new THREE.Vector3(0, 0, 0));
           if (controlsRef.current) {
             const controls = controlsRef.current;
             const cam = controls.object as THREE.PerspectiveCamera;
-            controls.target.set(0, 0, 0);
-            cam.position.set(0, 12, 0); // top-down view
-            controls.update();
+
+            // Current state
+            const currentTarget = controls.target.clone();
+            const currentOffset = cam.position.clone().sub(currentTarget);
+            const currentDistance = currentOffset.length();
+            const targetDistance = 12; // Overview distance
+
+            // Target state (overview from above)
+            const targetTarget = new THREE.Vector3(0, 0, 0);
+            const targetDir = new THREE.Vector3(0, 1, 0);
+
+            // Animate smoothly from current position to overview
+            const fromDir =
+              currentOffset.length() > 0
+                ? currentOffset.clone().normalize()
+                : new THREE.Vector3(0, 1, 0);
+
+            const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
+
+            zoomAnimRef.current = {
+              active: true,
+              start: performance.now(),
+              duration: 700,
+              fromDistance: currentDistance,
+              toDistance: targetDistance,
+              dir: blendedDir,
+              fromTarget: currentTarget,
+              toTarget: targetTarget,
+            };
           }
+          setSelectedId(null);
+          setSelectedPos(new THREE.Vector3(0, 0, 0));
         }}
       >
         <meshBasicMaterial color="#ffd700" />
@@ -210,15 +379,41 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          setSelectedId(null);
-          setSelectedPos(new THREE.Vector3(0, 0, 0));
           if (controlsRef.current) {
             const controls = controlsRef.current;
             const cam = controls.object as THREE.PerspectiveCamera;
-            controls.target.set(0, 0, 0);
-            cam.position.set(0, 12, 0); // top-down view
-            controls.update();
+
+            // Current state
+            const currentTarget = controls.target.clone();
+            const currentOffset = cam.position.clone().sub(currentTarget);
+            const currentDistance = currentOffset.length();
+            const targetDistance = 12; // Overview distance
+
+            // Target state (overview from above)
+            const targetTarget = new THREE.Vector3(0, 0, 0);
+            const targetDir = new THREE.Vector3(0, 1, 0);
+
+            // Animate smoothly from current position to overview
+            const fromDir =
+              currentOffset.length() > 0
+                ? currentOffset.clone().normalize()
+                : new THREE.Vector3(0, 1, 0);
+
+            const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
+
+            zoomAnimRef.current = {
+              active: true,
+              start: performance.now(),
+              duration: 700,
+              fromDistance: currentDistance,
+              toDistance: targetDistance,
+              dir: blendedDir,
+              fromTarget: currentTarget,
+              toTarget: targetTarget,
+            };
           }
+          setSelectedId(null);
+          setSelectedPos(new THREE.Vector3(0, 0, 0));
         }}
       >
         <meshBasicMaterial color="#ffd700" transparent opacity={0.3} />
@@ -253,6 +448,12 @@ const SolarSystemView: React.FC = () => {
             onSelect={(id, pos) => {
               setSelectedId(id);
               setSelectedPos(pos.clone());
+              // If selecting Home planet, set focus; otherwise reset it
+              if (g.planet.name === "Home") {
+                window.dispatchEvent(new CustomEvent("focusHomePlanet"));
+              } else {
+                window.dispatchEvent(new CustomEvent("resetHomeFocus"));
+              }
               // Begin smooth zoom toward planet
               if (controlsRef.current) {
                 const controls = controlsRef.current;
@@ -275,6 +476,28 @@ const SolarSystemView: React.FC = () => {
             onSelectedFrame={(id, pos) => {
               if (selectedId === id) {
                 setSelectedPos(pos.clone());
+                // If there's a pending focus distance (from Home button), trigger zoom
+                if (
+                  pendingFocusDistanceRef.current !== null &&
+                  controlsRef.current
+                ) {
+                  const controls = controlsRef.current;
+                  const cam = controls.object as THREE.PerspectiveCamera;
+                  const offset = cam.position.clone().sub(controls.target);
+                  const dir =
+                    offset.length() > 0
+                      ? offset.clone().normalize()
+                      : new THREE.Vector3(0, 0, 1);
+                  zoomAnimRef.current = {
+                    active: true,
+                    start: performance.now(),
+                    duration: 700,
+                    fromDistance: offset.length(),
+                    toDistance: pendingFocusDistanceRef.current,
+                    dir,
+                  };
+                  pendingFocusDistanceRef.current = null;
+                }
               }
             }}
             renderScale={renderScale}

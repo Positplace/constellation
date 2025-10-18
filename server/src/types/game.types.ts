@@ -56,7 +56,7 @@ export interface GameState {
   currentTurn: number;
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
-  activeView: "earth" | "solar" | "constellation";
+  activeView: "solar" | "constellation";
 }
 
-export type ViewType = "earth" | "solar" | "constellation";
+export type ViewType = "solar" | "constellation";

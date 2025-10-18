@@ -44,7 +44,8 @@ export type PlanetType =
   | "dwarf_planet"
   | "lava_world"
   | "jungle_world"
-  | "arctic_world";
+  | "arctic_world"
+  | "earth_like";
 
 export interface SurfaceData {
   // Terrain types and their coverage percentages

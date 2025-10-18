@@ -48,7 +48,7 @@ interface GameStore {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   // Initial state
-  activeView: "earth",
+  activeView: "solar",
   players: [],
   countries: new Map(),
   solarSystems: [],

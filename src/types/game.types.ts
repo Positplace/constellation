@@ -57,7 +57,7 @@ export interface GameState {
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
   currentTurn: number;
-  activeView: "earth" | "solar" | "constellation";
+  activeView: "solar" | "constellation";
 }
 
-export type ViewType = "earth" | "solar" | "constellation";
+export type ViewType = "solar" | "constellation";
