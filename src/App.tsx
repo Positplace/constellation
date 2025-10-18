@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
 import EarthGlobe from "./components/Globe/EarthGlobe";
@@ -13,11 +13,32 @@ import { useMultiplayerStore } from "./store/multiplayerStore";
 import { useGameLoop } from "./hooks/useGameLoop";
 
 function App() {
-  const { activeView } = useGameStore();
+  const { activeView, togglePlayPause } = useGameStore();
   const { isConnected } = useMultiplayerStore();
 
   // Start the game loop
   useGameLoop();
+
+  // Spacebar toggles play/pause
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input or textarea
+      const target = e.target as HTMLElement;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (isTyping) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [togglePlayPause]);
 
   const renderScene = () => {
     switch (activeView) {

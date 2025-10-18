@@ -20,6 +20,7 @@ interface GameStore {
   currentTurn: number;
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
+  timeScale: number; // 0..1 smooth playback factor
 
   // Layer visibility state
   layers: {
@@ -41,6 +42,7 @@ interface GameStore {
   nextTurn: () => void;
   togglePlayPause: () => void;
   updateGameTime: (time: number) => void;
+  setTimeScale: (scale: number) => void;
   toggleLayer: (layer: keyof GameStore["layers"]) => void;
 }
 
@@ -54,6 +56,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   currentTurn: 1,
   isPlaying: false,
   gameTime: 0,
+  timeScale: 0,
   layers: {
     continents: true,
     cities: true,
@@ -102,6 +105,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })),
 
   updateGameTime: (time) => set({ gameTime: time }),
+
+  setTimeScale: (scale) => set({ timeScale: Math.max(0, Math.min(1, scale)) }),
 
   toggleLayer: (layer) =>
     set((state) => ({

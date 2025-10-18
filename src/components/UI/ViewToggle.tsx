@@ -8,8 +8,8 @@ const ViewToggle: React.FC = () => {
   const { changeView } = useSocket();
 
   const views: { key: ViewType; label: string; icon: string }[] = [
-    { key: "earth", label: "Earth", icon: "🌍" },
-    { key: "solar", label: "Solar System", icon: "☀️" },
+    { key: "earth", label: "Home", icon: "🌍" },
+    { key: "solar", label: "System", icon: "☀️" },
     { key: "constellation", label: "Constellation", icon: "🌌" },
   ];
 

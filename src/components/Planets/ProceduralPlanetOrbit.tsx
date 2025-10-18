@@ -13,6 +13,8 @@ interface ProceduralPlanetOrbitProps {
   selectedId?: string;
   onSelect?: (planetId: string, worldPos: THREE.Vector3) => void;
   renderScale?: number;
+  onSelectedFrame?: (planetId: string, worldPos: THREE.Vector3) => void;
+  showOrbit?: boolean;
 }
 
 const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
@@ -24,6 +26,8 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
   selectedId,
   onSelect,
   renderScale,
+  onSelectedFrame,
+  showOrbit = true,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -46,15 +50,24 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
         groupRef.current.position.set(x, 0, z);
       }
 
-      // Apply planet self spin using axis stored by renderer
-      const axis: THREE.Vector3 | undefined = (
-        groupRef.current.children[0] as any
-      )?.userData?.spinAxis;
-      const spinSpeed: number | undefined = (
-        groupRef.current.children[0] as any
-      )?.userData?.spinSpeed;
-      if (axis && spinSpeed) {
-        groupRef.current.children[0].rotateOnAxis(axis, spinSpeed * delta);
+      // Apply planet self spin using axis stored by renderer when not paused
+      if (!paused) {
+        const axis: THREE.Vector3 | undefined = (
+          groupRef.current.children[0] as any
+        )?.userData?.spinAxis;
+        const spinSpeed: number | undefined = (
+          groupRef.current.children[0] as any
+        )?.userData?.spinSpeed;
+        if (axis && spinSpeed) {
+          groupRef.current.children[0].rotateOnAxis(axis, spinSpeed * delta);
+        }
+      }
+
+      // When this planet is selected, continuously emit its world position so the camera can track it while the system keeps spinning
+      if (selectedId === planet.id && onSelectedFrame) {
+        const world = new THREE.Vector3();
+        groupRef.current.getWorldPosition(world);
+        onSelectedFrame(planet.id, world);
       }
     }
   });
@@ -62,10 +75,17 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
   return (
     <group>
       {/* Orbital path */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[distance - 0.01, distance + 0.01, 64]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.1} />
-      </mesh>
+      {showOrbit && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[distance - 0.01, distance + 0.01, 64]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.1}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
 
       {/* Planet at animated position */}
       <group
