@@ -1,6 +1,6 @@
-import React, { useRef, useState } from "react";
-import { useThree } from "@react-three/fiber";
-import { OrbitControls, Sphere, Html } from "@react-three/drei";
+import React, { useRef, useState, useCallback } from "react";
+import { useThree, useFrame } from "@react-three/fiber";
+import { OrbitControls, Sphere, Html, Torus } from "@react-three/drei";
 import * as THREE from "three";
 import TunnelConnection from "./TunnelConnection";
 import Starfield from "../Background/Starfield";
@@ -30,6 +30,8 @@ const ConstellationView: React.FC = () => {
   const { camera, raycaster, gl } = useThree();
   const dragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
   const dragPointRef = useRef(new THREE.Vector3());
+  const lastUpdateTimeRef = useRef(0);
+  const ringRotationRef = useRef(0);
 
   const handleExplore = () => {
     if (!currentSystemId) return;
@@ -62,62 +64,59 @@ const ConstellationView: React.FC = () => {
     }
   };
 
-  const handleSystemDoubleClick = (systemId: string) => {
-    if (draggingSystemId) return; // Don't open if we're dragging
-    setCurrentSystem(systemId);
-    setActiveView("solar");
-    // Emit to server if connected
-    if (isConnected) {
-      emitCurrentSystemChanged(systemId);
-      changeView("solar");
-    }
-  };
-
-  const handlePointerDown = (e: any, systemId: string) => {
+  const handlePointerDown = useCallback((e: any, systemId: string) => {
     e.stopPropagation();
     setDraggingSystemId(systemId);
 
     // Change cursor to pointer hand
-    document.body.style.cursor = "pointer";
+    document.body.style.cursor = "grabbing";
 
     // Disable orbit controls while dragging
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false;
     }
-  };
+  }, []);
 
-  const handlePointerMove = (e: any) => {
-    if (!draggingSystemId) return;
-    e.stopPropagation();
+  const handlePointerMove = useCallback(
+    (e: any) => {
+      if (!draggingSystemId) return;
+      e.stopPropagation();
 
-    // Calculate intersection with drag plane
-    const pointer = new THREE.Vector2(
-      (e.clientX / gl.domElement.clientWidth) * 2 - 1,
-      -(e.clientY / gl.domElement.clientHeight) * 2 + 1
-    );
+      // Throttle updates to improve performance
+      const now = performance.now();
+      if (now - lastUpdateTimeRef.current < 16) return; // ~60fps
+      lastUpdateTimeRef.current = now;
 
-    raycaster.setFromCamera(pointer, camera);
+      // Calculate intersection with drag plane
+      const pointer = new THREE.Vector2(
+        (e.clientX / gl.domElement.clientWidth) * 2 - 1,
+        -(e.clientY / gl.domElement.clientHeight) * 2 + 1
+      );
 
-    // Update drag plane to be perpendicular to camera
-    const cameraDirection = new THREE.Vector3();
-    camera.getWorldDirection(cameraDirection);
-    dragPlaneRef.current.setFromNormalAndCoplanarPoint(
-      cameraDirection,
-      new THREE.Vector3(0, 0, 0)
-    );
+      raycaster.setFromCamera(pointer, camera);
 
-    if (
-      raycaster.ray.intersectPlane(dragPlaneRef.current, dragPointRef.current)
-    ) {
-      updateSystemPosition(draggingSystemId, [
-        dragPointRef.current.x,
-        dragPointRef.current.y,
-        dragPointRef.current.z,
-      ]);
-    }
-  };
+      // Update drag plane to be perpendicular to camera
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+      dragPlaneRef.current.setFromNormalAndCoplanarPoint(
+        cameraDirection,
+        new THREE.Vector3(0, 0, 0)
+      );
 
-  const handlePointerUp = () => {
+      if (
+        raycaster.ray.intersectPlane(dragPlaneRef.current, dragPointRef.current)
+      ) {
+        updateSystemPosition(draggingSystemId, [
+          dragPointRef.current.x,
+          dragPointRef.current.y,
+          dragPointRef.current.z,
+        ]);
+      }
+    },
+    [draggingSystemId, camera, raycaster, gl, updateSystemPosition]
+  );
+
+  const handlePointerUp = useCallback(() => {
     setDraggingSystemId(null);
 
     // Reset cursor
@@ -127,7 +126,12 @@ const ConstellationView: React.FC = () => {
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = true;
     }
-  };
+  }, []);
+
+  // Animate ring rotation
+  useFrame((state, delta) => {
+    ringRotationRef.current += delta * 2; // Rotate at 2 radians per second
+  });
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
   const canExplore = currentSystemId && canAddConnection(currentSystemId);
@@ -150,9 +154,11 @@ const ConstellationView: React.FC = () => {
       <group
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerMissed={() => {
-          // Clear planet selection when clicking on empty space
-          setSelectedPlanet(null);
+        onPointerMissed={(e) => {
+          // Only clear selection if we're not dragging and clicked on empty space
+          if (!draggingSystemId) {
+            setSelectedPlanet(null);
+          }
         }}
       >
         {/* Solar Systems */}
@@ -170,10 +176,6 @@ const ConstellationView: React.FC = () => {
                 e.stopPropagation();
                 handleSystemClick(system.id);
               }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                handleSystemDoubleClick(system.id);
-              }}
               onPointerDown={(e) => handlePointerDown(e, system.id)}
               onPointerEnter={(e) => {
                 if (!draggingSystemId) {
@@ -187,29 +189,74 @@ const ConstellationView: React.FC = () => {
               }}
             >
               {/* System node */}
-              <Sphere args={[isDragging ? 0.3 : 0.2, 16, 16]}>
+              <Sphere
+                args={[isDragging ? 0.3 : isSelected ? 0.25 : 0.2, 16, 16]}
+              >
                 <meshBasicMaterial color={starColor} />
               </Sphere>
 
               {/* Inner glow */}
-              <Sphere args={[isDragging ? 0.4 : 0.26, 16, 16]}>
+              <Sphere
+                args={[isDragging ? 0.4 : isSelected ? 0.35 : 0.26, 16, 16]}
+              >
                 <meshBasicMaterial
                   color={starColor}
                   transparent
-                  opacity={isDragging ? 0.8 : isSelected ? 0.6 : 0.4}
+                  opacity={isDragging ? 0.8 : isSelected ? 0.7 : 0.4}
                   blending={THREE.AdditiveBlending}
                 />
               </Sphere>
 
               {/* Outer glow */}
-              <Sphere args={[isDragging ? 0.6 : 0.4, 16, 16]}>
+              <Sphere
+                args={[isDragging ? 0.6 : isSelected ? 0.5 : 0.4, 16, 16]}
+              >
                 <meshBasicMaterial
                   color={starColor}
                   transparent
-                  opacity={isDragging ? 0.5 : isSelected ? 0.35 : 0.2}
+                  opacity={isDragging ? 0.5 : isSelected ? 0.4 : 0.2}
                   blending={THREE.AdditiveBlending}
                 />
               </Sphere>
+
+              {/* Current system indicator - animated rotating 3D torus rings */}
+              {isSelected && (
+                <>
+                  {/* Ring 1 - horizontal */}
+                  <Torus
+                    args={[0.55, 0.05, 8, 32]}
+                    rotation={[Math.PI / 2, ringRotationRef.current, 0]}
+                  >
+                    <meshBasicMaterial
+                      color="#ffff00"
+                      transparent
+                      opacity={0.8}
+                    />
+                  </Torus>
+                  {/* Ring 2 - vertical */}
+                  <Torus
+                    args={[0.55, 0.05, 8, 32]}
+                    rotation={[0, ringRotationRef.current, Math.PI / 2]}
+                  >
+                    <meshBasicMaterial
+                      color="#ffff00"
+                      transparent
+                      opacity={0.8}
+                    />
+                  </Torus>
+                  {/* Ring 3 - diagonal */}
+                  <Torus
+                    args={[0.55, 0.05, 8, 32]}
+                    rotation={[ringRotationRef.current, Math.PI / 4, 0]}
+                  >
+                    <meshBasicMaterial
+                      color="#ffff00"
+                      transparent
+                      opacity={0.8}
+                    />
+                  </Torus>
+                </>
+              )}
 
               {/* Hover/selection indicator ring */}
               {(isSelected || isHovered || isDragging) && (
@@ -227,34 +274,6 @@ const ConstellationView: React.FC = () => {
                     opacity={0.8}
                   />
                 </mesh>
-              )}
-
-              {/* System label */}
-              {(isHovered || isSelected || isDragging) && (
-                <Html position={[0, 0.6, 0]} center>
-                  <div
-                    style={{
-                      background: "rgba(0, 0, 0, 0.8)",
-                      color: "white",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      whiteSpace: "nowrap",
-                      pointerEvents: "none",
-                      border: `1px solid ${starColor}`,
-                    }}
-                  >
-                    <div style={{ fontWeight: "bold" }}>{system.name}</div>
-                    <div style={{ fontSize: "10px", color: "#aaa" }}>
-                      {system.star.name}
-                    </div>
-                    {system.colonized && (
-                      <div style={{ fontSize: "10px", color: "#00ff00" }}>
-                        Colonized
-                      </div>
-                    )}
-                  </div>
-                </Html>
               )}
             </group>
           );
@@ -290,6 +309,7 @@ const ConstellationView: React.FC = () => {
             bottom: "20px",
             right: "20px",
             zIndex: 10,
+            pointerEvents: draggingSystemId ? "none" : "auto",
           }}
         >
           <button

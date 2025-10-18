@@ -74,7 +74,7 @@ const HUD: React.FC = () => {
   return (
     <>
       {/* Top Right - Game Controls */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-50">
         <div className="glass-panel p-4 space-y-3">
           <div className="text-sm text-white/70">
             <div className="flex items-center space-x-3">

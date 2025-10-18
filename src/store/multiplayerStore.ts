@@ -23,7 +23,7 @@ export const useMultiplayerStore = create<MultiplayerStore>((set, get) => ({
   currentRoom: null,
   playerName: "",
   players: [],
-  showConnectionDialog: true,
+  showConnectionDialog: false,
 
   setConnected: (connected) => set({ isConnected: connected }),
   setCurrentRoom: (roomId) => set({ currentRoom: roomId }),

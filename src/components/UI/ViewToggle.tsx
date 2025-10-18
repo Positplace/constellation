@@ -39,7 +39,7 @@ const ViewToggle: React.FC = () => {
   ];
 
   return (
-    <div className="absolute top-4 left-4 z-10">
+    <div className="absolute top-4 left-4 z-50">
       <div className="glass-panel p-2 flex gap-2">
         {views.map((view) => (
           <button

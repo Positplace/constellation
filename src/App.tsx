@@ -54,8 +54,6 @@ function App() {
     }
   };
 
-  const dialogVisible = showConnectionDialog && !isConnected;
-
   return (
     <div className="w-full h-full relative space-gradient">
       <Canvas
@@ -63,13 +61,18 @@ function App() {
         shadows
         style={{
           background: "transparent",
-          pointerEvents: dialogVisible ? "none" : "auto",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: 1,
         }}
       >
         <Suspense fallback={null}>{renderScene()}</Suspense>
       </Canvas>
 
-      <div style={{ pointerEvents: dialogVisible ? "none" : "auto" }}>
+      <div style={{ position: "relative", zIndex: 10, pointerEvents: "auto" }}>
         <ViewToggle />
         <HUD />
       </div>
