@@ -2,18 +2,10 @@ import React from "react";
 import { useGameStore } from "../../store/gameStore";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
 import { useSocket } from "../../hooks/useSocket";
-import PlanetLayerControls from "../Globe/PlanetLayerControls";
 
 const HUD: React.FC = () => {
-  const {
-    isPlaying,
-    gameTime,
-    selectedCountry,
-    togglePlayPause,
-    layers,
-    toggleLayer,
-  } = useGameStore();
-  const { players, isConnected } = useMultiplayerStore();
+  const { isPlaying, gameTime, togglePlayPause } = useGameStore();
+  const { players, isConnected, currentRoom } = useMultiplayerStore();
   const { togglePlayPauseSocket } = useSocket();
 
   const formatTime = (seconds: number) => {
@@ -30,10 +22,6 @@ const HUD: React.FC = () => {
     if (isConnected) {
       togglePlayPauseSocket();
     }
-  };
-
-  const handleToggleLayer = (layer: keyof typeof layers) => {
-    toggleLayer(layer);
   };
 
   return (
@@ -56,6 +44,11 @@ const HUD: React.FC = () => {
               <div className="font-mono text-white">{formatTime(gameTime)}</div>
             </div>
             <div>Players: {players.length}</div>
+            {currentRoom && (
+              <div className="text-xs">
+                Room: <span className="font-mono">{currentRoom}</span>
+              </div>
+            )}
             <div
               className={`text-xs ${
                 isConnected ? "text-green-400" : "text-red-400"
@@ -64,26 +57,7 @@ const HUD: React.FC = () => {
               {isConnected ? "Connected" : "Disconnected"}
             </div>
           </div>
-
-          {selectedCountry && (
-            <div className="border-t border-white/20 pt-3">
-              <div className="text-xs text-white/70">Selected:</div>
-              <div className="text-sm font-medium text-white">
-                {selectedCountry.name}
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-
-      {/* Bottom Right - Planet Layer Controls */}
-      <div className="absolute bottom-4 right-4 z-10" style={{ backgroundColor: 'rgba(0,255,0,0.3)' }}>
-        <PlanetLayerControls
-          onToggleContinents={(enabled) => handleToggleLayer("continents")}
-          onToggleCities={(enabled) => handleToggleLayer("cities")}
-          onToggleAtmosphere={(enabled) => handleToggleLayer("atmosphere")}
-          onToggleClouds={(enabled) => handleToggleLayer("clouds")}
-        />
       </div>
     </>
   );

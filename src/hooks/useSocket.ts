@@ -5,13 +5,7 @@ import { useMultiplayerStore } from "../store/multiplayerStore";
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
-  const {
-    setSelectedCountry,
-    updateCountry,
-    setActiveView,
-    togglePlayPause,
-    updateGameTime,
-  } = useGameStore();
+  const { setActiveView, togglePlayPause, updateGameTime } = useGameStore();
   const { setConnected, setCurrentRoom, addPlayer, removePlayer } =
     useMultiplayerStore();
 
@@ -37,6 +31,12 @@ export const useSocket = () => {
       console.log("Joined room:", data.roomId);
       setCurrentRoom(data.roomId);
       // Update game state with server data
+      if (data.gameState && data.gameState.players) {
+        // Add all players from the server state
+        data.gameState.players.forEach((player: any) => {
+          addPlayer(player);
+        });
+      }
     });
 
     socket.on("player-joined", (data) => {
@@ -47,16 +47,6 @@ export const useSocket = () => {
     socket.on("player-left", (data) => {
       console.log("Player left:", data.playerId);
       removePlayer(data.playerId);
-    });
-
-    socket.on("country-selected", (data) => {
-      console.log("Country selected by player:", data.playerId, data.countryId);
-      // Update UI to show other player's selection
-    });
-
-    socket.on("country-colonized", (data) => {
-      console.log("Country colonized:", data.countryId, data.playerId);
-      updateCountry(data.countryId, { controlledBy: data.playerId });
     });
 
     socket.on("view-changed", (data) => {
@@ -88,8 +78,6 @@ export const useSocket = () => {
       socket.disconnect();
     };
   }, [
-    setSelectedCountry,
-    updateCountry,
     setActiveView,
     togglePlayPause,
     updateGameTime,
@@ -105,19 +93,7 @@ export const useSocket = () => {
     }
   };
 
-  const selectCountry = (countryId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("select-country", { countryId });
-    }
-  };
-
-  const colonizeCountry = (countryId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("colonize-country", { countryId });
-    }
-  };
-
-  const changeView = (view: "earth" | "solar" | "constellation") => {
+  const changeView = (view: "solar" | "constellation") => {
     if (socketRef.current) {
       socketRef.current.emit("change-view", { view });
     }
@@ -149,13 +125,10 @@ export const useSocket = () => {
 
   return {
     joinRoom,
-    selectCountry,
-    colonizeCountry,
     changeView,
     constructTunnel,
     nextTurn,
     togglePlayPauseSocket,
     updateGameTimeSocket,
-    isConnected: socketRef.current?.connected || false,
   };
 };

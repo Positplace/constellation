@@ -7,9 +7,12 @@ const ConnectionDialog: React.FC = () => {
   const [roomId, setRoomId] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const { joinRoom, isConnected } = useSocket();
-  const { setPlayerName: setStorePlayerName, setCurrentRoom } =
-    useMultiplayerStore();
+  const { joinRoom } = useSocket();
+  const {
+    isConnected,
+    setPlayerName: setStorePlayerName,
+    setCurrentRoom,
+  } = useMultiplayerStore();
 
   const handleConnect = async () => {
     if (!playerName.trim()) return;
@@ -26,6 +29,7 @@ const ConnectionDialog: React.FC = () => {
     }, 1000);
   };
 
+  // Hide the dialog if we're connected and in a room
   if (isConnected) return null;
 
   return (

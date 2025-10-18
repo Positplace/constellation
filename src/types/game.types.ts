@@ -1,23 +1,7 @@
-export interface Country {
-  id: string;
-  name: string;
-  code: string; // ISO code
-  population: number;
-  gdp: number;
-  techLevel: number;
-  researchOutput: number;
-  latitude: number;
-  longitude: number;
-  continent: string;
-  controlledBy?: string; // player ID
-  coordinates?: [number, number][]; // GeoJSON coordinates
-}
-
 export interface Player {
   id: string;
   name: string;
   color: string;
-  countries: string[]; // country IDs
   researchPoints: number;
   tunnelCapacity: number;
 }
@@ -53,7 +37,6 @@ export interface Tunnel {
 
 export interface GameState {
   players: Player[];
-  countries: Map<string, Country>;
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
   currentTurn: number;

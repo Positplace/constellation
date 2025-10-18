@@ -1,11 +1,5 @@
 import { Socket } from "socket.io";
-import {
-  GameState,
-  Player,
-  Country,
-  SolarSystem,
-  Tunnel,
-} from "../types/game.types";
+import { GameState, Player, SolarSystem, Tunnel } from "../types/game.types";
 
 export class GameRoom {
   public id: string;
@@ -22,7 +16,6 @@ export class GameRoom {
   private initializeGameState(): GameState {
     return {
       players: [],
-      countries: new Map(),
       solarSystems: [],
       tunnels: [],
       currentTurn: 1,
@@ -41,7 +34,6 @@ export class GameRoom {
       id: socket.id,
       name: playerName,
       color: this.generatePlayerColor(),
-      countries: [],
       researchPoints: 100,
       tunnelCapacity: 1,
     };
@@ -55,13 +47,6 @@ export class GameRoom {
   removePlayer(socketId: string): void {
     this.players.delete(socketId);
     this.gameState.players = Array.from(this.players.values());
-  }
-
-  updateCountry(countryId: string, updates: Partial<Country>): void {
-    const existing = this.gameState.countries.get(countryId);
-    if (existing) {
-      this.gameState.countries.set(countryId, { ...existing, ...updates });
-    }
   }
 
   addSolarSystem(system: SolarSystem): void {

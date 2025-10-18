@@ -31,35 +31,6 @@ export function setupSocketHandlers(
     }
   });
 
-  // Handle country selection
-  socket.on("select-country", (data: { countryId: string }) => {
-    const room = getPlayerRoom(socket, gameRooms);
-    if (room) {
-      socket.to(room.id).emit("country-selected", {
-        countryId: data.countryId,
-        playerId: socket.id,
-      });
-    }
-  });
-
-  // Handle country colonization
-  socket.on("colonize-country", (data: { countryId: string }) => {
-    const room = getPlayerRoom(socket, gameRooms);
-    if (room) {
-      const player = room.players.get(socket.id);
-      if (player) {
-        room.updateCountry(data.countryId, { controlledBy: socket.id });
-        player.countries.push(data.countryId);
-        room.gameState.players = Array.from(room.players.values());
-
-        socket.to(room.id).emit("country-colonized", {
-          countryId: data.countryId,
-          playerId: socket.id,
-        });
-      }
-    }
-  });
-
   // Handle view changes
   socket.on("change-view", (data: { view: "solar" | "constellation" }) => {
     const room = getPlayerRoom(socket, gameRooms);

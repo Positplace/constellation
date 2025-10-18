@@ -5,7 +5,6 @@ import SolarSystemView from "./components/SolarSystem/SolarSystemView";
 import ConstellationView from "./components/Constellation/ConstellationView";
 import ViewToggle from "./components/UI/ViewToggle";
 import HUD from "./components/UI/HUD";
-import CountryPanel from "./components/UI/CountryPanel";
 import ConnectionDialog from "./components/UI/ConnectionDialog";
 import { useGameStore } from "./store/gameStore";
 import { useMultiplayerStore } from "./store/multiplayerStore";
@@ -13,7 +12,6 @@ import { useGameLoop } from "./hooks/useGameLoop";
 
 function App() {
   const { activeView, togglePlayPause } = useGameStore();
-  const { isConnected } = useMultiplayerStore();
 
   // Start the game loop
   useGameLoop();
@@ -61,7 +59,6 @@ function App() {
 
       <ViewToggle />
       <HUD />
-      {isConnected && <CountryPanel />}
       <ConnectionDialog />
     </div>
   );
