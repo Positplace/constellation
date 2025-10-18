@@ -46,6 +46,23 @@ const SolarSystemView: React.FC = () => {
     }
   }, []);
 
+  // Listen for reset solar view event (from clicking active System tab)
+  useEffect(() => {
+    const handleReset = () => {
+      setSelectedId(null);
+      setSelectedPos(new THREE.Vector3(0, 0, 0));
+      if (controlsRef.current) {
+        const controls = controlsRef.current;
+        const cam = controls.object as THREE.PerspectiveCamera;
+        controls.target.set(0, 0, 0);
+        cam.position.set(0, 12, 0);
+        controls.update();
+      }
+    };
+    window.addEventListener("resetSolarView", handleReset);
+    return () => window.removeEventListener("resetSolarView", handleReset);
+  }, []);
+
   // Rotate Sun slowly
   useFrame((state, delta) => {
     if (sunRef.current && isPlaying) {
@@ -214,7 +231,15 @@ const SolarSystemView: React.FC = () => {
           (SUN_RADIUS_UNITS * 0.7) / Math.max(0.001, g.planet.radius / 6371)
         );
         const radiusUnits = (g.planet.radius / 6371) * renderScale;
-        const focusDistance = Math.max(0.35, Math.min(4, radiusUnits * 1.3));
+        // Calculate safe minimum distance: planet + atmosphere + safe margin
+        // Camera FOV is typically 60deg, so visible height at distance d is ~2*d*tan(30deg) = d*1.15
+        // We want planet (with atmosphere at 1.06x) to take ~60% of screen height
+        const atmosphereRadius = radiusUnits * 1.06;
+        const minSafeDistance = (atmosphereRadius * 2) / 0.6; // planet takes 60% of view
+        const focusDistance = Math.max(
+          minSafeDistance,
+          Math.min(4, radiusUnits * 2.5)
+        );
 
         return (
           <ProceduralPlanetOrbit

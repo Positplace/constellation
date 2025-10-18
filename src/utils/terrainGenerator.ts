@@ -86,19 +86,87 @@ export function generateContinents(
     const humidity = Math.max(0, Math.min(1, 0.5 + jitter(rng, 0.3)));
     const precipitation = Math.max(0, Math.min(1, 0.5 + jitter(rng, 0.3)));
 
-    // Shape control points: generate a ring of points around the center
+    // Choose shape type randomly for variety
+    const shapeTypes: Array<
+      "irregular" | "circular" | "elongated" | "fragmented"
+    > = ["irregular", "circular", "elongated", "fragmented"];
+    const shapeType = choose(rng, shapeTypes);
+
+    // Shape control points: vary based on shape type
     const controlPoints: Array<{ lat: number; lng: number; weight: number }> =
       [];
-    const numPoints = 8 + Math.floor(rng() * 6); // 8-13
-    for (let p = 0; p < numPoints; p++) {
-      const angle = (p / numPoints) * Math.PI * 2;
-      const radiusDeg = remap(size, 0, 1, 5, 25) + jitter(rng, 3);
-      const cpLat =
-        lat + Math.cos(angle) * radiusDeg * (1 - Math.abs(lat) / 120);
-      const cpLng =
-        lng + (Math.sin(angle) * radiusDeg) / Math.cos((lat * Math.PI) / 180);
-      const weight = 0.7 + rng() * 0.6; // 0.7 - 1.3
-      controlPoints.push({ lat: cpLat, lng: cpLng, weight });
+
+    if (shapeType === "circular") {
+      // More regular, rounded continent
+      const numPoints = 12 + Math.floor(rng() * 4); // 12-15
+      for (let p = 0; p < numPoints; p++) {
+        const angle = (p / numPoints) * Math.PI * 2;
+        const radiusDeg = remap(size, 0, 1, 6, 22) + jitter(rng, 1.5);
+        const cpLat =
+          lat + Math.cos(angle) * radiusDeg * (1 - Math.abs(lat) / 120);
+        const cpLng =
+          lng + (Math.sin(angle) * radiusDeg) / Math.cos((lat * Math.PI) / 180);
+        const weight = 0.85 + rng() * 0.3; // more uniform
+        controlPoints.push({ lat: cpLat, lng: cpLng, weight });
+      }
+    } else if (shapeType === "elongated") {
+      // Stretched in one direction like South America or Italy
+      const numPoints = 10 + Math.floor(rng() * 6); // 10-15
+      const stretchAngle = rng() * Math.PI * 2;
+      const stretchFactor = 1.5 + rng() * 1.5; // 1.5 - 3x
+      for (let p = 0; p < numPoints; p++) {
+        const angle = (p / numPoints) * Math.PI * 2;
+        const baseRadius = remap(size, 0, 1, 5, 20);
+        // Stretch along one axis
+        const alongStretch = Math.cos(angle - stretchAngle);
+        const radiusDeg =
+          baseRadius * (1 + alongStretch * stretchFactor) + jitter(rng, 2);
+        const cpLat =
+          lat + Math.cos(angle) * radiusDeg * (1 - Math.abs(lat) / 120);
+        const cpLng =
+          lng + (Math.sin(angle) * radiusDeg) / Math.cos((lat * Math.PI) / 180);
+        const weight = 0.6 + rng() * 0.8;
+        controlPoints.push({ lat: cpLat, lng: cpLng, weight });
+      }
+    } else if (shapeType === "fragmented") {
+      // Archipelago-like with multiple lobes
+      const numLobes = 2 + Math.floor(rng() * 3); // 2-4 lobes
+      const baseNumPoints = 6 + Math.floor(rng() * 4); // 6-9 per lobe
+      for (let lobe = 0; lobe < numLobes; lobe++) {
+        const lobeAngle = (lobe / numLobes) * Math.PI * 2 + jitter(rng, 0.5);
+        const lobeDistance = remap(size, 0, 1, 8, 18) * (0.7 + rng() * 0.6);
+        const lobeLat =
+          lat + Math.cos(lobeAngle) * lobeDistance * (1 - Math.abs(lat) / 120);
+        const lobeLng =
+          lng +
+          (Math.sin(lobeAngle) * lobeDistance) /
+            Math.cos((lat * Math.PI) / 180);
+
+        for (let p = 0; p < baseNumPoints; p++) {
+          const angle = (p / baseNumPoints) * Math.PI * 2;
+          const radiusDeg = remap(size, 0, 1, 3, 10) + jitter(rng, 2);
+          const cpLat =
+            lobeLat + Math.cos(angle) * radiusDeg * (1 - Math.abs(lat) / 120);
+          const cpLng =
+            lobeLng +
+            (Math.sin(angle) * radiusDeg) / Math.cos((lat * Math.PI) / 180);
+          const weight = 0.5 + rng() * 0.8;
+          controlPoints.push({ lat: cpLat, lng: cpLng, weight });
+        }
+      }
+    } else {
+      // irregular - highly varied, jagged coastlines
+      const numPoints = 10 + Math.floor(rng() * 12); // 10-21
+      for (let p = 0; p < numPoints; p++) {
+        const angle = (p / numPoints) * Math.PI * 2 + jitter(rng, 0.3);
+        const radiusDeg = remap(size, 0, 1, 4, 28) + jitter(rng, 6);
+        const cpLat =
+          lat + Math.cos(angle) * radiusDeg * (1 - Math.abs(lat) / 120);
+        const cpLng =
+          lng + (Math.sin(angle) * radiusDeg) / Math.cos((lat * Math.PI) / 180);
+        const weight = 0.4 + rng() * 1.2; // highly varied
+        controlPoints.push({ lat: cpLat, lng: cpLng, weight });
+      }
     }
 
     const elevationBase = elevationNoise(lat, lng, noise);
@@ -111,7 +179,7 @@ export function generateContinents(
         centerLat: lat,
         centerLng: lng,
         size,
-        shapeType: "irregular",
+        shapeType,
         controlPoints,
       },
       terrain: {

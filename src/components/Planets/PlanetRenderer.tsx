@@ -44,8 +44,6 @@ const PlanetRenderer: React.FC<PlanetRendererProps> = ({
           map={map}
           displacementMap={displacementMap}
           displacementScale={0.015}
-          transparent
-          opacity={0.95}
           shininess={10}
           specular={new THREE.Color("#000000")}
         />

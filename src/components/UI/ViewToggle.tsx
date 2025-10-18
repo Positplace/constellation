@@ -20,6 +20,10 @@ const ViewToggle: React.FC = () => {
           <button
             key={view.key}
             onClick={() => {
+              // If clicking the active System tab, emit reset event
+              if (view.key === "solar" && activeView === "solar") {
+                window.dispatchEvent(new CustomEvent("resetSolarView"));
+              }
               setActiveView(view.key);
               changeView(view.key);
             }}
