@@ -5,6 +5,7 @@ import * as THREE from "three";
 import Planet from "../Planets/Planet";
 import TunnelGate from "./TunnelGate";
 import TravelAnimation from "./TravelAnimation";
+import Starfield from "../Background/Starfield";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
 import { useSocket } from "../../hooks/useSocket";
@@ -420,6 +421,9 @@ const SolarSystemView: React.FC = () => {
     const controls = controlsRef.current;
     const cam = controls.object as THREE.PerspectiveCamera;
 
+    // Clear planet selection when traveling
+    setSelectedPlanet(null);
+
     // Start travel animation with approach phase
     setTravelState({
       active: true,
@@ -511,6 +515,9 @@ const SolarSystemView: React.FC = () => {
 
   return (
     <group onPointerMissed={handleResetView}>
+      {/* Starfield background that adapts to star type */}
+      <Starfield starType={currentSystem.star.type} />
+
       <OrbitControls
         ref={controlsRef}
         enablePan={true}
@@ -521,7 +528,7 @@ const SolarSystemView: React.FC = () => {
         autoRotate={false}
       />
 
-      {/* Sun */}
+      {/* Sun with enhanced glow layers */}
       <Sphere
         ref={sunRef}
         args={[SUN_RADIUS_UNITS, 32, 32]}
@@ -534,16 +541,72 @@ const SolarSystemView: React.FC = () => {
         <meshBasicMaterial color={SUN_COLOR} />
       </Sphere>
 
-      {/* Sun glow effect */}
+      {/* Inner glow - bright */}
       <Sphere
-        args={[SUN_RADIUS_UNITS * 1.2, 32, 32]}
+        args={[SUN_RADIUS_UNITS * 1.15, 32, 32]}
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
           handleResetView();
         }}
       >
-        <meshBasicMaterial color={SUN_GLOW_COLOR} transparent opacity={0.3} />
+        <meshBasicMaterial
+          color={SUN_COLOR}
+          transparent
+          opacity={0.6}
+          blending={THREE.AdditiveBlending}
+        />
+      </Sphere>
+
+      {/* Middle glow */}
+      <Sphere
+        args={[SUN_RADIUS_UNITS * 1.4, 32, 32]}
+        position={[0, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleResetView();
+        }}
+      >
+        <meshBasicMaterial
+          color={SUN_GLOW_COLOR}
+          transparent
+          opacity={0.4}
+          blending={THREE.AdditiveBlending}
+        />
+      </Sphere>
+
+      {/* Outer glow - soft halo */}
+      <Sphere
+        args={[SUN_RADIUS_UNITS * 1.8, 32, 32]}
+        position={[0, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleResetView();
+        }}
+      >
+        <meshBasicMaterial
+          color={SUN_GLOW_COLOR}
+          transparent
+          opacity={0.2}
+          blending={THREE.AdditiveBlending}
+        />
+      </Sphere>
+
+      {/* Far glow - atmospheric effect */}
+      <Sphere
+        args={[SUN_RADIUS_UNITS * 2.5, 32, 32]}
+        position={[0, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleResetView();
+        }}
+      >
+        <meshBasicMaterial
+          color={SUN_GLOW_COLOR}
+          transparent
+          opacity={0.08}
+          blending={THREE.AdditiveBlending}
+        />
       </Sphere>
 
       {/* Procedurally generated planets */}
@@ -700,12 +763,20 @@ const SolarSystemView: React.FC = () => {
         </div>
       </Html>
 
-      {/* Lighting */}
-      <ambientLight intensity={0.2} />
+      {/* Lighting - ambient light tinted by star color for atmosphere */}
+      <ambientLight intensity={0.5} color={SUN_COLOR} />
       <pointLight
         position={[0, 0, 0]}
-        intensity={currentSystem.star.luminosity * 2}
+        intensity={currentSystem.star.luminosity * 12}
+        distance={0}
+        decay={1.2}
         color={SUN_COLOR}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-near={0.1}
+        shadow-camera-far={100}
+        shadow-radius={2}
       />
     </group>
   );

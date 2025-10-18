@@ -7,8 +7,6 @@ interface PlanetMeshProps {
   planet: PlanetData;
   renderScale?: number;
   onClick?: () => void;
-  onPointerOver?: () => void;
-  onPointerOut?: () => void;
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -21,8 +19,6 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
   planet,
   renderScale = 0.16,
   onClick,
-  onPointerOver,
-  onPointerOut,
 }) => {
   // Generate textures
   const { map, displacementMap } = useMemo(
@@ -36,14 +32,29 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
   const isIcyPlanet =
     planet.type === "ice_giant" || planet.type === "ice_world";
 
+  // Determine glow color based on atmosphere or planet type
+  const glowColor = planet.atmosphere.present
+    ? planet.atmosphere.color
+    : planet.appearance.baseColor || "#4a9eff";
+
+  // Gas giants and planets with atmospheres get stronger glow
+  const hasStrongGlow =
+    planet.type === "gas_giant" ||
+    planet.type === "ice_giant" ||
+    planet.atmosphere.present;
+
+  // Earth-like and ocean world planets get slightly stronger glow for better visibility
+  const isEarthLike = planet.type === "earth_like";
+  const isOceanWorld = planet.type === "ocean_world";
+  const isWaterPlanet = isEarthLike || isOceanWorld;
+  const glowIntensity = hasStrongGlow ? (isWaterPlanet ? 0.95 : 1.0) : 0.6;
+
   return (
     <group
       onClick={(e) => {
         e.stopPropagation();
         onClick?.();
       }}
-      onPointerOver={onPointerOver}
-      onPointerOut={onPointerOut}
     >
       {/* Main planet sphere */}
       <mesh castShadow receiveShadow>
@@ -55,6 +66,16 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
           shininess={isIcyPlanet ? 100 : 10}
           specular={new THREE.Color(isIcyPlanet ? "#ffffff" : "#000000")}
           reflectivity={isIcyPlanet ? 0.95 : 0}
+          emissive={
+            planet.type === "earth_like" || planet.type === "ocean_world"
+              ? new THREE.Color("#0d2538")
+              : new THREE.Color(planet.appearance.baseColor || "#333333")
+          }
+          emissiveIntensity={
+            planet.type === "earth_like" || planet.type === "ocean_world"
+              ? 0.25
+              : 0.1
+          }
         />
       </mesh>
 
@@ -67,6 +88,44 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
             transparent
             opacity={planet.atmosphere.opacity}
             side={THREE.BackSide}
+          />
+        </mesh>
+      )}
+
+      {/* Inner glow - subtle atmospheric rim */}
+      <mesh>
+        <sphereGeometry args={[radiusUnits * 1.08, 32, 32]} />
+        <meshBasicMaterial
+          color={glowColor}
+          transparent
+          opacity={0.25 * glowIntensity}
+          side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Outer glow - soft halo */}
+      <mesh>
+        <sphereGeometry args={[radiusUnits * 1.15, 32, 32]} />
+        <meshBasicMaterial
+          color={glowColor}
+          transparent
+          opacity={0.15 * glowIntensity}
+          side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Extended glow for gas giants */}
+      {hasStrongGlow && (
+        <mesh>
+          <sphereGeometry args={[radiusUnits * 1.25, 32, 32]} />
+          <meshBasicMaterial
+            color={glowColor}
+            transparent
+            opacity={0.08}
+            side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
           />
         </mesh>
       )}

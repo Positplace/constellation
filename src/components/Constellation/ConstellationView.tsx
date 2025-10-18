@@ -3,6 +3,7 @@ import { useThree } from "@react-three/fiber";
 import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import TunnelConnection from "./TunnelConnection";
+import Starfield from "../Background/Starfield";
 import { useGameStore } from "../../store/gameStore";
 import { useSocket } from "../../hooks/useSocket";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
@@ -17,6 +18,7 @@ const ConstellationView: React.FC = () => {
     generateAndAddSystem,
     canAddConnection,
     updateSystemPosition,
+    setSelectedPlanet,
   } = useGameStore();
   const { emitSystemGenerated, emitCurrentSystemChanged, changeView } =
     useSocket();
@@ -51,6 +53,17 @@ const ConstellationView: React.FC = () => {
 
   const handleSystemClick = (systemId: string) => {
     if (draggingSystemId) return; // Don't select if we're dragging
+    setCurrentSystem(systemId);
+    // Clear planet selection when clicking a star
+    setSelectedPlanet(null);
+    // Emit to server if connected
+    if (isConnected) {
+      emitCurrentSystemChanged(systemId);
+    }
+  };
+
+  const handleSystemDoubleClick = (systemId: string) => {
+    if (draggingSystemId) return; // Don't open if we're dragging
     setCurrentSystem(systemId);
     setActiveView("solar");
     // Emit to server if connected
@@ -121,6 +134,9 @@ const ConstellationView: React.FC = () => {
 
   return (
     <>
+      {/* Starfield background - uses current system's star type if available */}
+      <Starfield starType={currentSystem?.star.type || "yellow_star"} />
+
       <OrbitControls
         ref={orbitControlsRef}
         enablePan={true}
@@ -131,7 +147,14 @@ const ConstellationView: React.FC = () => {
         autoRotate={false}
       />
 
-      <group onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
+      <group
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerMissed={() => {
+          // Clear planet selection when clicking on empty space
+          setSelectedPlanet(null);
+        }}
+      >
         {/* Solar Systems */}
         {solarSystems.map((system) => {
           const isSelected = system.id === currentSystemId;
@@ -147,6 +170,10 @@ const ConstellationView: React.FC = () => {
                 e.stopPropagation();
                 handleSystemClick(system.id);
               }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                handleSystemDoubleClick(system.id);
+              }}
               onPointerDown={(e) => handlePointerDown(e, system.id)}
               onPointerEnter={(e) => {
                 if (!draggingSystemId) {
@@ -160,20 +187,27 @@ const ConstellationView: React.FC = () => {
               }}
             >
               {/* System node */}
-              <Sphere
-                args={[isDragging ? 0.3 : isSelected ? 0.25 : 0.2, 16, 16]}
-              >
+              <Sphere args={[isDragging ? 0.3 : 0.2, 16, 16]}>
                 <meshBasicMaterial color={starColor} />
               </Sphere>
 
-              {/* System glow */}
-              <Sphere
-                args={[isDragging ? 0.5 : isSelected ? 0.4 : 0.3, 16, 16]}
-              >
+              {/* Inner glow */}
+              <Sphere args={[isDragging ? 0.4 : 0.26, 16, 16]}>
                 <meshBasicMaterial
                   color={starColor}
                   transparent
-                  opacity={isDragging ? 0.7 : isSelected ? 0.5 : 0.3}
+                  opacity={isDragging ? 0.8 : isSelected ? 0.6 : 0.4}
+                  blending={THREE.AdditiveBlending}
+                />
+              </Sphere>
+
+              {/* Outer glow */}
+              <Sphere args={[isDragging ? 0.6 : 0.4, 16, 16]}>
+                <meshBasicMaterial
+                  color={starColor}
+                  transparent
+                  opacity={isDragging ? 0.5 : isSelected ? 0.35 : 0.2}
+                  blending={THREE.AdditiveBlending}
                 />
               </Sphere>
 
@@ -217,11 +251,6 @@ const ConstellationView: React.FC = () => {
                     {system.colonized && (
                       <div style={{ fontSize: "10px", color: "#00ff00" }}>
                         Colonized
-                      </div>
-                    )}
-                    {isDragging && (
-                      <div style={{ fontSize: "10px", color: "#ffff00" }}>
-                        Dragging...
                       </div>
                     )}
                   </div>

@@ -15,14 +15,28 @@ export function generateSurfaceTextures(planet: PlanetData): {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D context not available");
 
-  // Base ocean color
-  ctx.fillStyle = planet.appearance.baseColor || "#1e90ff";
+  // Base ocean color - force bright blue for earth-like and ocean world planets
+  const isEarthLike = planet.type === "earth_like";
+  const isOceanWorld = planet.type === "ocean_world";
+  let oceanColor = planet.appearance.baseColor || "#1e90ff";
+
+  // Override with bright colors for water-dominant planets
+  if (isEarthLike) {
+    oceanColor = "#4AA9FF";
+  } else if (isOceanWorld) {
+    oceanColor = "#3D9FE8"; // Bright tropical ocean blue
+  }
+
+  ctx.fillStyle = oceanColor;
   ctx.fillRect(0, 0, width, height);
 
   // Draw continents as soft blobs around control point centroid
   planet.surface.continents.forEach((c) => {
     // Determine color based on primary terrain
-    const terrainColor = terrainToColor(c.terrain.primary);
+    const terrainColor = terrainToColor(
+      c.terrain.primary,
+      isEarthLike || isOceanWorld
+    );
 
     // Compute centroid and approximate radius
     const centerX = ((c.shape.centerLng + 180) / 360) * width;
@@ -103,7 +117,33 @@ export function generateSurfaceTextures(planet: PlanetData): {
   return { map: worldMapTexture, displacementMap };
 }
 
-function terrainToColor(terrain: string): string {
+function terrainToColor(terrain: string, isEarthLike: boolean = false): string {
+  // Use brighter, more vibrant colors for earth-like planets
+  if (isEarthLike) {
+    switch (terrain) {
+      case "forest":
+        return "#3CB371"; // Medium sea green - much brighter
+      case "plains":
+      case "grassland":
+        return "#B4D95E"; // Bright yellow-green
+      case "desert":
+        return "#E8C99B"; // Light sandy beige
+      case "mountains":
+        return "#A89382"; // Light brown-gray
+      case "tundra":
+      case "ice":
+        return "#F0F0F0"; // Very light gray/white
+      case "jungle":
+        return "#2E8B57"; // Sea green - much brighter than dark green
+      case "volcanic":
+      case "lava":
+        return "#A52A2A"; // Lighter brown-red
+      default:
+        return "#52C672"; // Bright green
+    }
+  }
+
+  // Standard colors for other planet types
   switch (terrain) {
     case "forest":
       return "#228B22";

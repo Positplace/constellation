@@ -93,12 +93,12 @@
     },
     "appearance": {
       "baseColors": {
-        "primary": ["#1E90FF", "#4169E1", "#0000CD", "#191970"],
-        "secondary": ["#87CEEB", "#6495ED", "#4682B4", "#5F9EA0"],
-        "accent": ["#B0E0E6", "#ADD8E6", "#87CEFA", "#87CEEB"]
+        "primary": ["#4AA9FF", "#5BA3E8", "#4682B4", "#5F9EA0"],
+        "secondary": ["#87CEEB", "#6495ED", "#72C9E8", "#7DD3F0"],
+        "accent": ["#B0E0E6", "#C0E8F8", "#A8D8F0", "#95D5F2"]
       },
       "surface": {
-        "albedo": { "min": 0.05, "max": 0.2, "default": 0.1 },
+        "albedo": { "min": 0.25, "max": 0.4, "default": 0.32 },
         "roughness": { "min": 0.1, "max": 0.3, "default": 0.2 }
       }
     }
@@ -353,13 +353,13 @@
     },
     "appearance": {
       "baseColors": {
-        "primary": ["#1E90FF", "#4A90E2", "#0077BE"],
-        "secondary": ["#228B22", "#2E8B57", "#3CB371"],
-        "accent": ["#8B4513", "#A0522D", "#CD853F"]
+        "primary": ["#4AA9FF", "#5BA3E8", "#3D9FE8"],
+        "secondary": ["#2FA84E", "#40B860", "#52C672"],
+        "accent": ["#A67C52", "#B88A5C", "#C99866"]
       },
       "surface": {
-        "albedo": { "min": 0.3, "max": 0.35, "default": 0.32 },
-        "roughness": { "min": 0.5, "max": 0.6, "default": 0.55 }
+        "albedo": { "min": 0.35, "max": 0.4, "default": 0.37 },
+        "roughness": { "min": 0.45, "max": 0.55, "default": 0.5 }
       }
     }
   },

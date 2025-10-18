@@ -60,6 +60,7 @@ function App() {
     <div className="w-full h-full relative space-gradient">
       <Canvas
         camera={{ position: [0, 0, 5], fov: 60 }}
+        shadows
         style={{
           background: "transparent",
           pointerEvents: dialogVisible ? "none" : "auto",

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import * as THREE from "three";
 import { PlanetData } from "../../types/planet.types";
 import { PlanetOrbit } from "./PlanetOrbit";
@@ -37,7 +36,6 @@ export const Planet: React.FC<PlanetProps> = ({
   onSelect,
   onSelectedFrame,
 }) => {
-  const [hovered, setHovered] = useState(false);
   const isSelected = selectedId === planet.id;
 
   const handlePositionUpdate = (worldPos: THREE.Vector3) => {
@@ -78,8 +76,6 @@ export const Planet: React.FC<PlanetProps> = ({
           planet={planet}
           renderScale={renderScale}
           onClick={handleClick}
-          onPointerOver={() => setHovered(true)}
-          onPointerOut={() => setHovered(false)}
         />
       </PlanetRotation>
     </PlanetOrbit>
@@ -87,5 +83,3 @@ export const Planet: React.FC<PlanetProps> = ({
 };
 
 export default Planet;
-
-

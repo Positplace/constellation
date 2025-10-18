@@ -5,8 +5,13 @@ import { useSocket } from "../../hooks/useSocket";
 import { ViewType } from "../../types/game.types";
 
 const ViewToggle: React.FC = () => {
-  const { activeView, setActiveView, solarSystems, setCurrentSystem } =
-    useGameStore();
+  const {
+    activeView,
+    setActiveView,
+    solarSystems,
+    setCurrentSystem,
+    setSelectedPlanet,
+  } = useGameStore();
   const { changeView, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
   const [isHomeFocused, setIsHomeFocused] = React.useState(false);
@@ -61,6 +66,10 @@ const ViewToggle: React.FC = () => {
                 // Reset home focus when switching views
                 if (view.key !== "solar") {
                   setIsHomeFocused(false);
+                }
+                // Clear planet selection when switching to constellation view
+                if (view.key === "constellation") {
+                  setSelectedPlanet(null);
                 }
                 setActiveView(view.key);
                 changeView(view.key);

@@ -43,7 +43,7 @@
   }
   
   .space-gradient {
-    background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0a0a0a 100%);
+    background: radial-gradient(ellipse at bottom, #0a0a12 0%, #020206 50%, #000000 100%);
   }
 }
 
