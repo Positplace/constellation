@@ -15,6 +15,7 @@ interface ProceduralPlanetOrbitProps {
   renderScale?: number;
   onSelectedFrame?: (planetId: string, worldPos: THREE.Vector3) => void;
   showOrbit?: boolean;
+  timeScale?: number;
 }
 
 const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
@@ -28,9 +29,12 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
   renderScale,
   onSelectedFrame,
   showOrbit = true,
+  timeScale = 1,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
+  // Track accumulated orbital phase using timeScale-aware delta
+  const phaseRef = useRef(0);
 
   // Ensure an initial position even when paused so planets are visible immediately
   useEffect(() => {
@@ -43,24 +47,24 @@ const ProceduralPlanetOrbit: React.FC<ProceduralPlanetOrbitProps> = ({
 
   useFrame((state, delta) => {
     if (groupRef.current) {
-      if (!paused) {
-        const time = state.clock.getElapsedTime();
-        const x = Math.cos(time * speed + angle) * distance;
-        const z = Math.sin(time * speed + angle) * distance;
-        groupRef.current.position.set(x, 0, z);
-      }
+      // Accumulate phase using timeScale so pausing/playing is smooth
+      phaseRef.current += delta * speed * timeScale;
+      const x = Math.cos(phaseRef.current + angle) * distance;
+      const z = Math.sin(phaseRef.current + angle) * distance;
+      groupRef.current.position.set(x, 0, z);
 
-      // Apply planet self spin using axis stored by renderer when not paused
-      if (!paused) {
-        const axis: THREE.Vector3 | undefined = (
-          groupRef.current.children[0] as any
-        )?.userData?.spinAxis;
-        const spinSpeed: number | undefined = (
-          groupRef.current.children[0] as any
-        )?.userData?.spinSpeed;
-        if (axis && spinSpeed) {
-          groupRef.current.children[0].rotateOnAxis(axis, spinSpeed * delta);
-        }
+      // Apply planet self spin scaled by timeScale
+      const axis: THREE.Vector3 | undefined = (
+        groupRef.current.children[0] as any
+      )?.userData?.spinAxis;
+      const spinSpeed: number | undefined = (
+        groupRef.current.children[0] as any
+      )?.userData?.spinSpeed;
+      if (axis && spinSpeed) {
+        groupRef.current.children[0].rotateOnAxis(
+          axis,
+          spinSpeed * delta * timeScale
+        );
       }
 
       // When this planet is selected, continuously emit its world position so the camera can track it while the system keeps spinning

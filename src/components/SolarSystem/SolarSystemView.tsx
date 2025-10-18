@@ -254,6 +254,7 @@ const SolarSystemView: React.FC = () => {
             }}
             renderScale={renderScale}
             showOrbit={!selectedId}
+            timeScale={timeScale}
           />
         );
       })}
