@@ -8,6 +8,7 @@ import {
   getSimpleRenderScale,
   getVisibilityScale,
   debugAsteroidSize,
+  SIMPLE_ASTEROID_SIZES,
 } from "../../utils/asteroidSizingSimple";
 
 interface AsteroidMeshProps {
@@ -35,30 +36,35 @@ function createAsteroidGeometry(
   //   debugAsteroidSize(asteroid.size, renderScale);
   // }
 
-  // Start with sphere geometry (simpler and more reliable)
+  // Start with sphere geometry - vary subdivision for different asteroids
+  // Larger asteroids get more detail
+  const sizeRatio = asteroid.size / SIMPLE_ASTEROID_SIZES.MAX_SIZE;
+  const widthSegments = Math.max(6, Math.floor(6 + sizeRatio * 10)); // 6-16 segments
+  const heightSegments = Math.max(4, Math.floor(4 + sizeRatio * 8)); // 4-12 segments
+
   const geometry = new THREE.SphereGeometry(
-    radiusUnits, // Use actual calculated size, no minimum constraint
-    8,
-    6
-  ); // Low poly sphere
+    radiusUnits,
+    widthSegments,
+    heightSegments
+  );
 
   const positions = geometry.attributes.position;
   const vertices = positions.array as Float32Array;
 
   // Apply noise-based vertex displacement for irregular shape
+  // More varied noise parameters based on seed
+  const noiseVariation = (asteroid.shapeSeed % 1000) / 1000;
   const noiseConfig = {
-    octaves: 3,
-    frequency: 2.0,
+    octaves: 3 + Math.floor(noiseVariation * 3), // 3-5 octaves
+    frequency: 1.5 + noiseVariation * 2.5, // 1.5-4.0 frequency
     amplitude: 1.0,
-    lacunarity: 2.0,
-    persistence: 0.5,
+    lacunarity: 1.8 + noiseVariation * 0.6, // 1.8-2.4 lacunarity
+    persistence: 0.4 + noiseVariation * 0.3, // 0.4-0.7 persistence
     seed: asteroid.shapeSeed,
   };
 
-  // Displacement strength is relative to base radius so geometry cannot inflate
-  // beyond a small percentage of its original size regardless of scale
-  const displacementStrength =
-    (0.06 + ((asteroid.shapeSeed % 100) / 100) * 0.08) * radiusUnits; // ~6%-14% of base radius
+  // Much more varied displacement strength (10%-40% of base radius)
+  const displacementStrength = (0.1 + noiseVariation * 0.3) * radiusUnits;
 
   for (let i = 0; i < vertices.length; i += 3) {
     const x = vertices[i];
@@ -73,10 +79,10 @@ function createAsteroidGeometry(
     // Generate noise at this point
     const noise = fractalNoise2D(theta * 10, phi * 10, noiseConfig);
 
-    // Apply displacement along normal
+    // Apply displacement along normal with more variation
     const displacement = noise * displacementStrength;
-    // Move along normal but cap absolute displacement to 15% base radius
-    const maxDisp = 0.15 * radiusUnits;
+    // Cap absolute displacement but allow more variation (up to 50% of base radius)
+    const maxDisp = 0.5 * radiusUnits;
     const applied = Math.max(-maxDisp, Math.min(maxDisp, displacement));
     const nx = x / radius;
     const ny = y / radius;

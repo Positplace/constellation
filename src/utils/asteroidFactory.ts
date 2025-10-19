@@ -172,12 +172,14 @@ export function generateAsteroid(
   const material = selectMaterialType(beltType, seed);
   const resources = generateResources(material, seed);
 
-  // Size variation using SIMPLE config - extremely small asteroids
-  const size = randomRange(
-    SIMPLE_ASTEROID_SIZES.MIN_SIZE,
-    SIMPLE_ASTEROID_SIZES.MAX_SIZE,
-    seed + 10
-  );
+  // Size variation using power law distribution (more small asteroids, fewer large ones)
+  // This mimics real asteroid belt size distribution
+  const sizeRandom = randomRange(0, 1, seed + 10);
+  const powerLaw = Math.pow(sizeRandom, 2.5); // Power law exponent
+  const size =
+    SIMPLE_ASTEROID_SIZES.MIN_SIZE +
+    powerLaw *
+      (SIMPLE_ASTEROID_SIZES.MAX_SIZE - SIMPLE_ASTEROID_SIZES.MIN_SIZE);
 
   // Random orbital angle
   const angle = randomRange(0, Math.PI * 2, seed + 20);

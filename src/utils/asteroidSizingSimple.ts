@@ -6,8 +6,8 @@
 // EXTREMELY small sizes - let's start with these values
 export const SIMPLE_ASTEROID_SIZES = {
   // These are the actual asteroid sizes in Earth radii
-  MIN_SIZE: 0.000001, // ~6.4 km
-  MAX_SIZE: 0.00001, // ~64 km
+  MIN_SIZE: 0.0000005, // ~3.2 km (smaller minimum)
+  MAX_SIZE: 0.00003, // ~190 km (larger maximum for more variety)
 
   // This is the render scale - how we convert real size to 3D units
   RENDER_SCALE: 0.000000001, // 1 BILLION times smaller than planets

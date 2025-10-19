@@ -314,11 +314,11 @@
     "name": "Earth-Like World",
     "description": "A habitable world similar to Earth with oceans, continents, and atmosphere",
     "baseProperties": {
-      "radius": { "min": 1.0, "max": 1.0, "unit": "earth_radius" },
-      "mass": { "min": 1.0, "max": 1.0, "unit": "earth_mass" },
-      "gravity": { "min": 1.0, "max": 1.0, "unit": "g" },
-      "rotationSpeed": { "min": 24, "max": 24, "unit": "hours" },
-      "axialTilt": { "min": 23.5, "max": 23.5, "unit": "degrees" }
+      "radius": { "min": 0.8, "max": 1.2, "unit": "earth_radius" },
+      "mass": { "min": 0.6, "max": 1.5, "unit": "earth_mass" },
+      "gravity": { "min": 0.85, "max": 1.15, "unit": "g" },
+      "rotationSpeed": { "min": 20, "max": 28, "unit": "hours" },
+      "axialTilt": { "min": 18, "max": 28, "unit": "degrees" }
     },
     "surface": {
       "terrainCoverage": {
