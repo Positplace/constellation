@@ -72,7 +72,12 @@ export interface GameState {
 
 export type ViewType = "solar" | "constellation";
 
-export type SelectedObjectType = "sun" | "planet" | "asteroid" | "moon";
+export type SelectedObjectType =
+  | "sun"
+  | "planet"
+  | "asteroid"
+  | "moon"
+  | "spaceship";
 
 export interface SelectedObject {
   id: string;

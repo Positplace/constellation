@@ -34,6 +34,8 @@ export const useGameLoop = () => {
         const newGameTime = gameTime + deltaTime * newScale;
         updateGameTime(newGameTime);
 
+        // Removed debug logging to improve performance
+
         // Sync with server every 5 seconds
         if (currentTime - lastSyncTimeRef.current > 5000) {
           updateGameTimeSocket(newGameTime);

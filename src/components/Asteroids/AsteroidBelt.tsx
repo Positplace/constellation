@@ -130,7 +130,7 @@ export const AsteroidBelt: React.FC<AsteroidBeltProps> = ({
 
         return (
           <AsteroidMesh
-            key={asteroid.id}
+            key={`${belt.id}-${asteroid.id}`}
             asteroid={asteroid}
             renderScale={getSimpleRenderScale()} // Use SIMPLE sizing
             timeScale={timeScale}

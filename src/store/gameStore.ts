@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import * as THREE from "three";
 import {
   Player,
   SolarSystem,
@@ -11,6 +12,13 @@ import {
   generateSolarSystem,
   calculateConnectedSystemPosition,
 } from "../utils/systemFactory";
+import { SpaceshipData, ObjectType } from "../types/spaceship.types";
+import {
+  createSpaceship,
+  getObjectWorldPosition,
+  calculateFlightTime,
+  getNextSpaceshipPosition,
+} from "../utils/spaceshipUtils";
 
 const STORAGE_KEY = "constellation-game-state";
 
@@ -38,6 +46,9 @@ interface GameStore {
   selectedObject: SelectedObject | null; // Currently selected object in solar view (sun, planet, asteroid, or moon)
   showPlanetDetails: boolean; // Whether to show planet details card
 
+  // Spaceship state
+  spaceships: SpaceshipData[];
+
   // Actions
   addPlayer: (player: Player) => void;
   addSolarSystem: (system: SolarSystem) => void;
@@ -60,6 +71,22 @@ interface GameStore {
   initializeGame: () => void;
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
+
+  // Spaceship actions
+  launchShip: (
+    fromId: string,
+    fromType: ObjectType,
+    toId: string,
+    toType: ObjectType
+  ) => void;
+  updateSpaceship: (id: string, updates: Partial<SpaceshipData>) => void;
+  changeSpaceshipDestination: (
+    id: string,
+    newDestination: { id: string; type: ObjectType }
+  ) => void;
+  removeSpaceship: (id: string) => void;
+  updateSpaceships: () => void;
+  lastSpaceshipUpdate: number;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -76,6 +103,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   timeScale: 0,
   selectedObject: null,
   showPlanetDetails: false,
+  spaceships: [],
+  lastSpaceshipUpdate: 0,
 
   // Actions
   setActiveView: (view) => {
@@ -259,6 +288,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return;
           }
           break;
+        case "spaceship":
+          if (!state.spaceships.find((s) => s.id === object.id)) {
+            console.warn(
+              `Spaceship ${object.id} not found in current system ${state.currentSystemId}`
+            );
+            set({ selectedObject: null });
+            return;
+          }
+          break;
       }
     }
 
@@ -319,6 +357,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         currentTurn: state.currentTurn,
         selectedObject: state.selectedObject,
         constellationCameraState: state.constellationCameraState,
+        // Temporarily disable spaceships saving to avoid circular dependency
+        // spaceships: state.spaceships,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (error) {
@@ -331,6 +371,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const data = JSON.parse(saved);
+
+        // Restore spaceships with proper Vector3 objects
+        const restoredSpaceships = (data.spaceships || []).map((ship: any) => ({
+          ...ship,
+          position: new THREE.Vector3(
+            ship.position.x,
+            ship.position.y,
+            ship.position.z
+          ),
+          velocity: new THREE.Vector3(
+            ship.velocity.x,
+            ship.velocity.y,
+            ship.velocity.z
+          ),
+          trailPositions: ship.trailPositions.map(
+            (pos: any) => new THREE.Vector3(pos.x, pos.y, pos.z)
+          ),
+        }));
+
         set({
           solarSystems: data.solarSystems || [],
           tunnels: data.tunnels || [],
@@ -338,10 +397,277 @@ export const useGameStore = create<GameStore>((set, get) => ({
           currentTurn: data.currentTurn || 1,
           selectedObject: data.selectedObject || null,
           constellationCameraState: data.constellationCameraState || null,
+          spaceships: restoredSpaceships,
         });
       }
     } catch (error) {
       console.error("Failed to load from localStorage:", error);
     }
+  },
+
+  // Spaceship actions
+  launchShip: (fromId, fromType, toId, toType) => {
+    const state = get();
+    const currentSystem = state.solarSystems.find(
+      (s) => s.id === state.currentSystemId
+    );
+    if (!currentSystem) return;
+
+    // Get current positions
+    const originPos = getObjectWorldPosition(
+      fromId,
+      fromType,
+      currentSystem,
+      state.gameTime
+    );
+    const destinationPos = getObjectWorldPosition(
+      toId,
+      toType,
+      currentSystem,
+      state.gameTime
+    );
+
+    // console.log("Spaceship launch positions:", {
+    //   fromId,
+    //   fromType,
+    //   toId,
+    //   toType,
+    //   gameTime: state.gameTime,
+    //   originPos: originPos?.toArray(),
+    //   destinationPos: destinationPos?.toArray(),
+    // });
+
+    if (!originPos || !destinationPos) {
+      console.warn(
+        "Could not find origin or destination positions for spaceship launch"
+      );
+      return;
+    }
+
+    // Create new spaceship with slight random offset to avoid overlapping
+    const spaceshipId = `spaceship-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // Add very small random offset to prevent multiple ships from launching at exact same position
+    const offset = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.02, // Very small random X offset
+      (Math.random() - 0.5) * 0.02, // Very small random Y offset
+      (Math.random() - 0.5) * 0.02 // Very small random Z offset
+    );
+    const launchPosition = originPos.clone().add(offset);
+
+    const spaceship = createSpaceship(
+      spaceshipId,
+      { id: fromId, type: fromType },
+      { id: toId, type: toType },
+      launchPosition
+    );
+
+    // Calculate total flight time
+    spaceship.totalFlightTime = calculateFlightTime(originPos, destinationPos);
+
+    set((state) => ({
+      spaceships: [...state.spaceships, spaceship],
+    }));
+
+    // Automatically select the launched spaceship for tracking
+    set({ selectedObject: { id: spaceship.id, type: "spaceship" } });
+  },
+
+  updateSpaceship: (id, updates) => {
+    set((state) => ({
+      spaceships: state.spaceships.map((ship) =>
+        ship.id === id ? { ...ship, ...updates } : ship
+      ),
+    }));
+  },
+
+  changeSpaceshipDestination: (id, newDestination) => {
+    const state = get();
+    const currentSystem = state.solarSystems.find(
+      (s) => s.id === state.currentSystemId
+    );
+    if (!currentSystem) return;
+
+    // Get the new destination position
+    const newDestinationPos = getObjectWorldPosition(
+      newDestination.id,
+      newDestination.type,
+      currentSystem,
+      state.gameTime
+    );
+
+    if (!newDestinationPos) {
+      console.warn(
+        "Could not find new destination position for spaceship rerouting"
+      );
+      return;
+    }
+
+    // Find the spaceship to get its current position
+    const spaceship = state.spaceships.find((ship) => ship.id === id);
+    if (!spaceship) {
+      console.warn("Spaceship not found for destination change");
+      return;
+    }
+
+    // Update the spaceship's destination and reset its state to traveling
+    // Update the trail positions to start from current position
+    set((state) => ({
+      ...state,
+      spaceships: state.spaceships.map((ship) =>
+        ship.id === id
+          ? {
+              ...ship,
+              destination: newDestination,
+              state: "traveling",
+              stateStartTime: Date.now(),
+              // Update trail to start from current position for new journey
+              trailPositions: [ship.position.clone()], // Start new trail from current position
+            }
+          : ship
+      ),
+    }));
+  },
+
+  removeSpaceship: (id) => {
+    set((state) => ({
+      spaceships: state.spaceships.filter((ship) => ship.id !== id),
+    }));
+  },
+
+  updateSpaceships: () => {
+    const state = get();
+    if (!state.isPlaying || state.spaceships.length === 0) return;
+
+    // Throttle updates to 30fps max to prevent performance issues
+    const now = Date.now();
+    if (state.lastSpaceshipUpdate && now - state.lastSpaceshipUpdate < 33) {
+      return; // Skip update if less than 33ms since last update (~30fps max)
+    }
+
+    const currentSystem = state.solarSystems.find(
+      (s) => s.id === state.currentSystemId
+    );
+    if (!currentSystem) return;
+
+    // Process spaceships efficiently
+    const updatedSpaceships: SpaceshipData[] = [];
+
+    for (const spaceship of state.spaceships) {
+      // Get current positions (cached to avoid repeated calculations)
+      const originPos = getObjectWorldPosition(
+        spaceship.origin.id,
+        spaceship.origin.type,
+        currentSystem,
+        state.gameTime
+      );
+      const destinationPos = getObjectWorldPosition(
+        spaceship.destination.id,
+        spaceship.destination.type,
+        currentSystem,
+        state.gameTime
+      );
+
+      if (!originPos || !destinationPos) {
+        updatedSpaceships.push(spaceship);
+        continue;
+      }
+
+      // Calculate new position
+      const newPosition = getNextSpaceshipPosition(
+        spaceship,
+        originPos,
+        destinationPos
+      );
+
+      // Debug logging for selected spaceships
+      if (
+        spaceship.id === state.selectedObject?.id &&
+        state.selectedObject?.type === "spaceship"
+      ) {
+        console.log(`Spaceship ${spaceship.id} debug:`, {
+          state: spaceship.state,
+          stateElapsed: (now - spaceship.stateStartTime) / 1000,
+          position: newPosition.toArray(),
+          originPos: originPos.toArray(),
+          destinationPos: destinationPos.toArray(),
+          distance: originPos.distanceTo(destinationPos),
+          distanceToDestination: newPosition.distanceTo(destinationPos),
+        });
+      }
+
+      // Update trail efficiently
+      const newTrail = [...spaceship.trailPositions, newPosition.clone()];
+      if (newTrail.length > spaceship.maxTrailLength) {
+        newTrail.shift(); // Remove oldest position
+      }
+
+      // Check for state transitions
+      const stateElapsed = (now - spaceship.stateStartTime) / 1000;
+      let newState = spaceship.state;
+      let newStateStartTime = spaceship.stateStartTime;
+
+      switch (spaceship.state) {
+        case "launching":
+          if (stateElapsed >= 2.0) {
+            newState = "traveling";
+            newStateStartTime = now;
+          }
+          break;
+        case "traveling": {
+          const distance = originPos.distanceTo(destinationPos);
+          const travelTime = distance / 4.0;
+          if (stateElapsed >= travelTime) {
+            newState = "orbiting";
+            newStateStartTime = now;
+            console.log(
+              `Spaceship ${
+                spaceship.id
+              } transitioning from traveling to orbiting after ${stateElapsed.toFixed(
+                2
+              )}s (travelTime: ${travelTime.toFixed(
+                2
+              )}s, distance: ${distance.toFixed(2)})`
+            );
+          }
+          break;
+        }
+        case "orbiting":
+          if (stateElapsed >= 1.0) {
+            newState = "landing";
+            newStateStartTime = now;
+          }
+          break;
+        case "landing":
+          if (stateElapsed >= 2.0) {
+            // Ship has landed - transition to waiting in orbit
+            newState = "waiting";
+            newStateStartTime = now;
+          }
+          break;
+        case "waiting":
+          // Ship is waiting in orbit - no state change needed
+          // The ship will continue orbiting the destination
+          break;
+      }
+
+      // Create updated spaceship
+      updatedSpaceships.push({
+        ...spaceship,
+        position: newPosition,
+        state: newState,
+        stateStartTime: newStateStartTime,
+        trailPositions: newTrail,
+      });
+    }
+
+    // Update state efficiently
+    set((state) => ({
+      ...state,
+      spaceships: updatedSpaceships,
+      lastSpaceshipUpdate: now,
+    }));
   },
 }));

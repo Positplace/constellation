@@ -6,6 +6,7 @@ import { generateSolarSystem } from "../../utils/systemFactory";
 import PlanetDetailsCard from "./PlanetDetailsCard";
 import AsteroidDetailsCard from "./AsteroidDetailsCard";
 import { MoonDetailsCard } from "./MoonDetailsCard";
+import { SpaceshipDetailsCard } from "./SpaceshipDetailsCard";
 
 const HUD: React.FC = () => {
   const {
@@ -17,6 +18,7 @@ const HUD: React.FC = () => {
     currentSystemId,
     selectedObject,
     setSelectedObject,
+    spaceships,
   } = useGameStore();
   const { players, isConnected, currentRoom } = useMultiplayerStore();
   const { togglePlayPauseSocket } = useSocket();
@@ -113,6 +115,8 @@ const HUD: React.FC = () => {
       solarSystems: state.solarSystems.map((s) =>
         s.id === currentSystem.id ? newSystem : s
       ),
+      // Remove all spaceships when regenerating a system
+      spaceships: [],
     }));
 
     // Save to localStorage
@@ -359,6 +363,22 @@ const HUD: React.FC = () => {
               onClose={() => {
                 setSelectedObject(null);
                 // TODO: Add moon deselection socket event
+              }}
+            />
+          ) : null;
+        })()}
+
+      {/* Spaceship Details Card - Top Right (when spaceship selected) */}
+      {selectedObject?.type === "spaceship" &&
+        (() => {
+          const selectedSpaceship = spaceships.find(
+            (s) => s.id === selectedObject.id
+          );
+          return selectedSpaceship ? (
+            <SpaceshipDetailsCard
+              spaceship={selectedSpaceship}
+              onClose={() => {
+                setSelectedObject(null);
               }}
             />
           ) : null;

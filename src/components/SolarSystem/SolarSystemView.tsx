@@ -12,6 +12,7 @@ import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
 import { useSocket } from "../../hooks/useSocket";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
+import SpaceshipManager from "../Spaceships/SpaceshipManager";
 
 const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
@@ -36,6 +37,7 @@ const SolarSystemView: React.FC = () => {
     selectedObject,
     setSelectedObject,
     setCurrentSystem,
+    spaceships,
   } = useGameStore();
   const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
@@ -50,6 +52,8 @@ const SolarSystemView: React.FC = () => {
     selectedObject?.type === "asteroid" ? selectedObject.id : null;
   const selectedMoonId =
     selectedObject?.type === "moon" ? selectedObject.id : null;
+  const selectedSpaceshipId =
+    selectedObject?.type === "spaceship" ? selectedObject.id : null;
 
   // Get current system
   const currentSystem = useMemo(() => {
@@ -884,6 +888,43 @@ const SolarSystemView: React.FC = () => {
     }
   };
 
+  // Camera following for selected spaceship (throttled)
+  useEffect(() => {
+    if (!selectedSpaceshipId || !controlsRef.current) return;
+
+    const selectedSpaceship = spaceships.find(
+      (s) => s.id === selectedSpaceshipId
+    );
+    if (!selectedSpaceship) return;
+
+    // Throttle camera updates to avoid performance issues
+    const now = Date.now();
+    if (now - (window.lastCameraUpdate || 0) < 33) {
+      // ~30fps max
+      return;
+    }
+    window.lastCameraUpdate = now;
+
+    // Update camera target to follow the spaceship
+    setSelectedPos(selectedSpaceship.position.clone());
+
+    // Focus on the spaceship with appropriate distance
+    const controls = controlsRef.current;
+    const targetPosition = selectedSpaceship.position.clone();
+
+    // Smooth camera movement to spaceship
+    const currentTarget = controls.target.clone();
+    const direction = targetPosition.clone().sub(currentTarget);
+    const distance = direction.length();
+
+    if (distance > 0.1) {
+      // Smooth interpolation to spaceship position
+      const lerpFactor = Math.min(0.1, 1.0); // Faster following
+      controls.target.lerp(targetPosition, lerpFactor);
+      controls.update();
+    }
+  }, [selectedSpaceshipId, spaceships]);
+
   const handleTravelToSystem = (
     toSystemId: string,
     gatePosition: [number, number, number]
@@ -1263,6 +1304,9 @@ const SolarSystemView: React.FC = () => {
           onClick={() => handleTravelToSystem(gate.id, gate.position)}
         />
       ))}
+
+      {/* Spaceships */}
+      <SpaceshipManager />
 
       {/* Simple asteroid size test - disabled to reduce clutter */}
       {/* {process.env.NODE_ENV === "development" && <SimpleAsteroidTest />} */}

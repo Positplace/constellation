@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { PlanetData } from "../../types/planet.types";
+import { useGameStore } from "../../store/gameStore";
+import { SolarSystem } from "../../types/game.types";
+import { ObjectType } from "../../types/spaceship.types";
 
 interface PlanetDetailsCardProps {
   planet: PlanetData;
@@ -15,6 +18,63 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
   selectedMoonId,
   onMoonSelect,
 }) => {
+  const { launchShip, solarSystems, currentSystemId } = useGameStore();
+  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+
+  const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
+
+  const handleLaunchShip = (destination: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => {
+    launchShip(planet.id, "planet", destination.id, destination.type);
+    setShowLaunchDialog(false);
+  };
+
+  const getAvailableDestinations = () => {
+    if (!currentSystem) return [];
+
+    const destinations: Array<{ id: string; type: ObjectType; name: string }> =
+      [];
+
+    // Add other planets
+    currentSystem.planets
+      .filter((p) => p.id !== planet.id)
+      .forEach((p) => {
+        destinations.push({
+          id: p.id,
+          type: "planet",
+          name: p.name,
+        });
+      });
+
+    // Add moons from other planets
+    currentSystem.planets
+      .filter((p) => p.id !== planet.id && p.moons)
+      .forEach((p) => {
+        p.moons?.forEach((moon) => {
+          destinations.push({
+            id: moon.id,
+            type: "moon",
+            name: `${moon.name} (${p.name})`,
+          });
+        });
+      });
+
+    // Add asteroids
+    currentSystem.asteroidBelts?.forEach((belt) => {
+      belt.asteroids.forEach((asteroid) => {
+        destinations.push({
+          id: asteroid.id,
+          type: "asteroid",
+          name: `${asteroid.name} (${belt.name})`,
+        });
+      });
+    });
+
+    return destinations;
+  };
   return (
     <div
       className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
@@ -249,11 +309,134 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
         </div>
       </div>
 
+      {/* Launch Ship Section */}
+      <div className="space-y-2 mt-3 pt-3 border-t border-white/10">
+        <h3 className="text-sm font-semibold text-blue-200 border-b border-white/10 pb-1">
+          Spaceship Operations
+        </h3>
+        <button
+          onClick={() => {
+            setShowLaunchDialog(true);
+          }}
+          className="w-full px-3 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <span>🚀</span>
+          <span>Launch Ship</span>
+        </button>
+      </div>
+
       {/* Technical ID */}
       <div className="mt-3 pt-3 border-t border-white/10">
         <div className="text-xs text-gray-500 font-mono">ID: {planet.id}</div>
         <div className="text-xs text-gray-500 font-mono">
           Seed: {planet.seed}
+        </div>
+      </div>
+
+      {/* Launch Ship Dialog - rendered outside the card */}
+      <LaunchShipDialog
+        isOpen={showLaunchDialog}
+        onClose={() => setShowLaunchDialog(false)}
+        planetName={planet.name}
+        onLaunch={handleLaunchShip}
+        availableDestinations={getAvailableDestinations()}
+      />
+    </div>
+  );
+};
+
+// Separate component for the launch dialog modal
+const LaunchShipDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  planetName: string;
+  onLaunch: (destination: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => void;
+  availableDestinations: Array<{ id: string; type: ObjectType; name: string }>;
+}> = ({ isOpen, onClose, planetName, onLaunch, availableDestinations }) => {
+  const [selectedDestination, setSelectedDestination] = useState<{
+    id: string;
+    type: ObjectType;
+    name: string;
+  } | null>(null);
+
+  const handleLaunch = () => {
+    if (selectedDestination) {
+      onLaunch(selectedDestination);
+      setSelectedDestination(null);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80]"
+      style={{ pointerEvents: "auto" }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="bg-black/90 border border-white/20 rounded-lg p-6 w-96 max-h-[80vh] text-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-blue-300">Launch Ship</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <p className="text-sm text-gray-300 mb-3">
+            Select a destination for your spaceship from {planetName}:
+          </p>
+
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {availableDestinations.map((dest) => (
+              <button
+                key={`${dest.type}-${dest.id}`}
+                onClick={() => setSelectedDestination(dest)}
+                className={`w-full text-left p-2 rounded text-sm transition-colors ${
+                  selectedDestination?.id === dest.id
+                    ? "bg-blue-500/30 border border-blue-500/50"
+                    : "hover:bg-white/10 border border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 capitalize">
+                    {dest.type}:
+                  </span>
+                  <span>{dest.name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleLaunch}
+            disabled={!selectedDestination}
+            className="flex-1 px-3 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+          >
+            Launch
+          </button>
         </div>
       </div>
     </div>
