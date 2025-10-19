@@ -107,7 +107,13 @@ export const useSocket = () => {
 
     socket.on("planet-selected", (data) => {
       console.log("Planet selected:", data.planetId);
-      useGameStore.getState().setSelectedPlanet(data.planetId);
+      if (data.planetId) {
+        useGameStore
+          .getState()
+          .setSelectedObject({ id: data.planetId, type: "planet" });
+      } else {
+        useGameStore.getState().setSelectedObject(null);
+      }
     });
 
     socket.on("game-state-synced", (data) => {

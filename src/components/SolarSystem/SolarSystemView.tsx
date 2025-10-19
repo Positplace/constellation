@@ -33,20 +33,23 @@ const SolarSystemView: React.FC = () => {
     timeScale,
     solarSystems,
     currentSystemId,
-    selectedPlanetId,
-    selectedAsteroidId,
-    selectedMoonId,
-    setSelectedPlanet,
-    setSelectedAsteroid,
-    setSelectedMoon,
+    selectedObject,
+    setSelectedObject,
     setCurrentSystem,
   } = useGameStore();
   const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
 
-  const selectedId = selectedPlanetId;
-  const shouldShowOrbits =
-    !selectedPlanetId && !selectedAsteroidId && !selectedMoonId;
+  // Show planet orbital paths when the sun is selected
+  const shouldShowPlanetOrbits = selectedObject?.type === "sun";
+
+  // Extract selected IDs for easier access
+  const selectedPlanetId =
+    selectedObject?.type === "planet" ? selectedObject.id : null;
+  const selectedAsteroidId =
+    selectedObject?.type === "asteroid" ? selectedObject.id : null;
+  const selectedMoonId =
+    selectedObject?.type === "moon" ? selectedObject.id : null;
 
   // Get current system
   const currentSystem = useMemo(() => {
@@ -128,7 +131,7 @@ const SolarSystemView: React.FC = () => {
       if (!planet) return;
 
       // Select planet; onSelectedFrame will provide its world position
-      setSelectedPlanet(planet.id);
+      setSelectedObject({ id: planet.id, type: "planet" });
 
       // Compute a reasonable focus distance based on planet size similar to Home focus
       const SUN_RADIUS_UNITS = currentSystem?.star?.size || 1;
@@ -149,7 +152,7 @@ const SolarSystemView: React.FC = () => {
     window.addEventListener("focusPlanet", onFocusPlanet as EventListener);
     return () =>
       window.removeEventListener("focusPlanet", onFocusPlanet as EventListener);
-  }, [currentSystem, setSelectedPlanet]);
+  }, [currentSystem, setSelectedObject]);
 
   // Listen for focusRandomAsteroid requests coming from HUD
   useEffect(() => {
@@ -168,7 +171,7 @@ const SolarSystemView: React.FC = () => {
     window.addEventListener("focusRandomAsteroid", onFocusRandomAsteroid);
     return () =>
       window.removeEventListener("focusRandomAsteroid", onFocusRandomAsteroid);
-  }, [currentSystem, setSelectedAsteroid]);
+  }, [currentSystem, setSelectedObject]);
 
   // Listen for focusAsteroidBelt requests (focus on specific belt)
   useEffect(() => {
@@ -197,7 +200,7 @@ const SolarSystemView: React.FC = () => {
         "focusAsteroidBelt",
         onFocusAsteroidBelt as EventListener
       );
-  }, [currentSystem, setSelectedAsteroid]);
+  }, [currentSystem, setSelectedObject]);
 
   // Helper function to focus on a specific asteroid with zoom animation
   const focusOnAsteroid = (asteroidId: string) => {
@@ -207,7 +210,7 @@ const SolarSystemView: React.FC = () => {
     const asteroid = allAsteroids.find((a) => a.id === asteroidId);
     if (!asteroid) return;
 
-    setSelectedAsteroid(asteroid.id);
+    setSelectedObject({ id: asteroid.id, type: "asteroid" });
 
     // Immediately set selected position to asteroid's current position for zoom
     const pos = new THREE.Vector3(
@@ -240,67 +243,80 @@ const SolarSystemView: React.FC = () => {
     }
   };
 
-  // Listen for reset solar view event (from clicking active System tab)
+  // Track the last selected sun ID to prevent re-running the effect
+  const lastSelectedSunRef = useRef<string | null>(null);
+
+  // Handle sun selection - zoom out to overview and show orbital paths (only once per selection)
   useEffect(() => {
-    const handleReset = () => {
-      if (controlsRef.current) {
-        const controls = controlsRef.current;
-        const cam = controls.object as THREE.PerspectiveCamera;
-
-        // Current state
-        const currentTarget = controls.target.clone();
-        const currentOffset = cam.position.clone().sub(currentTarget);
-        const currentDistance = currentOffset.length();
-        const targetDistance = 12; // Overview distance
-
-        // Target state (overview from above)
-        const targetTarget = new THREE.Vector3(0, 0, 0);
-        const targetDir = new THREE.Vector3(0, 1, 0); // top-down view
-
-        // If we're already roughly at the overview, just snap
-        if (
-          Math.abs(currentDistance - targetDistance) < 1 &&
-          currentTarget.distanceTo(targetTarget) < 0.5
-        ) {
-          controls.target.copy(targetTarget);
-          cam.position.set(0, 12, 0);
-          controls.update();
-        } else {
-          // Otherwise, animate smoothly from current position to overview
-          // Keep the current view direction initially, will interpolate to top-down
-          const fromDir =
-            currentOffset.length() > 0
-              ? currentOffset.clone().normalize()
-              : new THREE.Vector3(0, 1, 0);
-
-          // Blend the direction during animation
-          const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
-
-          zoomAnimRef.current = {
-            active: true,
-            start: performance.now(),
-            duration: 700,
-            fromDistance: currentDistance,
-            toDistance: targetDistance,
-            dir: blendedDir,
-            fromTarget: currentTarget,
-            toTarget: targetTarget,
-          };
-        }
+    // Only run when sun is newly selected (not already selected)
+    if (
+      selectedObject?.type !== "sun" ||
+      !controlsRef.current ||
+      lastSelectedSunRef.current === selectedObject.id
+    ) {
+      // Update the ref even if we don't run the effect
+      if (selectedObject?.type === "sun") {
+        lastSelectedSunRef.current = selectedObject.id;
+      } else {
+        lastSelectedSunRef.current = null;
       }
-      setSelectedPlanet(null);
-      setSelectedAsteroid(null);
-      setSelectedMoon(null);
-      setSelectedPos(new THREE.Vector3(0, 0, 0));
-      // Emit to server if connected
-      if (isConnected) {
-        emitPlanetSelected(null);
-        // TODO: Add asteroid deselection socket event
-      }
-    };
-    window.addEventListener("resetSolarView", handleReset);
-    return () => window.removeEventListener("resetSolarView", handleReset);
-  }, [isConnected, emitPlanetSelected]);
+      return;
+    }
+
+    lastSelectedSunRef.current = selectedObject.id;
+
+    const controls = controlsRef.current;
+    const cam = controls.object as THREE.PerspectiveCamera;
+
+    // Current state
+    const currentTarget = controls.target.clone();
+    const currentOffset = cam.position.clone().sub(currentTarget);
+    const currentDistance = currentOffset.length();
+    const targetDistance = 12; // Overview distance
+
+    // Target state (overview from above)
+    const targetTarget = new THREE.Vector3(0, 0, 0);
+    const targetDir = new THREE.Vector3(0, 1, 0); // top-down view
+
+    // Set selected position to sun center
+    setSelectedPos(new THREE.Vector3(0, 0, 0));
+
+    // If we're already roughly at the overview, just snap
+    if (
+      Math.abs(currentDistance - targetDistance) < 1 &&
+      currentTarget.distanceTo(targetTarget) < 0.5
+    ) {
+      controls.target.copy(targetTarget);
+      cam.position.set(0, 12, 0);
+      controls.update();
+    } else {
+      // Otherwise, animate smoothly from current position to overview
+      const fromDir =
+        currentOffset.length() > 0
+          ? currentOffset.clone().normalize()
+          : new THREE.Vector3(0, 1, 0);
+
+      // Blend the direction during animation
+      const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
+
+      zoomAnimRef.current = {
+        active: true,
+        start: performance.now(),
+        duration: 700,
+        fromDistance: currentDistance,
+        toDistance: targetDistance,
+        dir: blendedDir,
+        fromTarget: currentTarget,
+        toTarget: targetTarget,
+      };
+    }
+
+    // Emit to server if connected
+    if (isConnected) {
+      emitPlanetSelected(null);
+      // TODO: Add sun selection socket event
+    }
+  }, [selectedObject, isConnected, emitPlanetSelected]);
 
   // Keyboard controls for panning (WASD / Arrow keys)
   useEffect(() => {
@@ -665,7 +681,7 @@ const SolarSystemView: React.FC = () => {
       if (!foundMoon || !parentPlanet) return;
 
       // Select the moon
-      setSelectedMoon(foundMoon.id);
+      setSelectedObject({ id: foundMoon.id, type: "moon" });
 
       // Calculate moon position for focus
       const moonAngle = foundMoon.orbitalAngle;
@@ -716,7 +732,7 @@ const SolarSystemView: React.FC = () => {
     window.addEventListener("focusMoon", onFocusMoon as EventListener);
     return () =>
       window.removeEventListener("focusMoon", onFocusMoon as EventListener);
-  }, [currentSystem, setSelectedMoon, setSelectedPos, planetsToRender]);
+  }, [currentSystem, setSelectedObject, setSelectedPos, planetsToRender]);
 
   // Listen for cycleMoons requests coming from HUD
   useEffect(() => {
@@ -740,7 +756,7 @@ const SolarSystemView: React.FC = () => {
       const nextMoon = planet.moons[nextMoonIndex];
 
       if (nextMoon) {
-        setSelectedMoon(nextMoon.id);
+        setSelectedObject({ id: nextMoon.id, type: "moon" });
 
         // Calculate moon position for focus
         const moonAngle = nextMoon.orbitalAngle;
@@ -794,7 +810,7 @@ const SolarSystemView: React.FC = () => {
       window.removeEventListener("cycleMoons", onCycleMoons as EventListener);
   }, [
     currentSystem,
-    setSelectedMoon,
+    setSelectedObject,
     setSelectedPos,
     planetsToRender,
     selectedMoonId,
@@ -831,7 +847,7 @@ const SolarSystemView: React.FC = () => {
         pendingFocusDistanceRef.current = focusDistance;
 
         // Set selected ID - the frame loop will update position via onSelectedFrame
-        setSelectedPlanet(homePlanet.id);
+        setSelectedObject({ id: homePlanet.id, type: "planet" });
         // Emit to server if connected
         if (isConnected) {
           emitPlanetSelected(homePlanet.id);
@@ -840,7 +856,7 @@ const SolarSystemView: React.FC = () => {
     };
     window.addEventListener("focusHomePlanet", handleFocusHome);
     return () => window.removeEventListener("focusHomePlanet", handleFocusHome);
-  }, [currentSystem, isConnected, emitPlanetSelected]);
+  }, [currentSystem, isConnected, emitPlanetSelected, setSelectedObject]);
 
   // Visual radius for the sun (scene units) - from star data
   const SUN_RADIUS_UNITS = currentSystem?.star.size ?? 0.6;
@@ -856,44 +872,16 @@ const SolarSystemView: React.FC = () => {
     );
   }
 
-  const handleResetView = () => {
-    if (controlsRef.current) {
-      const controls = controlsRef.current;
-      const cam = controls.object as THREE.PerspectiveCamera;
+  // Handle clicking on empty space - deselect all objects
+  const handleDeselectAll = () => {
+    setSelectedObject(null);
+    setSelectedPos(null);
 
-      // Current state
-      const currentTarget = controls.target.clone();
-      const currentOffset = cam.position.clone().sub(currentTarget);
-      const currentDistance = currentOffset.length();
-      const targetDistance = 12; // Overview distance
-
-      // Target state (overview from above)
-      const targetTarget = new THREE.Vector3(0, 0, 0);
-      const targetDir = new THREE.Vector3(0, 1, 0);
-
-      // Animate smoothly from current position to overview
-      const fromDir =
-        currentOffset.length() > 0
-          ? currentOffset.clone().normalize()
-          : new THREE.Vector3(0, 1, 0);
-
-      const blendedDir = fromDir.clone().lerp(targetDir, 0.5).normalize();
-
-      zoomAnimRef.current = {
-        active: true,
-        start: performance.now(),
-        duration: 700,
-        fromDistance: currentDistance,
-        toDistance: targetDistance,
-        dir: blendedDir,
-        fromTarget: currentTarget,
-        toTarget: targetTarget,
-      };
+    // Emit to server if connected
+    if (isConnected) {
+      emitPlanetSelected(null);
+      // TODO: Add asteroid/moon/sun deselection socket event
     }
-    setSelectedPlanet(null);
-    setSelectedAsteroid(null);
-    setSelectedMoon(null);
-    setSelectedPos(new THREE.Vector3(0, 0, 0));
   };
 
   const handleTravelToSystem = (
@@ -905,10 +893,8 @@ const SolarSystemView: React.FC = () => {
     const controls = controlsRef.current;
     const cam = controls.object as THREE.PerspectiveCamera;
 
-    // Clear planet and asteroid selection when traveling
-    setSelectedPlanet(null);
-    setSelectedAsteroid(null);
-    setSelectedMoon(null);
+    // Clear selection when traveling
+    setSelectedObject(null);
 
     // Start travel animation with approach phase
     setTravelState({
@@ -1001,7 +987,7 @@ const SolarSystemView: React.FC = () => {
   }
 
   return (
-    <group onPointerMissed={handleResetView}>
+    <group onPointerMissed={handleDeselectAll}>
       {/* Starfield background that adapts to star type */}
       <Starfield starType={currentSystem?.star?.type || "yellow_star"} />
 
@@ -1032,7 +1018,7 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          handleResetView();
+          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
         }}
       >
         <meshBasicMaterial color={SUN_COLOR} />
@@ -1044,7 +1030,7 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          handleResetView();
+          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
         }}
       >
         <meshBasicMaterial
@@ -1061,7 +1047,7 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          handleResetView();
+          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
         }}
       >
         <meshBasicMaterial
@@ -1078,7 +1064,7 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          handleResetView();
+          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
         }}
       >
         <meshBasicMaterial
@@ -1095,7 +1081,7 @@ const SolarSystemView: React.FC = () => {
         position={[0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
-          handleResetView();
+          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
         }}
       >
         <meshBasicMaterial
@@ -1121,7 +1107,7 @@ const SolarSystemView: React.FC = () => {
             speed={g.speed}
             angle={g.angle}
             timeScale={timeScale}
-            selectedId={selectedId || undefined}
+            selectedId={selectedPlanetId || undefined}
             selectedMoonId={selectedMoonId || undefined}
             onSelect={(id, pos) => {
               // Find the clicked planet by ID
@@ -1130,7 +1116,7 @@ const SolarSystemView: React.FC = () => {
               );
               if (!clickedPlanetData) return;
 
-              setSelectedPlanet(id);
+              setSelectedObject({ id, type: "planet" });
               setSelectedPos(pos.clone());
               // Emit to server if connected
               if (isConnected) {
@@ -1172,7 +1158,7 @@ const SolarSystemView: React.FC = () => {
               }
             }}
             onSelectedFrame={(id, pos) => {
-              if (selectedId === id) {
+              if (selectedPlanetId === id) {
                 setSelectedPos(pos.clone());
                 // If there's a pending focus distance (from Home button), trigger zoom
                 if (
@@ -1199,7 +1185,7 @@ const SolarSystemView: React.FC = () => {
               }
             }}
             onMoonSelect={(moonId, moonPos) => {
-              setSelectedMoon(moonId);
+              setSelectedObject({ id: moonId, type: "moon" });
               setSelectedPos(moonPos.clone());
 
               // Calculate focus distance for the clicked moon
@@ -1228,7 +1214,7 @@ const SolarSystemView: React.FC = () => {
               }
             }}
             renderScale={renderScale}
-            showOrbit={shouldShowOrbits}
+            showOrbit={shouldShowPlanetOrbits}
           />
         );
       })}
@@ -1240,7 +1226,7 @@ const SolarSystemView: React.FC = () => {
           belt={belt}
           timeScale={timeScale}
           selectedId={selectedAsteroidId || undefined}
-          showBeltRing={shouldShowOrbits}
+          showBeltRing={shouldShowPlanetOrbits}
           planetPositions={planetsToRender.map(
             (p) =>
               new THREE.Vector3(
@@ -1252,9 +1238,7 @@ const SolarSystemView: React.FC = () => {
           onAsteroidSelect={(asteroidId) => {
             // Use the helper function to focus with zoom animation
             focusOnAsteroid(asteroidId);
-            // Clear planet selection when selecting asteroid
-            setSelectedPlanet(null);
-            setSelectedMoon(null);
+            // Selection is already handled by setSelectedObject above
             // Emit to server if connected
             if (isConnected) {
               // TODO: Add asteroid selection socket event

@@ -18,7 +18,7 @@ const ConstellationView: React.FC = () => {
     generateAndAddSystem,
     canAddConnection,
     updateSystemPosition,
-    setSelectedPlanet,
+    setSelectedObject,
   } = useGameStore();
   const { emitSystemGenerated, emitCurrentSystemChanged, changeView } =
     useSocket();
@@ -56,8 +56,8 @@ const ConstellationView: React.FC = () => {
   const handleSystemClick = (systemId: string) => {
     if (draggingSystemId) return; // Don't select if we're dragging
     setCurrentSystem(systemId);
-    // Clear planet selection when clicking a star
-    setSelectedPlanet(null);
+    // Clear selection when clicking a star
+    setSelectedObject(null);
     // Emit to server if connected
     if (isConnected) {
       emitCurrentSystemChanged(systemId);
@@ -157,7 +157,7 @@ const ConstellationView: React.FC = () => {
         onPointerMissed={(e) => {
           // Only clear selection if we're not dragging and clicked on empty space
           if (!draggingSystemId) {
-            setSelectedPlanet(null);
+            setSelectedObject(null);
           }
         }}
       >

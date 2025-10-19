@@ -5,6 +5,7 @@ import {
   Tunnel,
   ViewType,
   StarType,
+  SelectedObject,
 } from "../types/game.types";
 import {
   generateSolarSystem,
@@ -27,9 +28,7 @@ interface GameStore {
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
   timeScale: number; // 0..1 smooth playback factor
-  selectedPlanetId: string | null; // Currently selected planet in solar view
-  selectedAsteroidId: string | null; // Currently selected asteroid in solar view
-  selectedMoonId: string | null; // Currently selected moon in solar view
+  selectedObject: SelectedObject | null; // Currently selected object in solar view (sun, planet, asteroid, or moon)
   showPlanetDetails: boolean; // Whether to show planet details card
 
   // Actions
@@ -46,9 +45,7 @@ interface GameStore {
   togglePlayPause: () => void;
   updateGameTime: (time: number) => void;
   setTimeScale: (scale: number) => void;
-  setSelectedPlanet: (planetId: string | null) => void;
-  setSelectedAsteroid: (asteroidId: string | null) => void;
-  setSelectedMoon: (moonId: string | null) => void;
+  setSelectedObject: (object: SelectedObject | null) => void;
   updateSystemPosition: (
     systemId: string,
     position: [number, number, number]
@@ -69,9 +66,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isPlaying: false,
   gameTime: 0,
   timeScale: 0,
-  selectedPlanetId: null,
-  selectedAsteroidId: null,
-  selectedMoonId: null,
+  selectedObject: null,
+  showPlanetDetails: false,
 
   // Actions
   setActiveView: (view) => {
@@ -101,7 +97,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setCurrentSystem: (id) => {
-    set({ currentSystemId: id, selectedPlanetId: null });
+    set({ currentSystemId: id, selectedObject: null });
     get().saveToLocalStorage();
   },
 
@@ -190,83 +186,70 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTimeScale: (scale) => set({ timeScale: Math.max(0, Math.min(1, scale)) }),
 
-  setSelectedPlanet: (planetId) => {
-    // Validate that the planet exists in the current system
-    if (planetId) {
+  setSelectedObject: (object) => {
+    // Validate that the object exists in the current system (if not null)
+    if (object) {
       const state = get();
       const currentSystem = state.solarSystems.find(
         (s) => s.id === state.currentSystemId
       );
-      if (
-        currentSystem &&
-        !currentSystem.planets.find((p) => p.id === planetId)
-      ) {
-        console.warn(
-          `Planet ${planetId} not found in current system ${state.currentSystemId}`
-        );
-        set({ selectedPlanetId: null });
-        return;
-      }
-    }
-    set({
-      selectedPlanetId: planetId,
-      selectedAsteroidId: null,
-      selectedMoonId: null,
-    });
-  },
 
-  setSelectedAsteroid: (asteroidId) => {
-    // Validate that the asteroid exists in the current system
-    if (asteroidId) {
-      const state = get();
-      const currentSystem = state.solarSystems.find(
-        (s) => s.id === state.currentSystemId
-      );
-      if (
-        currentSystem &&
-        !currentSystem.asteroidBelts?.some((belt) =>
-          belt.asteroids.find((a) => a.id === asteroidId)
-        )
-      ) {
-        console.warn(
-          `Asteroid ${asteroidId} not found in current system ${state.currentSystemId}`
-        );
-        set({ selectedAsteroidId: null });
+      if (!currentSystem) {
+        console.warn("No current system found");
+        set({ selectedObject: null });
         return;
       }
-    }
-    set({
-      selectedAsteroidId: asteroidId,
-      selectedPlanetId: null,
-      selectedMoonId: null,
-    });
-  },
 
-  setSelectedMoon: (moonId) => {
-    // Validate that the moon exists in the current system
-    if (moonId) {
-      const state = get();
-      const currentSystem = state.solarSystems.find(
-        (s) => s.id === state.currentSystemId
-      );
-      if (
-        currentSystem &&
-        !currentSystem.planets?.some((planet) =>
-          planet.moons?.find((m) => m.id === moonId)
-        )
-      ) {
-        console.warn(
-          `Moon ${moonId} not found in current system ${state.currentSystemId}`
-        );
-        set({ selectedMoonId: null });
-        return;
+      // Validate based on object type
+      switch (object.type) {
+        case "sun":
+          if (currentSystem.star.id !== object.id) {
+            console.warn(
+              `Sun ${object.id} not found in current system ${state.currentSystemId}`
+            );
+            set({ selectedObject: null });
+            return;
+          }
+          break;
+        case "planet":
+          if (!currentSystem.planets.find((p) => p.id === object.id)) {
+            console.warn(
+              `Planet ${object.id} not found in current system ${state.currentSystemId}`
+            );
+            set({ selectedObject: null });
+            return;
+          }
+          break;
+        case "asteroid":
+          if (
+            !currentSystem.asteroidBelts?.some((belt) =>
+              belt.asteroids.find((a) => a.id === object.id)
+            )
+          ) {
+            console.warn(
+              `Asteroid ${object.id} not found in current system ${state.currentSystemId}`
+            );
+            set({ selectedObject: null });
+            return;
+          }
+          break;
+        case "moon":
+          if (
+            !currentSystem.planets?.some((planet) =>
+              planet.moons?.find((m) => m.id === object.id)
+            )
+          ) {
+            console.warn(
+              `Moon ${object.id} not found in current system ${state.currentSystemId}`
+            );
+            set({ selectedObject: null });
+            return;
+          }
+          break;
       }
     }
-    set({
-      selectedMoonId: moonId,
-      selectedPlanetId: null,
-      selectedAsteroidId: null,
-    });
+
+    set({ selectedObject: object });
   },
 
   updateSystemPosition: (systemId, position) => {
@@ -321,8 +304,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         tunnels: state.tunnels,
         currentSystemId: state.currentSystemId,
         currentTurn: state.currentTurn,
-        selectedPlanetId: state.selectedPlanetId,
-        selectedAsteroidId: state.selectedAsteroidId,
+        selectedObject: state.selectedObject,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (error) {
@@ -340,8 +322,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           tunnels: data.tunnels || [],
           currentSystemId: data.currentSystemId || null,
           currentTurn: data.currentTurn || 1,
-          selectedPlanetId: data.selectedPlanetId || null,
-          selectedAsteroidId: data.selectedAsteroidId || null,
+          selectedObject: data.selectedObject || null,
         });
       }
     } catch (error) {

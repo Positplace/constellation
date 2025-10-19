@@ -15,17 +15,21 @@ const HUD: React.FC = () => {
     activeView,
     solarSystems,
     currentSystemId,
-    selectedPlanetId,
-    selectedAsteroidId,
-    selectedMoonId,
-    setSelectedPlanet,
-    setSelectedAsteroid,
-    setSelectedMoon,
+    selectedObject,
+    setSelectedObject,
   } = useGameStore();
   const { players, isConnected, currentRoom } = useMultiplayerStore();
-  const { togglePlayPauseSocket, emitPlanetSelected } = useSocket();
+  const { togglePlayPauseSocket } = useSocket();
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
+
+  // Extract selected IDs for easier access
+  const selectedPlanetId =
+    selectedObject?.type === "planet" ? selectedObject.id : null;
+  const selectedAsteroidId =
+    selectedObject?.type === "asteroid" ? selectedObject.id : null;
+  const selectedMoonId =
+    selectedObject?.type === "moon" ? selectedObject.id : null;
 
   // Create a combined sorted list of planets and asteroid belts by orbital distance
   type SystemObject =
@@ -129,8 +133,11 @@ const HUD: React.FC = () => {
               <button
                 className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
                 onClick={() => {
-                  // Ask SolarSystemView to reset view to center on sun
-                  window.dispatchEvent(new CustomEvent("resetSolarView"));
+                  // Select the sun to show orbital paths and reset view
+                  setSelectedObject({
+                    id: currentSystem.star.id,
+                    type: "sun",
+                  });
                 }}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
@@ -302,17 +309,15 @@ const HUD: React.FC = () => {
           planet={selectedPlanet}
           selectedMoonId={selectedMoonId}
           onMoonSelect={(moonId) => {
-            setSelectedMoon(moonId);
+            setSelectedObject({ id: moonId, type: "moon" });
             // Emit moon selection to server if connected
             if (isConnected) {
               // TODO: Add moon selection socket event
             }
           }}
           onClose={() => {
-            // Don't clear planet selection - just close the details card
-            // Camera should stay focused on the planet
-            setSelectedMoon(null);
-            // Note: We don't call setSelectedPlanet(null) to keep the planet selected
+            // Clear selection to close the details card
+            setSelectedObject(null);
           }}
         />
       )}
@@ -322,22 +327,23 @@ const HUD: React.FC = () => {
         <AsteroidDetailsCard
           asteroid={selectedAsteroid}
           onClose={() => {
-            setSelectedAsteroid(null);
+            setSelectedObject(null);
             // TODO: Add asteroid deselection socket event
           }}
         />
       )}
 
       {/* Moon Details Card - Bottom Left (when moon selected) */}
-      {selectedMoonId && currentSystem && (
+      {selectedMoonId &&
+        currentSystem &&
         (() => {
           // Find the selected moon and its parent planet
           let selectedMoon = null;
           let parentPlanet = null;
-          
+
           for (const planet of currentSystem.planets) {
             if (planet.moons) {
-              const moon = planet.moons.find(m => m.id === selectedMoonId);
+              const moon = planet.moons.find((m) => m.id === selectedMoonId);
               if (moon) {
                 selectedMoon = moon;
                 parentPlanet = planet;
@@ -345,19 +351,18 @@ const HUD: React.FC = () => {
               }
             }
           }
-          
+
           return selectedMoon && parentPlanet ? (
             <MoonDetailsCard
               moon={selectedMoon}
               parentPlanetName={parentPlanet.name}
               onClose={() => {
-                setSelectedMoon(null);
+                setSelectedObject(null);
                 // TODO: Add moon deselection socket event
               }}
             />
           ) : null;
-        })()
-      )}
+        })()}
     </>
   );
 };

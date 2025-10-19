@@ -58,10 +58,10 @@ export const PlanetOrbit: React.FC<PlanetOrbitProps> = ({
 
   return (
     <>
-      {/* Orbital path ring - much smaller and closer to planet */}
+      {/* Orbital path ring around the sun */}
       {showOrbit && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.1, 0.15, 32]} />
+          <ringGeometry args={[distance - 0.02, distance + 0.02, 96]} />
           <meshBasicMaterial
             color="#c8d6ff"
             transparent

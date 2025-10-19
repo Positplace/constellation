@@ -156,7 +156,12 @@ export function generateMoonsForPlanet(
     const sizeRandom = randomRange(0, 1, moonSeed + 1);
     const powerLaw = Math.pow(sizeRandom, 1.8); // Less steep than asteroids
 
-    // Size scaling based on moon count
+    // Check for exceptional moons (rare large moons like Ganymede or Titan)
+    const exceptionalChance = randomRange(0, 100, moonSeed + 10);
+    const isExceptional = exceptionalChance < 15; // 15% chance for exceptional moon
+    const isFirstMoon = i === 0; // First moons can be larger (mimicking major moons)
+
+    // Size scaling based on moon count and special conditions
     let minSize, maxSize;
     if (moonCount === 1) {
       // Single moon can be quite large (like Earth's Moon)
@@ -168,21 +173,43 @@ export function generateMoonsForPlanet(
       maxSize = 0.25; // 25% of Earth radius
     } else {
       // Many moons - smaller sizes to avoid overcrowding
-      minSize = 0.03; // 3% of Earth radius
-      maxSize = 0.15; // 15% of Earth radius
+      // But allow for rare exceptional moons or larger first moons
+      if (isExceptional && planet.type === "gas_giant") {
+        // Rare major moon for gas giants (like Ganymede, Titan)
+        minSize = 0.25; // 25% of Earth radius
+        maxSize = 0.42; // 42% of Earth radius (Ganymede is ~41%)
+      } else if (isFirstMoon && moonCount > 3) {
+        // First moon slightly larger than others
+        minSize = 0.08; // 8% of Earth radius
+        maxSize = 0.2; // 20% of Earth radius
+      } else {
+        // Regular small moons
+        minSize = 0.03; // 3% of Earth radius
+        maxSize = 0.12; // 12% of Earth radius
+      }
     }
 
     const sizeKm = (minSize + powerLaw * (maxSize - minSize)) * EARTH_RADIUS_KM;
 
-    // Orbital distance: much closer for gaming purposes
-    // Base distance of 0.15-0.4, scaled by planet radius (closer than before)
-    const planetRadiusScale = Math.max(0.3, planet.radius / 6371); // Smaller scale for closer orbits
-    const baseDistance = randomRange(0.15, 0.4, moonSeed + 2);
-    const orbitalDistance = baseDistance * planetRadiusScale;
+    // Orbital distance: much closer and denser for better visibility
+    // Moons should be progressively spaced, with inner moons very close
+    const planetRadiusRender = (planet.radius / EARTH_RADIUS_KM) * 0.16; // Approximate render size
+
+    // Start close to the planet and space out progressively
+    // For gas giants: first moon at ~1.5x planet radius, each subsequent moon further out
+    const minDistance = planetRadiusRender * 1.5; // Start very close
+    const spacing = planetRadiusRender * 0.4; // Tighter spacing between moons
+
+    // Simple constant spacing to keep moons dense and close together
+    const orbitalDistance = minDistance + spacing * i;
+
+    // Add small random variation to avoid perfect alignment
+    const randomVariation = randomRange(-0.05, 0.05, moonSeed + 2);
+    const finalOrbitalDistance = orbitalDistance * (1 + randomVariation);
 
     // Orbital speed: faster for closer moons (Kepler's law)
     const baseSpeed = 0.3; // Base orbital speed
-    const orbitalSpeed = baseSpeed / Math.sqrt(orbitalDistance);
+    const orbitalSpeed = baseSpeed / Math.sqrt(finalOrbitalDistance);
 
     // Orbital angle - spread moons around planet
     const orbitalAngle = randomRange(0, Math.PI * 2, moonSeed + 3);
@@ -262,16 +289,20 @@ export function generateMoonsForPlanet(
     // Debug logging
     const sizeCategory =
       moonCount === 1 ? "single" : moonCount <= 3 ? "few" : "many";
+    const specialTag =
+      isExceptional && planet.type === "gas_giant"
+        ? " [MAJOR MOON]"
+        : isFirstMoon && moonCount > 3
+        ? " [PRIMARY]"
+        : "";
     console.log(
-      `Moon for ${
+      `Moon ${i + 1}/${moonCount} for ${
         planet.name
-      } (${sizeCategory}, ${moonCount} total): type=${moonType}, size=${(
-        sizeKm / 1000
-      ).toFixed(0)}km, baseDistance=${baseDistance.toFixed(
-        2
-      )}, planetRadiusScale=${planetRadiusScale.toFixed(
-        2
-      )}, orbitalDistance=${orbitalDistance.toFixed(2)}`
+      } (${sizeCategory}): type=${moonType}, size=${(sizeKm / 1000).toFixed(
+        0
+      )}km, orbitalDistance=${finalOrbitalDistance.toFixed(
+        3
+      )} units${specialTag}`
     );
 
     // Rotation properties
@@ -289,7 +320,7 @@ export function generateMoonsForPlanet(
       id: `moon-${planet.id}-${i}`,
       name: moonName,
       size: sizeKm,
-      orbitalDistance,
+      orbitalDistance: finalOrbitalDistance,
       orbitalSpeed,
       orbitalAngle,
       orbitalEccentricity,

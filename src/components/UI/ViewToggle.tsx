@@ -9,8 +9,10 @@ const ViewToggle: React.FC = () => {
     activeView,
     setActiveView,
     solarSystems,
+    currentSystemId,
     setCurrentSystem,
-    setSelectedPlanet,
+    selectedObject,
+    setSelectedObject,
   } = useGameStore();
   const { changeView, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
@@ -22,12 +24,10 @@ const ViewToggle: React.FC = () => {
     const handleResetFocus = () => setIsHomeFocused(false);
 
     window.addEventListener("focusHomePlanet", handleHomeFocus);
-    window.addEventListener("resetSolarView", handleResetFocus);
     window.addEventListener("resetHomeFocus", handleResetFocus);
 
     return () => {
       window.removeEventListener("focusHomePlanet", handleHomeFocus);
-      window.removeEventListener("resetSolarView", handleResetFocus);
       window.removeEventListener("resetHomeFocus", handleResetFocus);
     };
   }, []);
@@ -61,8 +61,17 @@ const ViewToggle: React.FC = () => {
               } else if (view.key === "solar") {
                 // Handle solar view switching
                 if (activeView === "solar") {
-                  // If clicking the active System tab, emit reset event
-                  window.dispatchEvent(new CustomEvent("resetSolarView"));
+                  // If clicking the active System tab, select the sun of the current system
+                  const currentSystem = solarSystems.find(
+                    (s) => s.id === currentSystemId
+                  );
+                  if (currentSystem) {
+                    setSelectedObject({
+                      id: currentSystem.star.id,
+                      type: "sun",
+                    });
+                  }
+                  setIsHomeFocused(false);
                 } else {
                   // Switching to solar view
                   setActiveView("solar");
@@ -75,9 +84,9 @@ const ViewToggle: React.FC = () => {
                 if (view.key !== "solar") {
                   setIsHomeFocused(false);
                 }
-                // Clear planet selection when switching to constellation view
+                // Clear selection when switching to constellation view
                 if (view.key === "constellation") {
-                  setSelectedPlanet(null);
+                  setSelectedObject(null);
                 }
                 setActiveView(view.key);
                 changeView(view.key);

@@ -210,8 +210,12 @@ export function generateSolarSystem(
   // Get star configuration
   const starConfig = (starConfigs as any)[selectedStarType];
 
+  // Generate system ID first (we need it for star ID)
+  const systemId = `system-${systemSeed}`;
+
   // Create star data
   const star: StarData = {
+    id: `${systemId}-star`,
     type: selectedStarType,
     name: starConfig.name,
     color: starConfig.visual.color,
@@ -457,7 +461,7 @@ export function generateSolarSystem(
 
   // Create solar system
   const solarSystem: SolarSystem = {
-    id: `system-${systemSeed}`,
+    id: systemId,
     name: systemName,
     position: systemPosition,
     star,

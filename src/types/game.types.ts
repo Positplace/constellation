@@ -19,6 +19,7 @@ export type StarType =
   | "white_dwarf";
 
 export interface StarData {
+  id: string;
   type: StarType;
   name: string;
   color: string;
@@ -70,3 +71,10 @@ export interface GameState {
 }
 
 export type ViewType = "solar" | "constellation";
+
+export type SelectedObjectType = "sun" | "planet" | "asteroid" | "moon";
+
+export interface SelectedObject {
+  id: string;
+  type: SelectedObjectType;
+}

@@ -33,9 +33,11 @@ export const MoonOrbit: React.FC<MoonOrbitProps> = ({
   // Set initial position with inclination
   useEffect(() => {
     if (groupRef.current) {
+      const inclinationRad = (inclination * Math.PI) / 180;
+      // Moon orbits in a plane tilted around the X-axis
       const x = Math.cos(angle) * distance;
-      const z = Math.sin(angle) * distance;
-      const y = Math.sin((inclination * Math.PI) / 180) * distance;
+      const y = -Math.sin(angle) * distance * Math.sin(inclinationRad);
+      const z = Math.sin(angle) * distance * Math.cos(inclinationRad);
       groupRef.current.position.set(x, y, z);
     }
   }, [angle, distance, inclination]);
@@ -46,10 +48,17 @@ export const MoonOrbit: React.FC<MoonOrbitProps> = ({
     // Accumulate orbital phase
     phaseRef.current += delta * speed * timeScale;
 
-    // Calculate new position with inclination
-    const x = Math.cos(phaseRef.current + angle) * distance;
-    const z = Math.sin(phaseRef.current + angle) * distance;
-    const y = Math.sin((inclination * Math.PI) / 180) * distance;
+    // Calculate new position with proper inclination
+    // The orbit is a circle in a plane tilted around the X-axis
+    // This matches the ring rotation: [Math.PI / 2 + inclinationRad, 0, 0]
+    const inclinationRad = (inclination * Math.PI) / 180;
+    const orbitAngle = phaseRef.current + angle;
+
+    // Start with XZ plane orbit, then tilt around X-axis
+    const x = Math.cos(orbitAngle) * distance;
+    const y = -Math.sin(orbitAngle) * distance * Math.sin(inclinationRad);
+    const z = Math.sin(orbitAngle) * distance * Math.cos(inclinationRad);
+
     groupRef.current.position.set(x, y, z);
 
     // Notify parent of position change
@@ -60,20 +69,25 @@ export const MoonOrbit: React.FC<MoonOrbitProps> = ({
     }
   });
 
+  // Calculate rotation for the orbital ring to match the inclined orbit
+  const inclinationRad = (inclination * Math.PI) / 180;
+
   return (
     <>
-      {/* Orbital path ring - much smaller for moons */}
+      {/* Orbital path ring around the planet - tilted to match inclination */}
       {showOrbit && (
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.05, 0.08, 16]} />
-          <meshBasicMaterial
-            color="#a0a0a0"
-            transparent
-            opacity={0.2}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
+        <group>
+          <mesh rotation={[Math.PI / 2 + inclinationRad, 0, 0]}>
+            <ringGeometry args={[distance - 0.01, distance + 0.01, 64]} />
+            <meshBasicMaterial
+              color="#a0a0a0"
+              transparent
+              opacity={0.3}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
       )}
 
       {/* Moon at orbital position */}

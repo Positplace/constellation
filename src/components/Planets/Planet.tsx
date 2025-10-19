@@ -6,7 +6,6 @@ import { PlanetMesh } from "./PlanetMesh";
 import { MoonOrbit } from "./MoonOrbit";
 import { MoonMesh } from "./MoonMesh";
 import { PlanetRings } from "./PlanetRings";
-import { migrateRingData } from "../../utils/moonFactory";
 
 interface PlanetProps {
   planet: PlanetData;
@@ -114,27 +113,36 @@ export const Planet: React.FC<PlanetProps> = ({
       </PlanetRotation>
 
       {/* Moons orbiting the planet */}
-      {planet.moons?.map((moon) => (
-        <MoonOrbit
-          key={moon.id}
-          distance={moon.orbitalDistance}
-          speed={moon.orbitalSpeed}
-          angle={moon.orbitalAngle}
-          timeScale={timeScale}
-          showOrbit={selectedMoonId === moon.id} // Show orbit for selected moon
-          inclination={moon.orbitalInclination}
-          onPositionUpdate={(worldPos) =>
-            handleMoonPositionUpdate(moon.id, worldPos)
-          }
-        >
-          <MoonMesh
-            moon={moon}
-            renderScale={renderScale}
-            isSelected={selectedMoonId === moon.id}
-            onClick={(moonPos) => handleMoonClick(moon.id, moonPos)}
-          />
-        </MoonOrbit>
-      ))}
+      {planet.moons?.map((moon) => {
+        // Show moon orbit if:
+        // 1. The moon itself is selected, OR
+        // 2. The parent planet is selected and has moons (to show all moon orbits)
+        const shouldShowMoonOrbit =
+          selectedMoonId === moon.id ||
+          (isSelected && planet.moons && planet.moons.length > 0);
+
+        return (
+          <MoonOrbit
+            key={moon.id}
+            distance={moon.orbitalDistance}
+            speed={moon.orbitalSpeed}
+            angle={moon.orbitalAngle}
+            timeScale={timeScale}
+            showOrbit={shouldShowMoonOrbit}
+            inclination={moon.orbitalInclination}
+            onPositionUpdate={(worldPos) =>
+              handleMoonPositionUpdate(moon.id, worldPos)
+            }
+          >
+            <MoonMesh
+              moon={moon}
+              renderScale={renderScale}
+              isSelected={selectedMoonId === moon.id}
+              onClick={(moonPos) => handleMoonClick(moon.id, moonPos)}
+            />
+          </MoonOrbit>
+        );
+      })}
     </PlanetOrbit>
   );
 };
