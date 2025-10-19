@@ -5,6 +5,7 @@ import { useSocket } from "../../hooks/useSocket";
 import { generateSolarSystem } from "../../utils/systemFactory";
 import PlanetDetailsCard from "./PlanetDetailsCard";
 import AsteroidDetailsCard from "./AsteroidDetailsCard";
+import { MoonDetailsCard } from "./MoonDetailsCard";
 
 const HUD: React.FC = () => {
   const {
@@ -16,8 +17,10 @@ const HUD: React.FC = () => {
     currentSystemId,
     selectedPlanetId,
     selectedAsteroidId,
+    selectedMoonId,
     setSelectedPlanet,
     setSelectedAsteroid,
+    setSelectedMoon,
   } = useGameStore();
   const { players, isConnected, currentRoom } = useMultiplayerStore();
   const { togglePlayPauseSocket, emitPlanetSelected } = useSocket();
@@ -142,23 +145,79 @@ const HUD: React.FC = () => {
                 if (obj.type === "planet") {
                   const planet = obj.data;
                   return (
-                    <button
-                      key={`planet-${planet.id}`}
-                      className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
-                      onClick={() => {
-                        // Ask SolarSystemView to focus this planet
-                        window.dispatchEvent(
-                          new CustomEvent("focusPlanet", {
-                            detail: { planetId: planet.id },
-                          })
-                        );
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
-                      <span className="truncate max-w-[160px]">
-                        {planet.name}
-                      </span>
-                    </button>
+                    <div key={`planet-${planet.id}`}>
+                      <button
+                        className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
+                        onClick={() => {
+                          // Ask SolarSystemView to focus this planet
+                          window.dispatchEvent(
+                            new CustomEvent("focusPlanet", {
+                              detail: { planetId: planet.id },
+                            })
+                          );
+                        }}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full inline-block ${
+                            planet.type === "gas_giant"
+                              ? "bg-orange-400"
+                              : planet.type === "ice_giant"
+                              ? "bg-blue-400"
+                              : planet.type === "earth_like"
+                              ? "bg-green-400"
+                              : planet.type === "ocean_world"
+                              ? "bg-cyan-400"
+                              : planet.type === "desert_world"
+                              ? "bg-yellow-400"
+                              : planet.type === "ice_world"
+                              ? "bg-blue-200"
+                              : planet.type === "lava_world"
+                              ? "bg-red-400"
+                              : planet.type === "dwarf_planet"
+                              ? "bg-gray-400"
+                              : "bg-white/70"
+                          }`}
+                        />
+                        <span className="truncate max-w-[160px]">
+                          {planet.name} -{" "}
+                          {planet.type
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </span>
+                      </button>
+
+                      {/* Moons display */}
+                      {planet.moons && planet.moons.length > 0 && (
+                        <div className="ml-4 mt-1">
+                          <button
+                            className="text-xs text-gray-300 hover:text-white transition-colors cursor-pointer"
+                            onClick={() => {
+                              // Cycle through moons or focus on single moon
+                              if (planet.moons.length === 1) {
+                                // Single moon - go directly to it
+                                window.dispatchEvent(
+                                  new CustomEvent("focusMoon", {
+                                    detail: { moonId: planet.moons[0].id },
+                                  })
+                                );
+                              } else {
+                                // Multiple moons - cycle through them
+                                window.dispatchEvent(
+                                  new CustomEvent("cycleMoons", {
+                                    detail: { planetId: planet.id },
+                                  })
+                                );
+                              }
+                            }}
+                          >
+                            -{" "}
+                            {planet.moons.length === 1
+                              ? "Moon"
+                              : `Moons (${planet.moons.length})`}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 } else {
                   // Asteroid belt
@@ -241,11 +300,19 @@ const HUD: React.FC = () => {
       {selectedPlanet && (
         <PlanetDetailsCard
           planet={selectedPlanet}
-          onClose={() => {
-            setSelectedPlanet(null);
+          selectedMoonId={selectedMoonId}
+          onMoonSelect={(moonId) => {
+            setSelectedMoon(moonId);
+            // Emit moon selection to server if connected
             if (isConnected) {
-              emitPlanetSelected(null);
+              // TODO: Add moon selection socket event
             }
+          }}
+          onClose={() => {
+            // Don't clear planet selection - just close the details card
+            // Camera should stay focused on the planet
+            setSelectedMoon(null);
+            // Note: We don't call setSelectedPlanet(null) to keep the planet selected
           }}
         />
       )}
@@ -259,6 +326,37 @@ const HUD: React.FC = () => {
             // TODO: Add asteroid deselection socket event
           }}
         />
+      )}
+
+      {/* Moon Details Card - Bottom Left (when moon selected) */}
+      {selectedMoonId && currentSystem && (
+        (() => {
+          // Find the selected moon and its parent planet
+          let selectedMoon = null;
+          let parentPlanet = null;
+          
+          for (const planet of currentSystem.planets) {
+            if (planet.moons) {
+              const moon = planet.moons.find(m => m.id === selectedMoonId);
+              if (moon) {
+                selectedMoon = moon;
+                parentPlanet = planet;
+                break;
+              }
+            }
+          }
+          
+          return selectedMoon && parentPlanet ? (
+            <MoonDetailsCard
+              moon={selectedMoon}
+              parentPlanetName={parentPlanet.name}
+              onClose={() => {
+                setSelectedMoon(null);
+                // TODO: Add moon deselection socket event
+              }}
+            />
+          ) : null;
+        })()
       )}
     </>
   );

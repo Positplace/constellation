@@ -9,6 +9,7 @@ import { NoiseConfig, randomInt, randomRange } from "./noiseUtils";
 import { generateAtmosphere } from "./atmosphereGenerator";
 import { generateContinents, generateCities } from "./terrainGenerator";
 import { generatePlanetName } from "./nameGenerator";
+import { generateMoonsForPlanet, generateRingsForPlanet } from "./moonFactory";
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -181,7 +182,9 @@ export function createPlanet(
   };
 
   // Determine orbital zone based on distance
-  const getOrbitalZone = (distance: number): import("../types/planet.types").OrbitalZone => {
+  const getOrbitalZone = (
+    distance: number
+  ): import("../types/planet.types").OrbitalZone => {
     if (distance < 0.4) return "inferno";
     if (distance < 0.7) return "hot";
     if (distance <= 2.0) return "goldilocks";
@@ -207,11 +210,24 @@ export function createPlanet(
     surface,
     atmosphere,
     appearance,
+    moons: [],
+    rings: null,
     seed,
     spinAxis,
     spinSpeed,
     spinDirection,
   };
+
+  // Generate moons and rings for the planet
+  planet.moons = generateMoonsForPlanet(planet, seed);
+  planet.rings = generateRingsForPlanet(planet, seed);
+
+  // Update appearance effects based on rings
+  if (planet.rings) {
+    planet.appearance.effects.rings = true;
+    planet.appearance.effects.ringColor = planet.rings.color;
+    planet.appearance.effects.ringOpacity = planet.rings.opacity;
+  }
 
   return planet;
 }

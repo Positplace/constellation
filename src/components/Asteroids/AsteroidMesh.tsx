@@ -17,6 +17,7 @@ interface AsteroidMeshProps {
   onClick?: () => void;
   timeScale?: number;
   selectedId?: string;
+  shadowIntensity?: number; // 0-1, controls shadow casting intensity
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -184,6 +185,7 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
   onClick,
   timeScale = 1,
   selectedId,
+  shadowIntensity = 1,
 }) => {
   // Use SIMPLE render scale calculation
   const actualRenderScale = renderScale ?? getSimpleRenderScale();
@@ -252,7 +254,7 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
         ref={meshRef}
         geometry={geometry}
         material={material}
-        castShadow
+        castShadow={shadowIntensity > 0}
         receiveShadow
         position={[0, 0, 0]}
         scale={[visibilityScale, visibilityScale, visibilityScale]}

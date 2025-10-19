@@ -35,15 +35,18 @@ const SolarSystemView: React.FC = () => {
     currentSystemId,
     selectedPlanetId,
     selectedAsteroidId,
+    selectedMoonId,
     setSelectedPlanet,
     setSelectedAsteroid,
+    setSelectedMoon,
     setCurrentSystem,
   } = useGameStore();
   const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
 
   const selectedId = selectedPlanetId;
-  const shouldShowOrbits = !selectedPlanetId && !selectedAsteroidId;
+  const shouldShowOrbits =
+    !selectedPlanetId && !selectedAsteroidId && !selectedMoonId;
 
   // Get current system
   const currentSystem = useMemo(() => {
@@ -287,6 +290,7 @@ const SolarSystemView: React.FC = () => {
       }
       setSelectedPlanet(null);
       setSelectedAsteroid(null);
+      setSelectedMoon(null);
       setSelectedPos(new THREE.Vector3(0, 0, 0));
       // Emit to server if connected
       if (isConnected) {
@@ -637,6 +641,165 @@ const SolarSystemView: React.FC = () => {
     );
   }, [currentSystem]);
 
+  // Listen for focusMoon requests coming from HUD
+  useEffect(() => {
+    const onFocusMoon = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { moonId: string };
+      if (!detail || !currentSystem || !controlsRef.current) return;
+
+      // Find the moon in the system
+      let foundMoon = null;
+      let parentPlanet = null;
+
+      for (const planet of currentSystem.planets) {
+        if (planet.moons) {
+          const moon = planet.moons.find((m) => m.id === detail.moonId);
+          if (moon) {
+            foundMoon = moon;
+            parentPlanet = planet;
+            break;
+          }
+        }
+      }
+
+      if (!foundMoon || !parentPlanet) return;
+
+      // Select the moon
+      setSelectedMoon(foundMoon.id);
+
+      // Calculate moon position for focus
+      const moonAngle = foundMoon.orbitalAngle;
+      const moonDistance = foundMoon.orbitalDistance;
+
+      // Get planet's actual orbital position from planetsToRender
+      const planetRenderData = planetsToRender.find(
+        (p) => p.planet.id === parentPlanet.id
+      );
+      if (!planetRenderData) return;
+
+      const planetPos = new THREE.Vector3(
+        Math.cos(planetRenderData.angle) * planetRenderData.distance,
+        0,
+        Math.sin(planetRenderData.angle) * planetRenderData.distance
+      );
+
+      // Calculate moon position relative to planet
+      const moonPos = new THREE.Vector3(
+        planetPos.x + Math.cos(moonAngle) * moonDistance,
+        planetPos.y,
+        planetPos.z + Math.sin(moonAngle) * moonDistance
+      );
+
+      setSelectedPos(moonPos);
+
+      // Focus on the moon with close-up distance
+      const focusDistance = 0.2;
+      if (controlsRef.current) {
+        const controls = controlsRef.current;
+        const cam = controls.object as THREE.PerspectiveCamera;
+        const offset = cam.position.clone().sub(controls.target);
+        const dir =
+          offset.length() > 0
+            ? offset.clone().normalize()
+            : new THREE.Vector3(0, 0, 1);
+        zoomAnimRef.current = {
+          active: true,
+          start: performance.now(),
+          duration: 700,
+          fromDistance: offset.length(),
+          toDistance: focusDistance,
+          dir,
+        };
+      }
+    };
+
+    window.addEventListener("focusMoon", onFocusMoon as EventListener);
+    return () =>
+      window.removeEventListener("focusMoon", onFocusMoon as EventListener);
+  }, [currentSystem, setSelectedMoon, setSelectedPos, planetsToRender]);
+
+  // Listen for cycleMoons requests coming from HUD
+  useEffect(() => {
+    const onCycleMoons = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { planetId: string };
+      if (!detail || !currentSystem || !controlsRef.current) return;
+
+      // Find the planet
+      const planet = currentSystem.planets.find(
+        (p) => p.id === detail.planetId
+      );
+      if (!planet || !planet.moons || planet.moons.length === 0) return;
+
+      // Find current moon index
+      const currentMoonIndex = selectedMoonId
+        ? planet.moons.findIndex((m) => m.id === selectedMoonId)
+        : -1;
+
+      // Cycle to next moon, or first moon if none selected
+      const nextMoonIndex = (currentMoonIndex + 1) % planet.moons.length;
+      const nextMoon = planet.moons[nextMoonIndex];
+
+      if (nextMoon) {
+        setSelectedMoon(nextMoon.id);
+
+        // Calculate moon position for focus
+        const moonAngle = nextMoon.orbitalAngle;
+        const moonDistance = nextMoon.orbitalDistance;
+
+        // Get planet's actual orbital position from planetsToRender
+        const planetRenderData = planetsToRender.find(
+          (p) => p.planet.id === planet.id
+        );
+        if (!planetRenderData) return;
+
+        const planetPos = new THREE.Vector3(
+          Math.cos(planetRenderData.angle) * planetRenderData.distance,
+          0,
+          Math.sin(planetRenderData.angle) * planetRenderData.distance
+        );
+
+        // Calculate moon position relative to planet
+        const moonPos = new THREE.Vector3(
+          planetPos.x + Math.cos(moonAngle) * moonDistance,
+          planetPos.y,
+          planetPos.z + Math.sin(moonAngle) * moonDistance
+        );
+
+        setSelectedPos(moonPos);
+
+        // Focus on the moon with close-up distance
+        const focusDistance = 0.2;
+        if (controlsRef.current) {
+          const controls = controlsRef.current;
+          const cam = controls.object as THREE.PerspectiveCamera;
+          const offset = cam.position.clone().sub(controls.target);
+          const dir =
+            offset.length() > 0
+              ? offset.clone().normalize()
+              : new THREE.Vector3(0, 0, 1);
+          zoomAnimRef.current = {
+            active: true,
+            start: performance.now(),
+            duration: 700,
+            fromDistance: offset.length(),
+            toDistance: focusDistance,
+            dir,
+          };
+        }
+      }
+    };
+
+    window.addEventListener("cycleMoons", onCycleMoons as EventListener);
+    return () =>
+      window.removeEventListener("cycleMoons", onCycleMoons as EventListener);
+  }, [
+    currentSystem,
+    setSelectedMoon,
+    setSelectedPos,
+    planetsToRender,
+    selectedMoonId,
+  ]);
+
   // Listen for focus Home planet event (from clicking Home button)
   useEffect(() => {
     const handleFocusHome = () => {
@@ -729,6 +892,7 @@ const SolarSystemView: React.FC = () => {
     }
     setSelectedPlanet(null);
     setSelectedAsteroid(null);
+    setSelectedMoon(null);
     setSelectedPos(new THREE.Vector3(0, 0, 0));
   };
 
@@ -744,6 +908,7 @@ const SolarSystemView: React.FC = () => {
     // Clear planet and asteroid selection when traveling
     setSelectedPlanet(null);
     setSelectedAsteroid(null);
+    setSelectedMoon(null);
 
     // Start travel animation with approach phase
     setTravelState({
@@ -957,6 +1122,7 @@ const SolarSystemView: React.FC = () => {
             angle={g.angle}
             timeScale={timeScale}
             selectedId={selectedId || undefined}
+            selectedMoonId={selectedMoonId || undefined}
             onSelect={(id, pos) => {
               // Find the clicked planet by ID
               const clickedPlanetData = planetsToRender.find(
@@ -1032,6 +1198,35 @@ const SolarSystemView: React.FC = () => {
                 }
               }
             }}
+            onMoonSelect={(moonId, moonPos) => {
+              setSelectedMoon(moonId);
+              setSelectedPos(moonPos.clone());
+
+              // Calculate focus distance for the clicked moon
+              const focusDistance = 0.2; // Close-up for moons
+              if (controlsRef.current) {
+                const controls = controlsRef.current;
+                const cam = controls.object as THREE.PerspectiveCamera;
+                const offset = cam.position.clone().sub(controls.target);
+                const dir =
+                  offset.length() > 0
+                    ? offset.clone().normalize()
+                    : new THREE.Vector3(0, 0, 1);
+                zoomAnimRef.current = {
+                  active: true,
+                  start: performance.now(),
+                  duration: 700,
+                  fromDistance: offset.length(),
+                  toDistance: focusDistance,
+                  dir,
+                };
+              }
+            }}
+            onMoonSelectedFrame={(moonId, moonPos) => {
+              if (selectedMoonId === moonId) {
+                setSelectedPos(moonPos.clone());
+              }
+            }}
             renderScale={renderScale}
             showOrbit={shouldShowOrbits}
           />
@@ -1046,11 +1241,20 @@ const SolarSystemView: React.FC = () => {
           timeScale={timeScale}
           selectedId={selectedAsteroidId || undefined}
           showBeltRing={shouldShowOrbits}
+          planetPositions={planetsToRender.map(
+            (p) =>
+              new THREE.Vector3(
+                Math.cos(p.angle) * p.distance,
+                0,
+                Math.sin(p.angle) * p.distance
+              )
+          )}
           onAsteroidSelect={(asteroidId) => {
             // Use the helper function to focus with zoom animation
             focusOnAsteroid(asteroidId);
             // Clear planet selection when selecting asteroid
             setSelectedPlanet(null);
+            setSelectedMoon(null);
             // Emit to server if connected
             if (isConnected) {
               // TODO: Add asteroid selection socket event

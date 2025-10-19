@@ -3,6 +3,10 @@ import { PlanetData } from "../../types/planet.types";
 import { PlanetOrbit } from "./PlanetOrbit";
 import { PlanetRotation } from "./PlanetRotation";
 import { PlanetMesh } from "./PlanetMesh";
+import { MoonOrbit } from "./MoonOrbit";
+import { MoonMesh } from "./MoonMesh";
+import { PlanetRings } from "./PlanetRings";
+import { migrateRingData } from "../../utils/moonFactory";
 
 interface PlanetProps {
   planet: PlanetData;
@@ -13,8 +17,11 @@ interface PlanetProps {
   renderScale?: number;
   showOrbit?: boolean;
   selectedId?: string;
+  selectedMoonId?: string;
   onSelect?: (planetId: string, worldPos: THREE.Vector3) => void;
   onSelectedFrame?: (planetId: string, worldPos: THREE.Vector3) => void;
+  onMoonSelect?: (moonId: string, worldPos: THREE.Vector3) => void;
+  onMoonSelectedFrame?: (moonId: string, worldPos: THREE.Vector3) => void;
 }
 
 /**
@@ -33,8 +40,11 @@ export const Planet: React.FC<PlanetProps> = ({
   renderScale = 0.16,
   showOrbit = true,
   selectedId,
+  selectedMoonId,
   onSelect,
   onSelectedFrame,
+  onMoonSelect,
+  onMoonSelectedFrame,
 }) => {
   const isSelected = selectedId === planet.id;
 
@@ -57,6 +67,21 @@ export const Planet: React.FC<PlanetProps> = ({
     }
   };
 
+  const handleMoonClick = (moonId: string, moonPos: THREE.Vector3) => {
+    if (onMoonSelect) {
+      onMoonSelect(moonId, moonPos);
+    }
+  };
+
+  const handleMoonPositionUpdate = (
+    moonId: string,
+    worldPos: THREE.Vector3
+  ) => {
+    if (selectedMoonId === moonId && onMoonSelectedFrame) {
+      onMoonSelectedFrame(moonId, worldPos);
+    }
+  };
+
   return (
     <PlanetOrbit
       distance={distance}
@@ -66,6 +91,15 @@ export const Planet: React.FC<PlanetProps> = ({
       showOrbit={showOrbit && !isSelected}
       onPositionUpdate={handlePositionUpdate}
     >
+      {/* Planet rings (rendered before planet mesh) */}
+      {planet.rings && (
+        <PlanetRings
+          ringData={planet.rings}
+          planetAxialTilt={planet.axialTilt}
+          timeScale={timeScale}
+        />
+      )}
+
       <PlanetRotation
         spinAxis={planet.spinAxis}
         spinSpeed={planet.spinSpeed}
@@ -78,6 +112,29 @@ export const Planet: React.FC<PlanetProps> = ({
           onClick={handleClick}
         />
       </PlanetRotation>
+
+      {/* Moons orbiting the planet */}
+      {planet.moons?.map((moon) => (
+        <MoonOrbit
+          key={moon.id}
+          distance={moon.orbitalDistance}
+          speed={moon.orbitalSpeed}
+          angle={moon.orbitalAngle}
+          timeScale={timeScale}
+          showOrbit={selectedMoonId === moon.id} // Show orbit for selected moon
+          inclination={moon.orbitalInclination}
+          onPositionUpdate={(worldPos) =>
+            handleMoonPositionUpdate(moon.id, worldPos)
+          }
+        >
+          <MoonMesh
+            moon={moon}
+            renderScale={renderScale}
+            isSelected={selectedMoonId === moon.id}
+            onClick={(moonPos) => handleMoonClick(moon.id, moonPos)}
+          />
+        </MoonOrbit>
+      ))}
     </PlanetOrbit>
   );
 };

@@ -266,6 +266,44 @@ export function generateSolarSystem(
   // Generate planet orbital distances with proper spacing
   const orbitalDistances: number[] = [];
 
+  // First, determine planet types and sizes to calculate appropriate spacing
+  const planetTypes: string[] = [];
+  const planetSizes: number[] = [];
+
+  for (let i = 0; i < planetCount; i++) {
+    const planetSeed = systemSeed + 1000 + i * 100;
+
+    // Pre-determine planet type and size for spacing calculations
+    const t = i / (planetCount - 1); // 0 to 1
+    const logT = Math.log(1 + t * 9) / Math.log(10); // Logarithmic scale
+    let baseDistance = innerBoundary + logT * (outerBoundary - innerBoundary);
+    const variance = randomRange(-0.15, 0.15, planetSeed + 50);
+    baseDistance = baseDistance * (1 + variance);
+
+    // Select planet type based on orbital zone
+    const planetType = selectPlanetTypeByZone(
+      baseDistance,
+      habitableZoneMin,
+      habitableZoneMax,
+      planetSeed
+    );
+
+    // Determine planet size based on type
+    let planetSize = 1.0; // Default Earth-sized
+    if (planetType === "gas_giant") {
+      planetSize = randomRange(8, 15, planetSeed + 10); // 8-15 Earth radii
+    } else if (planetType === "ice_giant") {
+      planetSize = randomRange(3, 6, planetSeed + 11); // 3-6 Earth radii
+    } else if (planetType === "dwarf_planet") {
+      planetSize = randomRange(0.1, 0.3, planetSeed + 12); // 0.1-0.3 Earth radii
+    } else {
+      planetSize = randomRange(0.5, 2.0, planetSeed + 13); // 0.5-2 Earth radii
+    }
+
+    planetTypes.push(planetType);
+    planetSizes.push(planetSize);
+  }
+
   for (let i = 0; i < planetCount; i++) {
     const planetSeed = systemSeed + 1000 + i * 100;
 
@@ -302,39 +340,67 @@ export function generateSolarSystem(
     const variance = randomRange(-0.15, 0.15, planetSeed + 50);
     baseDistance = baseDistance * (1 + variance);
 
-    // Ensure minimum spacing between consecutive planets
+    // Dynamic spacing based on planet size
     if (i > 0) {
-      const minSpacing = 0.3;
+      const currentPlanetSize = planetSizes[i];
+      const previousPlanetSize = planetSizes[i - 1];
+
+      // Calculate minimum spacing based on planet sizes
+      // Larger planets need more space to avoid visual overlap
+      const sizeFactor = Math.max(currentPlanetSize, previousPlanetSize);
+      const baseSpacing = 0.3; // Base spacing for Earth-sized planets
+      const sizeMultiplier = 1 + (sizeFactor - 1) * 0.5; // Scale spacing with size
+
+      // Extra spacing for gas giants (they often have rings and many moons)
+      const gasGiantBonus =
+        planetTypes[i] === "gas_giant" || planetTypes[i - 1] === "gas_giant"
+          ? 0.5
+          : 0;
+
+      const minSpacing = baseSpacing * sizeMultiplier + gasGiantBonus;
+
       const previousDistance = orbitalDistances[i - 1];
       baseDistance = Math.max(baseDistance, previousDistance + minSpacing);
+
+      console.log(
+        `Planet ${i}: type=${planetTypes[i]}, size=${currentPlanetSize.toFixed(
+          1
+        )}R⊕, spacing=${minSpacing.toFixed(
+          2
+        )}AU, distance=${baseDistance.toFixed(2)}AU`
+      );
     }
 
     orbitalDistances.push(baseDistance);
   }
 
-  // Now create planets with calculated distances using zone-based selection
+  // Now create planets with calculated distances using pre-determined types
   for (let i = 0; i < planetCount; i++) {
     const planetSeed = systemSeed + 1000 + i * 100;
     const orbitalDistance = orbitalDistances[i];
 
-    // Select planet type based on orbital zone (realistic placement)
-    const planetType = selectPlanetTypeByZone(
-      orbitalDistance,
-      habitableZoneMin,
-      habitableZoneMax,
-      planetSeed
-    );
+    // Use pre-determined planet type
+    const planetType = planetTypes[i];
 
     // Determine if this planet should be in the habitable zone
     const inHabitableZone =
       orbitalDistance >= habitableZoneMin &&
       orbitalDistance <= habitableZoneMax;
 
+    // Determine planet size category based on pre-determined size
+    let sizeCategory: "tiny" | "small" | "medium" | "large" | "huge";
+    const planetSize = planetSizes[i];
+    if (planetSize < 0.5) sizeCategory = "tiny";
+    else if (planetSize < 1.0) sizeCategory = "small";
+    else if (planetSize < 3.0) sizeCategory = "medium";
+    else if (planetSize < 8.0) sizeCategory = "large";
+    else sizeCategory = "huge";
+
     // Create planet
     const planet = createPlanet(
       {
         type: planetType,
-        size: randomRange(0, 1, planetSeed + 2) > 0.7 ? "large" : "medium",
+        size: sizeCategory,
         age: starConfig.systemAge as any,
         habitability: inHabitableZone ? "habitable" : "marginal",
         seed: planetSeed,

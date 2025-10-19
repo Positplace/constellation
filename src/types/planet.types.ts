@@ -1,10 +1,10 @@
-export type OrbitalZone = 
-  | "inferno"      // < 0.4 AU - Lava/volcanic worlds
-  | "hot"          // 0.4-0.7 AU - Hot desert/volcanic
-  | "goldilocks"   // 0.7-2.0 AU - Habitable
-  | "cold"         // 2.0-5.0 AU - Ice worlds
-  | "outer"        // 5.0-10.0 AU - Gas/ice giants
-  | "deep_space";  // > 10 AU - Frozen worlds
+export type OrbitalZone =
+  | "inferno" // < 0.4 AU - Lava/volcanic worlds
+  | "hot" // 0.4-0.7 AU - Hot desert/volcanic
+  | "goldilocks" // 0.7-2.0 AU - Habitable
+  | "cold" // 2.0-5.0 AU - Ice worlds
+  | "outer" // 5.0-10.0 AU - Gas/ice giants
+  | "deep_space"; // > 10 AU - Frozen worlds
 
 export interface PlanetData {
   // Basic properties
@@ -38,6 +38,10 @@ export interface PlanetData {
 
   // Visual properties
   appearance: AppearanceData;
+
+  // Moons and rings
+  moons?: MoonData[];
+  rings?: RingData | null;
 
   // Generation seed for reproducibility
   seed: number;
@@ -314,4 +318,37 @@ export interface TerrainGenerationConfig {
   erosion: number; // 0-1
   smoothing: number; // 0-1
   detail: number; // 0-1
+}
+
+export interface MoonData {
+  id: string;
+  name: string;
+  size: number; // radius in kilometers
+  orbitalDistance: number; // distance from planet center in render units
+  orbitalSpeed: number; // orbital speed around planet
+  orbitalAngle: number; // current orbital angle in radians
+  orbitalEccentricity: number; // 0-1
+  orbitalInclination: number; // in degrees
+  type: PlanetType; // Moon planet type
+  material: "silicate" | "ice" | "carbonaceous" | "iron";
+  rotation: {
+    axis: [number, number, number]; // normalized rotation axis
+    speed: number; // radians per second
+    direction: 1 | -1; // rotation direction
+  };
+  seed: number;
+}
+
+export interface RingBand {
+  innerRadius: number; // inner edge in render units
+  outerRadius: number; // outer edge in render units
+  color: string; // hex color
+  opacity: number; // 0-1
+  texturePattern: "solid" | "banded" | "particulate";
+}
+
+export interface RingData {
+  bands: RingBand[]; // Multiple ring bands
+  rotationSpeed: number; // rotation speed of rings
+  seed: number;
 }

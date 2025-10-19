@@ -29,6 +29,8 @@ interface GameStore {
   timeScale: number; // 0..1 smooth playback factor
   selectedPlanetId: string | null; // Currently selected planet in solar view
   selectedAsteroidId: string | null; // Currently selected asteroid in solar view
+  selectedMoonId: string | null; // Currently selected moon in solar view
+  showPlanetDetails: boolean; // Whether to show planet details card
 
   // Actions
   addPlayer: (player: Player) => void;
@@ -46,6 +48,7 @@ interface GameStore {
   setTimeScale: (scale: number) => void;
   setSelectedPlanet: (planetId: string | null) => void;
   setSelectedAsteroid: (asteroidId: string | null) => void;
+  setSelectedMoon: (moonId: string | null) => void;
   updateSystemPosition: (
     systemId: string,
     position: [number, number, number]
@@ -68,6 +71,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   timeScale: 0,
   selectedPlanetId: null,
   selectedAsteroidId: null,
+  selectedMoonId: null,
 
   // Actions
   setActiveView: (view) => {
@@ -204,7 +208,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
     }
-    set({ selectedPlanetId: planetId, selectedAsteroidId: null });
+    set({
+      selectedPlanetId: planetId,
+      selectedAsteroidId: null,
+      selectedMoonId: null,
+    });
   },
 
   setSelectedAsteroid: (asteroidId) => {
@@ -227,7 +235,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
     }
-    set({ selectedAsteroidId: asteroidId, selectedPlanetId: null });
+    set({
+      selectedAsteroidId: asteroidId,
+      selectedPlanetId: null,
+      selectedMoonId: null,
+    });
+  },
+
+  setSelectedMoon: (moonId) => {
+    // Validate that the moon exists in the current system
+    if (moonId) {
+      const state = get();
+      const currentSystem = state.solarSystems.find(
+        (s) => s.id === state.currentSystemId
+      );
+      if (
+        currentSystem &&
+        !currentSystem.planets?.some((planet) =>
+          planet.moons?.find((m) => m.id === moonId)
+        )
+      ) {
+        console.warn(
+          `Moon ${moonId} not found in current system ${state.currentSystemId}`
+        );
+        set({ selectedMoonId: null });
+        return;
+      }
+    }
+    set({
+      selectedMoonId: moonId,
+      selectedPlanetId: null,
+      selectedAsteroidId: null,
+    });
   },
 
   updateSystemPosition: (systemId, position) => {

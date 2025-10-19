@@ -4,11 +4,16 @@ import { PlanetData } from "../../types/planet.types";
 interface PlanetDetailsCardProps {
   planet: PlanetData;
   onClose?: () => void;
+  selectedMoonId?: string | null;
+  onMoonSelect?: (moonId: string) => void;
+  onCycleMoons?: () => void;
 }
 
 export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
   planet,
   onClose,
+  selectedMoonId,
+  onMoonSelect,
 }) => {
   return (
     <div
@@ -147,6 +152,79 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Moons and Rings */}
+      <div className="space-y-2 mb-3">
+        <h3 className="text-sm font-semibold text-blue-200 border-b border-white/10 pb-1">
+          Satellites
+        </h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <div className="text-gray-400">Moons:</div>
+          <div>{planet.moons?.length || 0}</div>
+
+          <div className="text-gray-400">Rings:</div>
+          <div className={planet.rings ? "text-green-400" : "text-gray-500"}>
+            {planet.rings ? "Yes" : "No"}
+          </div>
+        </div>
+
+        {/* Moon list */}
+        {planet.moons && planet.moons.length > 0 && (
+          <div className="mt-2">
+            <div className="text-xs text-gray-400 mb-1">
+              Moon Names ({planet.moons.length}):
+            </div>
+            <div className="text-xs space-y-0.5 max-h-20 overflow-y-auto">
+              {planet.moons.map((moon, index) => (
+                <div
+                  key={moon.id}
+                  className={`flex justify-between items-center p-1 rounded cursor-pointer transition-colors ${
+                    selectedMoonId === moon.id
+                      ? "bg-green-500/20 border border-green-500/50"
+                      : "hover:bg-white/10"
+                  }`}
+                  onClick={() => onMoonSelect?.(moon.id)}
+                >
+                  <span className="text-gray-300">{moon.name}</span>
+                  <span className="text-gray-500 text-xs">
+                    {moon.material} • {(moon.size / 1000).toFixed(0)}km
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Click on a moon to select and focus on it
+            </div>
+          </div>
+        )}
+
+        {/* Ring details */}
+        {planet.rings && (
+          <div className="mt-2">
+            <div className="text-xs text-gray-400 mb-1">Ring Details:</div>
+            <div className="text-xs space-y-0.5">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Inner Radius:</span>
+                <span className="text-gray-300">
+                  {(planet.rings.innerRadius * 1000).toFixed(0)}km
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Outer Radius:</span>
+                <span className="text-gray-300">
+                  {(planet.rings.outerRadius * 1000).toFixed(0)}km
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Pattern:</span>
+                <span className="text-gray-300 capitalize">
+                  {planet.rings.texturePattern}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Surface */}
       <div className="space-y-2">
