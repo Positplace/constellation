@@ -172,7 +172,7 @@ const SolarSystemView: React.FC = () => {
           .clone()
           .sub(directionToGate.multiplyScalar(3)); // Stop 3 units before gate
 
-        // Animate camera to gate
+        // Animate camera position to gate
         if (travelState.initialCameraPos) {
           cam.position.lerpVectors(
             travelState.initialCameraPos,
@@ -181,8 +181,15 @@ const SolarSystemView: React.FC = () => {
           );
         }
 
-        // Look at the gate
-        controls.target.copy(gatePos);
+        // Smoothly animate camera target from current target to gate
+        if (travelState.initialCameraTarget) {
+          controls.target.lerpVectors(
+            travelState.initialCameraTarget,
+            gatePos,
+            eased
+          );
+        }
+
         controls.update();
 
         if (progress >= 1) {
