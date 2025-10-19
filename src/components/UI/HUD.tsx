@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
 import { useSocket } from "../../hooks/useSocket";
@@ -7,6 +7,7 @@ import PlanetDetailsCard from "./PlanetDetailsCard";
 import AsteroidDetailsCard from "./AsteroidDetailsCard";
 import { MoonDetailsCard } from "./MoonDetailsCard";
 import { SpaceshipDetailsCard } from "./SpaceshipDetailsCard";
+import { ObjectType } from "../../types/spaceship.types";
 
 const HUD: React.FC = () => {
   const {
@@ -19,11 +20,115 @@ const HUD: React.FC = () => {
     selectedObject,
     setSelectedObject,
     spaceships,
+    launchShip,
+    changeSpaceshipDestination,
   } = useGameStore();
   const { players, isConnected, currentRoom } = useMultiplayerStore();
   const { togglePlayPauseSocket } = useSocket();
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
+
+  // Launch dialog state
+  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+  const [launchOrigin, setLaunchOrigin] = useState<{
+    id: string;
+    type: ObjectType;
+    name: string;
+  } | null>(null);
+  const [dialogMode, setDialogMode] = useState<"launch" | "changeDestination">(
+    "launch"
+  );
+  const [spaceshipToChange, setSpaceshipToChange] = useState<string | null>(
+    null
+  );
+
+  // Launch dialog functions
+  const handleLaunchShip = (destination: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => {
+    if (dialogMode === "launch" && launchOrigin) {
+      launchShip(
+        launchOrigin.id,
+        launchOrigin.type,
+        destination.id,
+        destination.type
+      );
+    } else if (dialogMode === "changeDestination" && spaceshipToChange) {
+      changeSpaceshipDestination(spaceshipToChange, {
+        id: destination.id,
+        type: destination.type,
+      });
+    }
+
+    setShowLaunchDialog(false);
+    setLaunchOrigin(null);
+    setSpaceshipToChange(null);
+    setDialogMode("launch");
+  };
+
+  const getAvailableDestinations = () => {
+    if (!currentSystem) return [];
+
+    const destinations: Array<{ id: string; type: ObjectType; name: string }> =
+      [];
+
+    // Add other planets
+    currentSystem.planets
+      .filter((p) => !launchOrigin || p.id !== launchOrigin.id)
+      .forEach((p) => {
+        destinations.push({
+          id: p.id,
+          type: "planet",
+          name: p.name,
+        });
+      });
+
+    // Add moons
+    currentSystem.planets.forEach((planet) => {
+      if (planet.moons) {
+        planet.moons.forEach((moon) => {
+          destinations.push({
+            id: moon.id,
+            type: "moon",
+            name: `${moon.name} (${planet.name})`,
+          });
+        });
+      }
+    });
+
+    // Add asteroids
+    currentSystem.asteroidBelts?.forEach((belt) => {
+      belt.asteroids.forEach((asteroid) => {
+        destinations.push({
+          id: asteroid.id,
+          type: "asteroid",
+          name: `${asteroid.name} (${belt.name})`,
+        });
+      });
+    });
+
+    return destinations;
+  };
+
+  // Function to trigger launch dialog
+  const triggerLaunchDialog = (origin: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => {
+    setLaunchOrigin(origin);
+    setDialogMode("launch");
+    setShowLaunchDialog(true);
+  };
+
+  // Function to trigger destination change dialog
+  const triggerDestinationChangeDialog = (spaceshipId: string) => {
+    setSpaceshipToChange(spaceshipId);
+    setDialogMode("changeDestination");
+    setShowLaunchDialog(true);
+  };
 
   // Extract selected IDs for easier access
   const selectedPlanetId =
@@ -319,6 +424,7 @@ const HUD: React.FC = () => {
               // TODO: Add moon selection socket event
             }
           }}
+          onLaunchShip={triggerLaunchDialog}
           onClose={() => {
             // Clear selection to close the details card
             setSelectedObject(null);
@@ -377,13 +483,153 @@ const HUD: React.FC = () => {
           return selectedSpaceship ? (
             <SpaceshipDetailsCard
               spaceship={selectedSpaceship}
+              onLaunchShip={(origin) => {
+                if (origin.id.startsWith("spaceship-")) {
+                  triggerDestinationChangeDialog(origin.id);
+                } else {
+                  triggerLaunchDialog(origin);
+                }
+              }}
               onClose={() => {
                 setSelectedObject(null);
               }}
             />
           ) : null;
         })()}
+
+      {/* Launch Ship Dialog - Full Screen Modal */}
+      {showLaunchDialog && (
+        <LaunchShipDialog
+          isOpen={showLaunchDialog}
+          onClose={() => {
+            setShowLaunchDialog(false);
+            setLaunchOrigin(null);
+            setSpaceshipToChange(null);
+            setDialogMode("launch");
+          }}
+          originName={launchOrigin?.name || "Spaceship"}
+          dialogMode={dialogMode}
+          onLaunch={handleLaunchShip}
+          availableDestinations={getAvailableDestinations()}
+        />
+      )}
     </>
+  );
+};
+
+// Launch Ship Dialog Component
+const LaunchShipDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  originName: string;
+  dialogMode: "launch" | "changeDestination";
+  onLaunch: (destination: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => void;
+  availableDestinations: Array<{ id: string; type: ObjectType; name: string }>;
+}> = ({
+  isOpen,
+  onClose,
+  originName,
+  dialogMode,
+  onLaunch,
+  availableDestinations,
+}) => {
+  const [selectedDestination, setSelectedDestination] = useState<{
+    id: string;
+    type: ObjectType;
+    name: string;
+  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter destinations based on search term
+  const filteredDestinations = availableDestinations.filter((dest) =>
+    dest.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div
+        className="bg-gray-900 border border-white/20 rounded-lg p-4 max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-white">
+            {dialogMode === "launch"
+              ? `Launch Ship from ${originName}`
+              : `Change Destination for ${originName}`}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-3">
+          <input
+            type="text"
+            placeholder="Search destinations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400"
+          />
+        </div>
+
+        {/* Destinations List */}
+        <div className="flex-1 overflow-y-auto space-y-1 mb-3">
+          {filteredDestinations.length === 0 ? (
+            <div className="text-gray-400 text-center py-4">
+              No destinations found
+            </div>
+          ) : (
+            filteredDestinations.map((destination) => (
+              <button
+                key={`${destination.type}-${destination.id}`}
+                onClick={() => setSelectedDestination(destination)}
+                className={`w-full text-left p-2 rounded border transition-colors ${
+                  selectedDestination?.id === destination.id
+                    ? "bg-cyan-600 border-cyan-400 text-white"
+                    : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
+                }`}
+              >
+                <div className="font-medium text-sm">{destination.name}</div>
+                <div className="text-xs text-gray-400 capitalize">
+                  {destination.type}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (selectedDestination) {
+                onLaunch(selectedDestination);
+              }
+            }}
+            disabled={!selectedDestination}
+            className="flex-1 px-3 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {dialogMode === "launch" ? "Launch Ship" : "Change Destination"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

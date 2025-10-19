@@ -10,6 +10,11 @@ interface PlanetDetailsCardProps {
   selectedMoonId?: string | null;
   onMoonSelect?: (moonId: string) => void;
   onCycleMoons?: () => void;
+  onLaunchShip?: (origin: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => void;
 }
 
 export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
@@ -17,6 +22,7 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
   onClose,
   selectedMoonId,
   onMoonSelect,
+  onLaunchShip,
 }) => {
   const { launchShip, solarSystems, currentSystemId } = useGameStore();
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
@@ -316,7 +322,15 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
         </h3>
         <button
           onClick={() => {
-            setShowLaunchDialog(true);
+            if (onLaunchShip) {
+              onLaunchShip({
+                id: planet.id,
+                type: "planet",
+                name: planet.name,
+              });
+            } else {
+              setShowLaunchDialog(true);
+            }
           }}
           className="w-full px-3 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >

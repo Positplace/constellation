@@ -7,11 +7,17 @@ import { ObjectType } from "../../types/spaceship.types";
 interface SpaceshipDetailsCardProps {
   spaceship: SpaceshipData;
   onClose?: () => void;
+  onLaunchShip?: (origin: {
+    id: string;
+    type: ObjectType;
+    name: string;
+  }) => void;
 }
 
 export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
   spaceship,
   onClose,
+  onLaunchShip,
 }) => {
   const {
     solarSystems,
@@ -114,64 +120,79 @@ export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
   };
 
   const getStatusInfo = () => {
+    const { gameTime, isPlaying } = useGameStore();
     const now = Date.now();
     const stateElapsed = (now - spaceship.stateStartTime) / 1000;
 
+    // For progress calculation, use different approaches based on state
+    let progress = 0;
+    let eta = null;
+
     switch (spaceship.state) {
       case "launching":
-        return {
-          status: "Launching",
-          description: "Taking off from origin",
-          progress: Math.min(stateElapsed / 2.0, 1),
-          eta: null,
-        };
-      case "traveling":
-        return {
-          status: "Traveling",
-          description: `En route to ${getObjectName(
-            spaceship.destination.id,
-            spaceship.destination.type
-          )}`,
-          progress: Math.min(stateElapsed / 10.0, 1), // Approximate travel time
-          eta: "Calculating...",
-        };
+        progress = Math.min(stateElapsed / 2.0, 1);
+        break;
+      case "traveling": {
+        // For traveling, calculate progress based on distance traveled
+        // This is more accurate than time-based progress
+        const totalDistance = spaceship.totalFlightTime || 10; // fallback to 10 seconds
+        progress = Math.min(stateElapsed / totalDistance, 1);
+        eta = "Calculating...";
+        break;
+      }
       case "orbiting":
-        return {
-          status: "Orbiting",
-          description: `Orbiting ${getObjectName(
-            spaceship.destination.id,
-            spaceship.destination.type
-          )}`,
-          progress: Math.min(stateElapsed / 1.0, 1),
-          eta: null,
-        };
+        progress = Math.min(stateElapsed / 1.0, 1);
+        break;
       case "landing":
-        return {
-          status: "Landing",
-          description: `Landing on ${getObjectName(
-            spaceship.destination.id,
-            spaceship.destination.type
-          )}`,
-          progress: Math.min(stateElapsed / 2.0, 1),
-          eta: null,
-        };
+        progress = Math.min(stateElapsed / 2.0, 1);
+        break;
       case "waiting":
-        return {
-          status: "Waiting",
-          description: `Waiting in orbit around ${getObjectName(
-            spaceship.destination.id,
-            spaceship.destination.type
-          )}`,
-          progress: 1,
-          eta: null,
-        };
+        progress = 1; // Always 100% when waiting
+        break;
       default:
-        return {
-          status: "Unknown",
-          description: "Status unknown",
-          progress: 0,
-          eta: null,
-        };
+        progress = 0;
+    }
+
+    // If game is paused, don't update progress
+    if (!isPlaying && spaceship.state !== "waiting") {
+      progress = Math.max(0, progress - 0.1); // Slightly reduce to show it's paused
+    }
+
+    return {
+      status:
+        spaceship.state.charAt(0).toUpperCase() + spaceship.state.slice(1),
+      description: getStatusDescription(spaceship.state),
+      progress: Math.max(0, Math.min(1, progress)),
+      eta,
+    };
+  };
+
+  const getStatusDescription = (state: string) => {
+    switch (state) {
+      case "launching":
+        return "Taking off from origin";
+      case "traveling":
+        return `En route to ${getObjectName(
+          spaceship.destination.id,
+          spaceship.destination.type
+        )}`;
+      case "orbiting":
+        return `Orbiting ${getObjectName(
+          spaceship.destination.id,
+          spaceship.destination.type
+        )}`;
+      case "landing":
+        return `Landing on ${getObjectName(
+          spaceship.destination.id,
+          spaceship.destination.type
+        )}`;
+      case "waiting":
+        return `Waiting in orbit around ${getObjectName(
+          spaceship.destination.id,
+          spaceship.destination.type
+        )}`;
+      default:
+        return "Status unknown";
     }
   };
 
@@ -244,7 +265,17 @@ export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
         {/* Change Destination Button */}
         <div className="pt-3 border-t border-white/10">
           <button
-            onClick={() => setShowDestinationDialog(true)}
+            onClick={() => {
+              if (onLaunchShip) {
+                onLaunchShip({
+                  id: spaceship.id,
+                  type: "spaceship",
+                  name: `Spaceship ${spaceship.id.slice(-6)}`,
+                });
+              } else {
+                setShowDestinationDialog(true);
+              }
+            }}
             className="w-full px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded text-sm font-medium transition-colors"
           >
             Change Destination
