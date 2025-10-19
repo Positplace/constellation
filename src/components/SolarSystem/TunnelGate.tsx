@@ -101,11 +101,12 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
         />
       </mesh>
 
-      {/* Invisible clickable plane behind the label to block raycasting */}
+      {/* Invisible clickable sphere behind the label to block raycasting */}
       <mesh
         position={[0, 0.8, 0]}
         onClick={(e) => {
           e.stopPropagation();
+          console.log("Invisible blocker clicked - initiating travel");
           onClick();
         }}
         onPointerEnter={() => {
@@ -117,11 +118,11 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
           document.body.style.cursor = "default";
         }}
       >
-        <planeGeometry args={[2, 0.6]} />
-        <meshBasicMaterial transparent opacity={0} />
+        <sphereGeometry args={[0.8, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Label */}
+      {/* Label - purely visual, clicks handled by invisible sphere */}
       <Html
         position={[0, 0.8, 0]}
         center
@@ -138,40 +139,14 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
             borderRadius: "6px",
             fontSize: "13px",
             whiteSpace: "nowrap",
-            pointerEvents: "auto",
+            pointerEvents: "none",
             border: `2px solid ${connectedStarColor}`,
             boxShadow: `0 0 10px ${connectedStarColor}40`,
-            cursor: "pointer",
             transition: "all 0.2s ease",
             userSelect: "none",
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            if (e.nativeEvent) {
-              e.nativeEvent.stopImmediatePropagation();
-              e.nativeEvent.stopPropagation();
-            }
-            // Call the travel function
-            onClick();
-            return false;
-          }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            return false;
-          }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            return false;
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
-          <div style={{ fontWeight: "bold", pointerEvents: "none" }}>
-            {connectedSystemName}
-          </div>
+          <div style={{ fontWeight: "bold" }}>{connectedSystemName}</div>
         </div>
       </Html>
     </group>
