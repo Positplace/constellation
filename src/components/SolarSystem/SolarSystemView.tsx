@@ -50,6 +50,35 @@ const SolarSystemView: React.FC = () => {
     return solarSystems.find((s) => s.id === currentSystemId);
   }, [solarSystems, currentSystemId]);
 
+  // Calculate maximum camera distance based on system size
+  const maxCameraDistance = useMemo(() => {
+    if (!currentSystem) return 20; // Default fallback
+
+    let maxOrbitalDistance = 0;
+
+    // Check planets
+    if (currentSystem.planets) {
+      for (const planet of currentSystem.planets) {
+        const visualDistance = planet.orbitalDistance * 1.5; // Same scale as rendering
+        maxOrbitalDistance = Math.max(maxOrbitalDistance, visualDistance);
+      }
+    }
+
+    // Check asteroid belts
+    if (currentSystem.asteroidBelts) {
+      for (const belt of currentSystem.asteroidBelts) {
+        const visualDistance = belt.outerRadius * 1.5; // Same scale as rendering
+        maxOrbitalDistance = Math.max(maxOrbitalDistance, visualDistance);
+      }
+    }
+
+    // Add buffer: allow zooming out to 2x the farthest object + 5 units
+    const calculatedMax = maxOrbitalDistance * 2 + 5;
+
+    // Ensure minimum of 20 for small systems
+    return Math.max(20, calculatedMax);
+  }, [currentSystem]);
+
   // Smooth zoom animation state for planet focus
   const zoomAnimRef = useRef<{
     active: boolean;
@@ -269,6 +298,147 @@ const SolarSystemView: React.FC = () => {
     return () => window.removeEventListener("resetSolarView", handleReset);
   }, [isConnected, emitPlanetSelected]);
 
+  // Keyboard controls for panning (WASD / Arrow keys)
+  useEffect(() => {
+    const keyState = {
+      w: false,
+      a: false,
+      s: false,
+      d: false,
+      arrowUp: false,
+      arrowLeft: false,
+      arrowDown: false,
+      arrowRight: false,
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keys if not typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case "w":
+          keyState.w = true;
+          e.preventDefault();
+          break;
+        case "a":
+          keyState.a = true;
+          e.preventDefault();
+          break;
+        case "s":
+          keyState.s = true;
+          e.preventDefault();
+          break;
+        case "d":
+          keyState.d = true;
+          e.preventDefault();
+          break;
+        case "arrowup":
+          keyState.arrowUp = true;
+          e.preventDefault();
+          break;
+        case "arrowleft":
+          keyState.arrowLeft = true;
+          e.preventDefault();
+          break;
+        case "arrowdown":
+          keyState.arrowDown = true;
+          e.preventDefault();
+          break;
+        case "arrowright":
+          keyState.arrowRight = true;
+          e.preventDefault();
+          break;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      switch (e.key.toLowerCase()) {
+        case "w":
+          keyState.w = false;
+          break;
+        case "a":
+          keyState.a = false;
+          break;
+        case "s":
+          keyState.s = false;
+          break;
+        case "d":
+          keyState.d = false;
+          break;
+        case "arrowup":
+          keyState.arrowUp = false;
+          break;
+        case "arrowleft":
+          keyState.arrowLeft = false;
+          break;
+        case "arrowdown":
+          keyState.arrowDown = false;
+          break;
+        case "arrowright":
+          keyState.arrowRight = false;
+          break;
+      }
+    };
+
+    // Animate camera panning based on key state
+    const animate = () => {
+      if (!controlsRef.current) {
+        requestAnimationFrame(animate);
+        return;
+      }
+
+      const controls = controlsRef.current;
+      const camera = controls.object as THREE.PerspectiveCamera;
+      const panSpeed = 0.1; // Adjust for faster/slower panning
+
+      // Calculate pan direction based on camera orientation
+      const forward = new THREE.Vector3();
+      const right = new THREE.Vector3();
+
+      camera.getWorldDirection(forward);
+      forward.y = 0; // Keep panning horizontal
+      forward.normalize();
+
+      right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+      const movement = new THREE.Vector3();
+
+      // WASD controls
+      if (keyState.w || keyState.arrowUp)
+        movement.add(forward.clone().multiplyScalar(panSpeed));
+      if (keyState.s || keyState.arrowDown)
+        movement.add(forward.clone().multiplyScalar(-panSpeed));
+      if (keyState.a || keyState.arrowLeft)
+        movement.add(right.clone().multiplyScalar(-panSpeed));
+      if (keyState.d || keyState.arrowRight)
+        movement.add(right.clone().multiplyScalar(panSpeed));
+
+      // Apply movement to both camera and target
+      if (movement.lengthSq() > 0) {
+        controls.target.add(movement);
+        camera.position.add(movement);
+        controls.update();
+      }
+
+      requestAnimationFrame(animate);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    const animationId = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      cancelAnimationFrame(animationId);
+    };
+  }, []);
+
   // Rotate Sun slowly
   useFrame((_state, delta) => {
     if (sunRef.current && isPlaying) {
@@ -346,7 +516,15 @@ const SolarSystemView: React.FC = () => {
           const originalOffset = travelState.initialCameraPos
             .clone()
             .sub(travelState.initialCameraTarget);
-          // Apply same offset to new system's center
+
+          // Clamp the offset to respect the destination system's max camera distance
+          const originalDistance = originalOffset.length();
+          if (originalDistance > maxCameraDistance) {
+            // Scale down the offset to fit within the max distance
+            originalOffset.multiplyScalar(maxCameraDistance / originalDistance);
+          }
+
+          // Apply clamped offset to new system's center
           finalPos = finalTarget.clone().add(originalOffset);
         }
 
@@ -451,7 +629,9 @@ const SolarSystemView: React.FC = () => {
       currentSystem?.planets?.map((planet, idx) => ({
         planet,
         distance: planet.orbitalDistance * 1.5, // Scale for visualization
-        speed: planet.orbitalSpeed * 0.1, // Slow down for easier interaction
+        // Use Kepler's law directly: angular speed ∝ 1/√r
+        // This ensures inner planets move visibly faster than outer ones
+        speed: 0.08 / Math.sqrt(planet.orbitalDistance), // Proportional to distance
         angle: (idx * Math.PI) / (currentSystem.planets.length || 1),
       })) || []
     );
@@ -666,8 +846,18 @@ const SolarSystemView: React.FC = () => {
         enableZoom={true}
         enableRotate={true}
         minDistance={0.3}
-        maxDistance={20}
+        maxDistance={maxCameraDistance}
         autoRotate={false}
+        // Two-finger trackpad gestures for panning
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.PAN, // Two-finger pan instead of zoom
+        }}
       />
 
       {/* Sun with enhanced glow layers */}

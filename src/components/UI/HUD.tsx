@@ -120,7 +120,7 @@ const HUD: React.FC = () => {
           className="fixed bottom-4 right-4 z-[60]"
           style={{ pointerEvents: "auto" }}
         >
-          <div className="bg-black/90 border-2 border-cyan-500 rounded px-3 py-2 text-xs text-white shadow-2xl max-h-[50vh] overflow-auto min-w-[200px]">
+          <div className="bg-black/90 border-2 border-cyan-500 rounded px-3 py-2 text-xs text-white shadow-2xl max-h-[40vh] overflow-y-auto min-w-[200px] max-w-[250px]">
             <div className="space-y-0.5">
               {/* Sun */}
               <button

@@ -54,7 +54,21 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
       </mesh>
 
       {/* Rotating ring around the box */}
-      <mesh ref={ringRef}>
+      <mesh
+        ref={ringRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        onPointerEnter={() => {
+          setIsHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          setIsHovered(false);
+          document.body.style.cursor = "default";
+        }}
+      >
         <torusGeometry args={[0.5, 0.04, 16, 32]} />
         <meshBasicMaterial
           color={connectedStarColor}
@@ -64,7 +78,20 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
       </mesh>
 
       {/* Inner glow circle */}
-      <mesh>
+      <mesh
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        onPointerEnter={() => {
+          setIsHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          setIsHovered(false);
+          document.body.style.cursor = "default";
+        }}
+      >
         <ringGeometry args={[0.35, 0.4, 32]} />
         <meshBasicMaterial
           color={connectedStarColor}
@@ -74,8 +101,35 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
         />
       </mesh>
 
+      {/* Invisible clickable plane behind the label to block raycasting */}
+      <mesh
+        position={[0, 0.8, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        onPointerEnter={() => {
+          setIsHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          setIsHovered(false);
+          document.body.style.cursor = "default";
+        }}
+      >
+        <planeGeometry args={[2, 0.6]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
       {/* Label */}
-      <Html position={[0, 0.8, 0]} center>
+      <Html
+        position={[0, 0.8, 0]}
+        center
+        zIndexRange={[100, 0]}
+        occlude={false}
+        transform
+        sprite
+      >
         <div
           style={{
             background: "rgba(0, 0, 0, 0.85)",
@@ -84,12 +138,40 @@ const TunnelGate: React.FC<TunnelGateProps> = ({
             borderRadius: "6px",
             fontSize: "13px",
             whiteSpace: "nowrap",
-            pointerEvents: "none",
+            pointerEvents: "auto",
             border: `2px solid ${connectedStarColor}`,
             boxShadow: `0 0 10px ${connectedStarColor}40`,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            userSelect: "none",
           }}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (e.nativeEvent) {
+              e.nativeEvent.stopImmediatePropagation();
+              e.nativeEvent.stopPropagation();
+            }
+            // Call the travel function
+            onClick();
+            return false;
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          <div style={{ fontWeight: "bold" }}>{connectedSystemName}</div>
+          <div style={{ fontWeight: "bold", pointerEvents: "none" }}>
+            {connectedSystemName}
+          </div>
         </div>
       </Html>
     </group>

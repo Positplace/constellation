@@ -18,13 +18,16 @@ export function generateSurfaceTextures(planet: PlanetData): {
   // Base ocean color - force bright blue for earth-like and ocean world planets
   const isEarthLike = planet.type === "earth_like";
   const isOceanWorld = planet.type === "ocean_world";
-  let oceanColor = planet.appearance.baseColor || "#1e90ff";
 
-  // Override with bright colors for water-dominant planets
+  // Always use proper ocean colors for water planets, ignore baseColor
+  let oceanColor: string;
   if (isEarthLike) {
-    oceanColor = "#4AA9FF";
+    oceanColor = "#1E90FF"; // Deep blue ocean like Earth
   } else if (isOceanWorld) {
-    oceanColor = "#3D9FE8"; // Bright tropical ocean blue
+    oceanColor = "#0077BE"; // Slightly deeper blue for ocean worlds
+  } else {
+    // For other planets, use baseColor or default
+    oceanColor = planet.appearance.baseColor || "#4A90E2";
   }
 
   ctx.fillStyle = oceanColor;

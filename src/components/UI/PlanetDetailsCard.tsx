@@ -11,8 +11,8 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
   onClose,
 }) => {
   return (
-    <div 
-      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[80vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+    <div
+      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
       style={{ pointerEvents: "auto" }}
     >
       {/* Header */}
@@ -64,6 +64,27 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <div className="text-gray-400">Distance:</div>
           <div>{planet.orbitalDistance.toFixed(2)} AU</div>
+
+          <div className="text-gray-400">Zone:</div>
+          <div className="capitalize">
+            <span
+              className={
+                planet.orbitalZone === "inferno"
+                  ? "text-red-400"
+                  : planet.orbitalZone === "hot"
+                  ? "text-orange-400"
+                  : planet.orbitalZone === "goldilocks"
+                  ? "text-green-400"
+                  : planet.orbitalZone === "cold"
+                  ? "text-blue-300"
+                  : planet.orbitalZone === "outer"
+                  ? "text-blue-400"
+                  : "text-purple-300"
+              }
+            >
+              {planet.orbitalZone.replace("_", " ")}
+            </span>
+          </div>
 
           <div className="text-gray-400">Speed:</div>
           <div>{planet.orbitalSpeed.toFixed(1)} km/s</div>

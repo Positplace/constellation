@@ -84,7 +84,10 @@ export function createPlanet(
 
   // Orbit (simple plausible ranges)
   const orbitalDistance = randomRange(0.3, 15, seed + 6); // AU
-  const orbitalSpeed = randomRange(0.05, 1.5, seed + 7); // arbitrary sim units
+  // Orbital speed using Kepler's Third Law: v ∝ 1/√r
+  // Closer planets orbit faster, farther planets orbit slower
+  const baseOrbitalSpeed = 0.5; // Base speed factor for 1 AU
+  const orbitalSpeed = baseOrbitalSpeed / Math.sqrt(orbitalDistance);
   const orbitalEccentricity = randomRange(0, 0.2, seed + 8);
   const orbitalInclination = randomRange(0, 5, seed + 9);
 
@@ -177,6 +180,16 @@ export function createPlanet(
     },
   };
 
+  // Determine orbital zone based on distance
+  const getOrbitalZone = (distance: number): import("../types/planet.types").OrbitalZone => {
+    if (distance < 0.4) return "inferno";
+    if (distance < 0.7) return "hot";
+    if (distance <= 2.0) return "goldilocks";
+    if (distance < 5.0) return "cold";
+    if (distance < 10.0) return "outer";
+    return "deep_space";
+  };
+
   const planet: PlanetData = {
     id: `pl-${seed}`,
     name,
@@ -190,6 +203,7 @@ export function createPlanet(
     orbitalSpeed,
     orbitalEccentricity,
     orbitalInclination,
+    orbitalZone: getOrbitalZone(orbitalDistance),
     surface,
     atmosphere,
     appearance,

@@ -53,17 +53,20 @@ export const AsteroidBelt: React.FC<AsteroidBeltProps> = ({
 
   // Handle orbital motion animation using local phase tracking
   useFrame((_state, delta) => {
-    if (groupRef.current && timeScale > 0) {
+    if (groupRef.current) {
       // Update orbital positions for each asteroid
       belt.asteroids.forEach((asteroid, index) => {
         const asteroidMesh = groupRef.current?.children[index] as THREE.Group;
         if (asteroidMesh) {
-          // Update local orbital phase (don't mutate shared data)
-          orbitalPhasesRef.current[index] +=
-            asteroid.orbital.speed * delta * timeScale;
+          // Update local orbital phase only when time is running
+          if (timeScale > 0) {
+            orbitalPhasesRef.current[index] +=
+              asteroid.orbital.speed * delta * timeScale;
+          }
+
           const currentAngle = orbitalPhasesRef.current[index];
 
-          // Calculate new position
+          // Calculate new position (always update, even when paused)
           const visualDistance = asteroid.orbital.distance * 1.5;
           const x = Math.cos(currentAngle) * visualDistance;
           const z = Math.sin(currentAngle) * visualDistance;

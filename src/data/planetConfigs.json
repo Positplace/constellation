@@ -460,5 +460,139 @@
         "roughness": { "min": 0.0, "max": 0.05, "default": 0.02 }
       }
     }
+  },
+  "barren_world": {
+    "name": "Barren World",
+    "description": "Dead, airless rock with extreme temperatures (Mercury-like)",
+    "baseProperties": {
+      "radius": { "min": 0.3, "max": 0.7, "unit": "earth_radius" },
+      "mass": { "min": 0.05, "max": 0.4, "unit": "earth_mass" },
+      "gravity": { "min": 0.3, "max": 0.7, "unit": "g" },
+      "rotationSpeed": { "min": 100, "max": 1000, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 25, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "land": { "min": 1.0, "max": 1.0, "default": 1.0 },
+        "mountains": { "min": 0.1, "max": 0.3, "default": 0.2 }
+      },
+      "elevation": {
+        "minHeight": { "min": -5000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 8000, "unit": "meters" },
+        "roughness": { "min": 0.3, "max": 0.6, "default": 0.45 }
+      },
+      "continentCount": { "min": 0, "max": 0, "default": 0 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": false
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#6B6B6B", "#808080", "#5A5A5A", "#7A7A7A"],
+        "secondary": ["#8B8B8B", "#9C9C9C", "#7B7B7B", "#6C6C6C"],
+        "accent": ["#A0A0A0", "#B5B5B5", "#909090", "#858585"]
+      },
+      "surface": {
+        "albedo": { "min": 0.08, "max": 0.15, "default": 0.11 },
+        "roughness": { "min": 0.7, "max": 0.9, "default": 0.8 }
+      }
+    }
+  },
+  "volcanic_world": {
+    "name": "Volcanic World",
+    "description": "Hot planet with active volcanism and tectonic activity (Io-like)",
+    "baseProperties": {
+      "radius": { "min": 0.4, "max": 1.2, "unit": "earth_radius" },
+      "mass": { "min": 0.1, "max": 1.5, "unit": "earth_mass" },
+      "gravity": { "min": 0.4, "max": 1.3, "unit": "g" },
+      "rotationSpeed": { "min": 18, "max": 36, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 20, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "land": { "min": 0.9, "max": 1.0, "default": 0.95 },
+        "volcanic": { "min": 0.3, "max": 0.6, "default": 0.45 },
+        "mountains": { "min": 0.2, "max": 0.4, "default": 0.3 }
+      },
+      "elevation": {
+        "minHeight": { "min": -3000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 5000, "max": 15000, "unit": "meters" },
+        "roughness": { "min": 0.6, "max": 0.9, "default": 0.75 }
+      },
+      "continentCount": { "min": 1, "max": 4, "default": 2 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "sulfurDioxide": { "min": 0.4, "max": 0.7, "default": 0.6 },
+        "carbonDioxide": { "min": 0.2, "max": 0.5, "default": 0.35 },
+        "nitrogen": { "min": 0.0, "max": 0.2, "default": 0.05 }
+      },
+      "pressure": { "min": 0.2, "max": 3.0, "unit": "atm" },
+      "height": { "min": 40, "max": 80, "unit": "km" },
+      "color": "#FF6B35",
+      "opacity": { "min": 0.2, "max": 0.4, "default": 0.3 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#8B4513", "#A0522D", "#CD853F", "#D2691E"],
+        "secondary": ["#FF4500", "#FF6347", "#DC143C", "#B22222"],
+        "accent": ["#FFD700", "#FFA500", "#FF8C00", "#FF7F50"]
+      },
+      "surface": {
+        "albedo": { "min": 0.15, "max": 0.3, "default": 0.22 },
+        "roughness": { "min": 0.5, "max": 0.8, "default": 0.65 },
+        "emission": { "min": 0.05, "max": 0.2, "default": 0.1 }
+      }
+    }
+  },
+  "frozen_world": {
+    "name": "Frozen World",
+    "description": "Extremely cold world with nitrogen/methane ice (Pluto-like)",
+    "baseProperties": {
+      "radius": { "min": 0.15, "max": 0.6, "unit": "earth_radius" },
+      "mass": { "min": 0.001, "max": 0.1, "unit": "earth_mass" },
+      "gravity": { "min": 0.05, "max": 0.3, "unit": "g" },
+      "rotationSpeed": { "min": 100, "max": 300, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 50, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ice": { "min": 0.8, "max": 1.0, "default": 0.95 },
+        "land": { "min": 0.0, "max": 0.2, "default": 0.05 }
+      },
+      "elevation": {
+        "minHeight": { "min": -2000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 3000, "unit": "meters" },
+        "roughness": { "min": 0.2, "max": 0.5, "default": 0.35 }
+      },
+      "continentCount": { "min": 0, "max": 2, "default": 0 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.7, "max": 0.9, "default": 0.8 },
+        "methane": { "min": 0.05, "max": 0.2, "default": 0.15 },
+        "argon": { "min": 0.01, "max": 0.05, "default": 0.02 }
+      },
+      "pressure": { "min": 0.00001, "max": 0.001, "unit": "atm" },
+      "height": { "min": 10, "max": 30, "unit": "km" },
+      "color": "#B8D4E8",
+      "opacity": { "min": 0.05, "max": 0.15, "default": 0.1 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#D0E8F0", "#C0D8E8", "#B0C8E0", "#A0B8D8"],
+        "secondary": ["#E8F0F8", "#D8E8F0", "#C8D8E8", "#B8C8E0"],
+        "accent": ["#F0F8FF", "#E0F0FF", "#D0E8F8", "#C0D8F0"]
+      },
+      "surface": {
+        "albedo": { "min": 0.6, "max": 0.85, "default": 0.72 },
+        "roughness": { "min": 0.1, "max": 0.3, "default": 0.2 }
+      }
+    }
   }
 }

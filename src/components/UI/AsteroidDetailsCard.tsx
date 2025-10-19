@@ -53,7 +53,7 @@ export const AsteroidDetailsCard: React.FC<AsteroidDetailsCardProps> = ({
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[80vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
       style={{ pointerEvents: "auto" }}
     >
       {/* Header */}

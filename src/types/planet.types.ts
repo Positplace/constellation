@@ -1,3 +1,11 @@
+export type OrbitalZone = 
+  | "inferno"      // < 0.4 AU - Lava/volcanic worlds
+  | "hot"          // 0.4-0.7 AU - Hot desert/volcanic
+  | "goldilocks"   // 0.7-2.0 AU - Habitable
+  | "cold"         // 2.0-5.0 AU - Ice worlds
+  | "outer"        // 5.0-10.0 AU - Gas/ice giants
+  | "deep_space";  // > 10 AU - Frozen worlds
+
 export interface PlanetData {
   // Basic properties
   id: string;
@@ -20,6 +28,7 @@ export interface PlanetData {
   orbitalSpeed: number; // in km/s
   orbitalEccentricity: number; // 0-1
   orbitalInclination: number; // in degrees
+  orbitalZone: OrbitalZone; // Which temperature zone
 
   // Surface properties
   surface: SurfaceData;
@@ -45,7 +54,10 @@ export type PlanetType =
   | "lava_world"
   | "jungle_world"
   | "arctic_world"
-  | "earth_like";
+  | "earth_like"
+  | "frozen_world" // Extremely cold, nitrogen/methane surface
+  | "barren_world" // Dead, no atmosphere, like Mercury/Moon
+  | "volcanic_world"; // Active volcanism, hot but not molten
 
 export interface SurfaceData {
   // Terrain types and their coverage percentages

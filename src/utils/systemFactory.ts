@@ -84,32 +84,104 @@ function generateSystemName(seed: number): string {
 }
 
 /**
- * Select planet types based on star type configuration
+ * Determine orbital zone based on distance from star (scaled to habitable zone)
+ * @param orbitalDistance Distance from star in AU
+ * @param habitableZoneMin Inner edge of habitable zone
+ * @param habitableZoneMax Outer edge of habitable zone
  */
-function selectPlanetType(starType: StarType, seed: number): PlanetType {
-  const config = (starConfigs as any)[starType];
-  const types = config.planetGeneration.types;
+function getOrbitalZone(
+  orbitalDistance: number,
+  habitableZoneMin: number,
+  habitableZoneMax: number
+): import("../types/planet.types").OrbitalZone {
+  // Scale zones relative to the habitable zone
+  const infernoZone = habitableZoneMin * 0.5; // 50% inside habitable zone
+  const hotZone = habitableZoneMin * 0.85; // 85% of habitable zone inner edge
+  const coldZone = habitableZoneMax * 1.5; // 150% of habitable zone outer edge
+  const outerZone = habitableZoneMax * 2.5; // 250% of habitable zone outer edge
 
-  // Build cumulative probability array
-  const cumulative: { type: PlanetType; prob: number }[] = [];
-  let sum = 0;
+  if (orbitalDistance < infernoZone) return "inferno";
+  if (orbitalDistance < hotZone) return "hot";
+  if (
+    orbitalDistance >= habitableZoneMin &&
+    orbitalDistance <= habitableZoneMax
+  )
+    return "goldilocks";
+  if (orbitalDistance < coldZone) return "cold";
+  if (orbitalDistance < outerZone) return "outer";
+  return "deep_space";
+}
 
-  for (const [type, prob] of Object.entries(types)) {
-    sum += prob as number;
-    cumulative.push({ type: type as PlanetType, prob: sum });
+/**
+ * Select planet type based on orbital distance (scaled to star's habitable zone)
+ * @param orbitalDistance Distance from star in AU
+ * @param habitableZoneMin Inner edge of habitable zone
+ * @param habitableZoneMax Outer edge of habitable zone
+ * @param seed Random seed
+ */
+function selectPlanetTypeByZone(
+  orbitalDistance: number,
+  habitableZoneMin: number,
+  habitableZoneMax: number,
+  seed: number
+): PlanetType {
+  const rand = randomRange(0, 100, seed);
+
+  // Calculate zone boundaries relative to habitable zone
+  const infernoZone = habitableZoneMin * 0.5;
+  const hotZone = habitableZoneMin * 0.85;
+  const coldZone = habitableZoneMax * 1.5;
+  const outerZone = habitableZoneMax * 2.5;
+
+  // ZONE 1: INFERNO ZONE (< 50% of habitable zone min) - Always hot!
+  if (orbitalDistance < infernoZone) {
+    // Extremely hot - lava, volcanic, or barren worlds
+    if (rand < 50) return "lava_world";
+    if (rand < 80) return "volcanic_world";
+    return "barren_world";
   }
 
-  // Use seeded random to select
-  const rand = randomRange(0, sum, seed);
-
-  for (const item of cumulative) {
-    if (rand <= item.prob) {
-      return item.type;
-    }
+  // ZONE 2: HOT ZONE (50%-85% of habitable zone min) - Too hot for comfort
+  if (orbitalDistance < hotZone) {
+    if (rand < 40) return "volcanic_world";
+    if (rand < 70) return "desert_world";
+    return "barren_world";
   }
 
-  // Fallback
-  return "terrestrial";
+  // ZONE 3: GOLDILOCKS ZONE (habitable zone) - Perfect for life!
+  if (
+    orbitalDistance >= habitableZoneMin &&
+    orbitalDistance <= habitableZoneMax
+  ) {
+    if (rand < 30) return "earth_like";
+    if (rand < 55) return "ocean_world";
+    if (rand < 70) return "terrestrial"; // Habitable terrestrial
+    if (rand < 85) return "desert_world"; // Mars-like
+    if (rand < 95) return "ice_world"; // Cold edge
+    return "gas_giant";
+  }
+
+  // ZONE 4: COLD ZONE (100%-150% of habitable zone max) - Getting chilly
+  if (orbitalDistance < coldZone) {
+    if (rand < 40) return "ice_world";
+    if (rand < 60) return "frozen_world";
+    if (rand < 85) return "gas_giant"; // Jupiter-like
+    return "terrestrial";
+  }
+
+  // ZONE 5: OUTER ZONE (150%-250% of habitable zone max) - Very cold
+  if (orbitalDistance < outerZone) {
+    if (rand < 40) return "ice_giant"; // Neptune/Uranus
+    if (rand < 75) return "gas_giant"; // Saturn-like
+    if (rand < 90) return "frozen_world";
+    return "ice_world";
+  }
+
+  // ZONE 6: DEEP SPACE (> 250% of habitable zone max) - Frozen wasteland
+  if (rand < 50) return "frozen_world";
+  if (rand < 75) return "dwarf_planet";
+  if (rand < 90) return "ice_world";
+  return "ice_giant";
 }
 
 /**
@@ -164,19 +236,60 @@ export function generateSolarSystem(
   const habitableZoneMin = starConfig.habitableZone.min;
   const habitableZoneMax = starConfig.habitableZone.max;
 
-  // Calculate safe minimum distance from sun (based on star size)
-  // Sun radius in scene units is star.size, we need at least 2-3x that for planet orbit
-  const sunSafeDistance = Math.max(star.size * 3, 0.5);
+  console.log(
+    `Generating ${systemName} (${selectedStarType}): ${planetCount} planets, habitable zone ${habitableZoneMin}-${habitableZoneMax} AU`
+  );
 
-  // Calculate system range - inner planets to outer planets
-  const innerBoundary = Math.max(sunSafeDistance, habitableZoneMin * 0.5);
-  const outerBoundary = habitableZoneMax * 5;
+  // Calculate safe minimum distance from sun based on visual size
+  // The star's visual size is in render units, and we apply a 1.5x scale in rendering
+  // We need to ensure planets don't visually overlap with the star
+  // Convert visual size to AU-equivalent safe distance (rough approximation for gameplay)
+  const visualSafeDistance = star.size * 1.5 * 0.15; // Scale visual size to AU distance
+  const sunSafeDistance = Math.max(0.02, visualSafeDistance); // Minimum 0.02 AU
+
+  console.log(
+    `Star visual size: ${
+      star.size
+    }, calculated safe distance: ${sunSafeDistance.toFixed(3)} AU`
+  );
+
+  // Calculate system range - scale to star's habitable zone
+  // Inner boundary: 10-30% of habitable zone (allows hot planets!)
+  const innerBoundaryFactor = randomRange(0.1, 0.3, systemSeed + 5000);
+  const innerBoundary = Math.max(
+    sunSafeDistance,
+    habitableZoneMin * innerBoundaryFactor
+  );
+  // Reduce outer boundary to 3x habitable zone max (was 5x) to keep systems more compact
+  const outerBoundary = habitableZoneMax * 3;
 
   // Generate planet orbital distances with proper spacing
   const orbitalDistances: number[] = [];
 
   for (let i = 0; i < planetCount; i++) {
     const planetSeed = systemSeed + 1000 + i * 100;
+
+    // Special handling for first planet - 50% chance it's very close (inferno zone)
+    // This creates variety - some systems have hot inner planets, some don't
+    if (i === 0 && randomRange(0, 100, planetSeed + 40) < 50) {
+      // Place first planet at 50%-80% of habitable zone min (inferno zone, but safe distance)
+      // Ensure it's at least 2x the visual safe distance to avoid overlap
+      const closeDistance = Math.max(
+        sunSafeDistance * 2.5,
+        randomRange(
+          habitableZoneMin * 0.5,
+          habitableZoneMin * 0.8,
+          planetSeed + 41
+        )
+      );
+      console.log(
+        `System ${systemName}: First planet at ${closeDistance.toFixed(
+          3
+        )} AU (inferno zone) (habitable zone: ${habitableZoneMin}-${habitableZoneMax})`
+      );
+      orbitalDistances.push(closeDistance);
+      continue;
+    }
 
     // Use a logarithmic distribution for more realistic spacing
     // Inner planets are closer together, outer planets are more spread out
@@ -199,38 +312,28 @@ export function generateSolarSystem(
     orbitalDistances.push(baseDistance);
   }
 
-  // Now create planets with calculated distances
+  // Now create planets with calculated distances using zone-based selection
   for (let i = 0; i < planetCount; i++) {
     const planetSeed = systemSeed + 1000 + i * 100;
     const orbitalDistance = orbitalDistances[i];
 
-    // Select planet type based on star type probabilities
-    const planetType = selectPlanetType(selectedStarType, planetSeed);
+    // Select planet type based on orbital zone (realistic placement)
+    const planetType = selectPlanetTypeByZone(
+      orbitalDistance,
+      habitableZoneMin,
+      habitableZoneMax,
+      planetSeed
+    );
 
     // Determine if this planet should be in the habitable zone
     const inHabitableZone =
       orbitalDistance >= habitableZoneMin &&
       orbitalDistance <= habitableZoneMax;
 
-    // Adjust planet type if in habitable zone
-    let finalPlanetType = planetType;
-    if (
-      inHabitableZone &&
-      (planetType === "terrestrial" || planetType === "desert_world")
-    ) {
-      // Give a chance to make it more habitable
-      if (randomRange(0, 1, planetSeed + 60) > 0.6) {
-        finalPlanetType =
-          randomRange(0, 1, planetSeed + 61) > 0.5
-            ? "earth_like"
-            : "ocean_world";
-      }
-    }
-
     // Create planet
     const planet = createPlanet(
       {
-        type: finalPlanetType,
+        type: planetType,
         size: randomRange(0, 1, planetSeed + 2) > 0.7 ? "large" : "medium",
         age: starConfig.systemAge as any,
         habitability: inHabitableZone ? "habitable" : "marginal",
@@ -239,8 +342,22 @@ export function generateSolarSystem(
       undefined
     );
 
-    // Override orbital distance to match our calculated value
+    // Override orbital distance AND speed to match our calculated values
+    // Using Kepler's Third Law: v = √(GM/r) ∝ √(M/r)
+    // Scale base speed by star's luminosity as a proxy for mass (more massive stars are brighter)
+    // Blue giants: luminosity ~10, Red dwarfs: luminosity ~0.1
     planet.orbitalDistance = orbitalDistance;
+    const baseOrbitalSpeed = 0.5; // Base speed factor for 1 AU around a Sun-like star
+    const massScaleFactor = Math.sqrt(star.luminosity); // Scale by √luminosity (proxy for √mass)
+    planet.orbitalSpeed =
+      (baseOrbitalSpeed * massScaleFactor) / Math.sqrt(orbitalDistance);
+
+    // Set the orbital zone for clarity (now scaled to habitable zone)
+    planet.orbitalZone = getOrbitalZone(
+      orbitalDistance,
+      habitableZoneMin,
+      habitableZoneMax
+    );
 
     planets.push(planet);
   }
