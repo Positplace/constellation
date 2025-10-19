@@ -14,10 +14,17 @@ import {
 
 const STORAGE_KEY = "constellation-game-state";
 
+interface CameraState {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
 interface GameStore {
   // View state
   activeView: ViewType;
   setActiveView: (view: ViewType) => void;
+  constellationCameraState: CameraState | null; // Saved camera state for constellation view
+  saveConstellationCameraState: (state: CameraState) => void;
 
   // Game state
   players: Player[];
@@ -58,6 +65,7 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set, get) => ({
   // Initial state
   activeView: "solar",
+  constellationCameraState: null,
   players: [],
   solarSystems: [],
   tunnels: [],
@@ -72,6 +80,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Actions
   setActiveView: (view) => {
     set({ activeView: view });
+    get().saveToLocalStorage();
+  },
+
+  saveConstellationCameraState: (state) => {
+    set({ constellationCameraState: state });
     get().saveToLocalStorage();
   },
 
@@ -305,6 +318,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         currentSystemId: state.currentSystemId,
         currentTurn: state.currentTurn,
         selectedObject: state.selectedObject,
+        constellationCameraState: state.constellationCameraState,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (error) {
@@ -323,6 +337,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           currentSystemId: data.currentSystemId || null,
           currentTurn: data.currentTurn || 1,
           selectedObject: data.selectedObject || null,
+          constellationCameraState: data.constellationCameraState || null,
         });
       }
     } catch (error) {

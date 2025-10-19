@@ -244,24 +244,34 @@ export function generateSolarSystem(
     `Generating ${systemName} (${selectedStarType}): ${planetCount} planets, habitable zone ${habitableZoneMin}-${habitableZoneMax} AU`
   );
 
-  // Calculate safe minimum distance from sun based on visual size
-  // The star's visual size is in render units, and we apply a 1.5x scale in rendering
-  // We need to ensure planets don't visually overlap with the star
-  // Convert visual size to AU-equivalent safe distance (rough approximation for gameplay)
-  const visualSafeDistance = star.size * 1.5 * 0.15; // Scale visual size to AU distance
-  const sunSafeDistance = Math.max(0.02, visualSafeDistance); // Minimum 0.02 AU
-
-  console.log(
-    `Star visual size: ${
-      star.size
-    }, calculated safe distance: ${sunSafeDistance.toFixed(3)} AU`
+  /**
+   * Calculate minimum safe distance from star (SINGLE SOURCE OF TRUTH)
+   * Planets closer than this would visually overlap with or be inside the star
+   */
+  const minSafeDistance = Math.max(
+    0.1, // Absolute minimum: 0.1 AU
+    star.size * 2.5, // Visual safety: 2.5x star's visual size
+    habitableZoneMin * 0.2 // Astrophysical safety: 20% of inner habitable zone
   );
 
-  // Calculate system range - scale to star's habitable zone
-  // Inner boundary: 10-30% of habitable zone (allows hot planets!)
-  const innerBoundaryFactor = randomRange(0.1, 0.3, systemSeed + 5000);
-  const innerBoundary = Math.max(
-    sunSafeDistance,
+  /**
+   * Helper function: Enforce minimum safe distance for any orbital distance
+   */
+  const enforceSafeDistance = (distance: number): number => {
+    return Math.max(distance, minSafeDistance);
+  };
+
+  console.log(
+    `Star: ${selectedStarType} (size: ${
+      star.size
+    }), Habitable: ${habitableZoneMin}-${habitableZoneMax} AU, Min safe: ${minSafeDistance.toFixed(
+      3
+    )} AU`
+  );
+
+  // Calculate system range - inner boundary starts just beyond safe distance
+  const innerBoundaryFactor = randomRange(0.15, 0.35, systemSeed + 5000);
+  const innerBoundary = enforceSafeDistance(
     habitableZoneMin * innerBoundaryFactor
   );
   // Reduce outer boundary to 3x habitable zone max (was 5x) to keep systems more compact
@@ -312,22 +322,16 @@ export function generateSolarSystem(
     const planetSeed = systemSeed + 1000 + i * 100;
 
     // Special handling for first planet - 50% chance it's very close (inferno zone)
-    // This creates variety - some systems have hot inner planets, some don't
     if (i === 0 && randomRange(0, 100, planetSeed + 40) < 50) {
-      // Place first planet at 50%-80% of habitable zone min (inferno zone, but safe distance)
-      // Ensure it's at least 2x the visual safe distance to avoid overlap
-      const closeDistance = Math.max(
-        sunSafeDistance * 2.5,
-        randomRange(
-          habitableZoneMin * 0.5,
-          habitableZoneMin * 0.8,
-          planetSeed + 41
-        )
+      const infernoZoneDistance = randomRange(
+        habitableZoneMin * 0.5,
+        habitableZoneMin * 0.8,
+        planetSeed + 41
       );
+      const closeDistance = enforceSafeDistance(infernoZoneDistance);
+
       console.log(
-        `System ${systemName}: First planet at ${closeDistance.toFixed(
-          3
-        )} AU (inferno zone) (habitable zone: ${habitableZoneMin}-${habitableZoneMax})`
+        `First planet in inferno zone: ${closeDistance.toFixed(3)} AU`
       );
       orbitalDistances.push(closeDistance);
       continue;
@@ -375,7 +379,8 @@ export function generateSolarSystem(
       );
     }
 
-    orbitalDistances.push(baseDistance);
+    // Always enforce minimum safe distance
+    orbitalDistances.push(enforceSafeDistance(baseDistance));
   }
 
   // Now create planets with calculated distances using pre-determined types

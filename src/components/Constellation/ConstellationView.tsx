@@ -1,5 +1,5 @@
-import React, { useRef, useState, useCallback } from "react";
-import { useThree, useFrame } from "@react-three/fiber";
+import React, { useRef, useState, useEffect } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Sphere, Html, Torus } from "@react-three/drei";
 import * as THREE from "three";
 import TunnelConnection from "./TunnelConnection";
@@ -17,21 +17,23 @@ const ConstellationView: React.FC = () => {
     setActiveView,
     generateAndAddSystem,
     canAddConnection,
-    updateSystemPosition,
     setSelectedObject,
+    constellationCameraState,
+    saveConstellationCameraState,
+    updateSystemPosition,
   } = useGameStore();
-  const { emitSystemGenerated, emitCurrentSystemChanged, changeView } =
-    useSocket();
+  const { emitSystemGenerated, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
+  const { camera, raycaster, gl } = useThree();
 
   const [hoveredSystemId, setHoveredSystemId] = useState<string | null>(null);
   const [draggingSystemId, setDraggingSystemId] = useState<string | null>(null);
   const orbitControlsRef = useRef<any>(null);
-  const { camera, raycaster, gl } = useThree();
+  const ringRotationRef = useRef(0);
+  const hasRestoredCamera = useRef(false);
   const dragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
   const dragPointRef = useRef(new THREE.Vector3());
   const lastUpdateTimeRef = useRef(0);
-  const ringRotationRef = useRef(0);
 
   const handleExplore = () => {
     if (!currentSystemId) return;
@@ -54,7 +56,18 @@ const ConstellationView: React.FC = () => {
   };
 
   const handleSystemClick = (systemId: string) => {
-    if (draggingSystemId) return; // Don't select if we're dragging
+    // Don't transition if we were dragging
+    if (draggingSystemId) return;
+
+    // Save current camera state before transitioning
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current;
+      saveConstellationCameraState({
+        position: [camera.position.x, camera.position.y, camera.position.z],
+        target: [controls.target.x, controls.target.y, controls.target.z],
+      });
+    }
+
     setCurrentSystem(systemId);
     // Clear selection when clicking a star
     setSelectedObject(null);
@@ -62,61 +75,62 @@ const ConstellationView: React.FC = () => {
     if (isConnected) {
       emitCurrentSystemChanged(systemId);
     }
+    // Transition to solar system view
+    setActiveView("solar");
   };
 
-  const handlePointerDown = useCallback((e: any, systemId: string) => {
+  const handleContextMenu = (e: any, systemId: string) => {
     e.stopPropagation();
+    e.nativeEvent.preventDefault();
+
     setDraggingSystemId(systemId);
 
-    // Change cursor to pointer hand
+    // Change cursor to grabbing
     document.body.style.cursor = "grabbing";
 
     // Disable orbit controls while dragging
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false;
     }
-  }, []);
+  };
 
-  const handlePointerMove = useCallback(
-    (e: any) => {
-      if (!draggingSystemId) return;
-      e.stopPropagation();
+  const handlePointerMove = (e: any) => {
+    if (!draggingSystemId) return;
+    e.stopPropagation();
 
-      // Throttle updates to improve performance
-      const now = performance.now();
-      if (now - lastUpdateTimeRef.current < 16) return; // ~60fps
-      lastUpdateTimeRef.current = now;
+    // Throttle updates to improve performance
+    const now = performance.now();
+    if (now - lastUpdateTimeRef.current < 16) return; // ~60fps
+    lastUpdateTimeRef.current = now;
 
-      // Calculate intersection with drag plane
-      const pointer = new THREE.Vector2(
-        (e.clientX / gl.domElement.clientWidth) * 2 - 1,
-        -(e.clientY / gl.domElement.clientHeight) * 2 + 1
-      );
+    // Calculate intersection with drag plane
+    const pointer = new THREE.Vector2(
+      (e.clientX / gl.domElement.clientWidth) * 2 - 1,
+      -(e.clientY / gl.domElement.clientHeight) * 2 + 1
+    );
 
-      raycaster.setFromCamera(pointer, camera);
+    raycaster.setFromCamera(pointer, camera);
 
-      // Update drag plane to be perpendicular to camera
-      const cameraDirection = new THREE.Vector3();
-      camera.getWorldDirection(cameraDirection);
-      dragPlaneRef.current.setFromNormalAndCoplanarPoint(
-        cameraDirection,
-        new THREE.Vector3(0, 0, 0)
-      );
+    // Update drag plane to be perpendicular to camera
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    dragPlaneRef.current.setFromNormalAndCoplanarPoint(
+      cameraDirection,
+      new THREE.Vector3(0, 0, 0)
+    );
 
-      if (
-        raycaster.ray.intersectPlane(dragPlaneRef.current, dragPointRef.current)
-      ) {
-        updateSystemPosition(draggingSystemId, [
-          dragPointRef.current.x,
-          dragPointRef.current.y,
-          dragPointRef.current.z,
-        ]);
-      }
-    },
-    [draggingSystemId, camera, raycaster, gl, updateSystemPosition]
-  );
+    if (
+      raycaster.ray.intersectPlane(dragPlaneRef.current, dragPointRef.current)
+    ) {
+      updateSystemPosition(draggingSystemId, [
+        dragPointRef.current.x,
+        dragPointRef.current.y,
+        dragPointRef.current.z,
+      ]);
+    }
+  };
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = () => {
     setDraggingSystemId(null);
 
     // Reset cursor
@@ -126,7 +140,38 @@ const ConstellationView: React.FC = () => {
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = true;
     }
-  }, []);
+  };
+
+  // Restore saved camera state on mount
+  useEffect(() => {
+    if (
+      constellationCameraState &&
+      orbitControlsRef.current &&
+      !hasRestoredCamera.current
+    ) {
+      const controls = orbitControlsRef.current;
+      const { position, target } = constellationCameraState;
+
+      // Restore camera position and target
+      camera.position.set(position[0], position[1], position[2]);
+      controls.target.set(target[0], target[1], target[2]);
+      controls.update();
+
+      hasRestoredCamera.current = true;
+    }
+  }, [constellationCameraState, camera]);
+
+  // Prevent context menu while dragging
+  useEffect(() => {
+    const preventContextMenu = (e: MouseEvent) => {
+      if (draggingSystemId) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("contextmenu", preventContextMenu);
+    return () => window.removeEventListener("contextmenu", preventContextMenu);
+  }, [draggingSystemId]);
 
   // Animate ring rotation
   useFrame((state, delta) => {
@@ -155,7 +200,7 @@ const ConstellationView: React.FC = () => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerMissed={(e) => {
-          // Only clear selection if we're not dragging and clicked on empty space
+          // Clear selection when clicked on empty space
           if (!draggingSystemId) {
             setSelectedObject(null);
           }
@@ -176,7 +221,7 @@ const ConstellationView: React.FC = () => {
                 e.stopPropagation();
                 handleSystemClick(system.id);
               }}
-              onPointerDown={(e) => handlePointerDown(e, system.id)}
+              onContextMenu={(e) => handleContextMenu(e, system.id)}
               onPointerEnter={(e) => {
                 if (!draggingSystemId) {
                   setHoveredSystemId(system.id);
@@ -184,8 +229,10 @@ const ConstellationView: React.FC = () => {
                 }
               }}
               onPointerLeave={(e) => {
-                setHoveredSystemId(null);
-                document.body.style.cursor = "default";
+                if (!draggingSystemId) {
+                  setHoveredSystemId(null);
+                  document.body.style.cursor = "default";
+                }
               }}
             >
               {/* System node */}
@@ -274,6 +321,51 @@ const ConstellationView: React.FC = () => {
                     opacity={0.8}
                   />
                 </mesh>
+              )}
+
+              {/* Hover label with system name and star type */}
+              {isHovered && (
+                <Html
+                  position={[0, 1.5, 0]}
+                  center
+                  distanceFactor={10}
+                  style={{ pointerEvents: "none" }}
+                >
+                  <div
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(0,0,0,0.95) 0%, rgba(20,20,40,0.9) 100%)",
+                      color: "white",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      whiteSpace: "nowrap",
+                      border: `2px solid ${starColor}`,
+                      boxShadow: `0 0 15px ${starColor}60, 0 4px 10px rgba(0,0,0,0.5)`,
+                      backdropFilter: "blur(4px)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "bold",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      {system.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: starColor,
+                        opacity: 0.9,
+                      }}
+                    >
+                      {system.star.type.replace(/_/g, " ").toUpperCase()}
+                    </div>
+                  </div>
+                </Html>
               )}
             </group>
           );
