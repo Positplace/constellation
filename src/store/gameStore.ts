@@ -28,6 +28,7 @@ interface GameStore {
   gameTime: number; // Real-time game time in seconds
   timeScale: number; // 0..1 smooth playback factor
   selectedPlanetId: string | null; // Currently selected planet in solar view
+  selectedAsteroidId: string | null; // Currently selected asteroid in solar view
 
   // Actions
   addPlayer: (player: Player) => void;
@@ -44,7 +45,11 @@ interface GameStore {
   updateGameTime: (time: number) => void;
   setTimeScale: (scale: number) => void;
   setSelectedPlanet: (planetId: string | null) => void;
-  updateSystemPosition: (systemId: string, position: [number, number, number]) => void;
+  setSelectedAsteroid: (asteroidId: string | null) => void;
+  updateSystemPosition: (
+    systemId: string,
+    position: [number, number, number]
+  ) => void;
   initializeGame: () => void;
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
@@ -62,6 +67,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameTime: 0,
   timeScale: 0,
   selectedPlanetId: null,
+  selectedAsteroidId: null,
 
   // Actions
   setActiveView: (view) => {
@@ -91,7 +97,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setCurrentSystem: (id) => {
-    set({ currentSystemId: id });
+    set({ currentSystemId: id, selectedPlanetId: null });
     get().saveToLocalStorage();
   },
 
@@ -180,7 +186,49 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTimeScale: (scale) => set({ timeScale: Math.max(0, Math.min(1, scale)) }),
 
-  setSelectedPlanet: (planetId) => set({ selectedPlanetId: planetId }),
+  setSelectedPlanet: (planetId) => {
+    // Validate that the planet exists in the current system
+    if (planetId) {
+      const state = get();
+      const currentSystem = state.solarSystems.find(
+        (s) => s.id === state.currentSystemId
+      );
+      if (
+        currentSystem &&
+        !currentSystem.planets.find((p) => p.id === planetId)
+      ) {
+        console.warn(
+          `Planet ${planetId} not found in current system ${state.currentSystemId}`
+        );
+        set({ selectedPlanetId: null });
+        return;
+      }
+    }
+    set({ selectedPlanetId: planetId, selectedAsteroidId: null });
+  },
+
+  setSelectedAsteroid: (asteroidId) => {
+    // Validate that the asteroid exists in the current system
+    if (asteroidId) {
+      const state = get();
+      const currentSystem = state.solarSystems.find(
+        (s) => s.id === state.currentSystemId
+      );
+      if (
+        currentSystem &&
+        !currentSystem.asteroidBelts?.some((belt) =>
+          belt.asteroids.find((a) => a.id === asteroidId)
+        )
+      ) {
+        console.warn(
+          `Asteroid ${asteroidId} not found in current system ${state.currentSystemId}`
+        );
+        set({ selectedAsteroidId: null });
+        return;
+      }
+    }
+    set({ selectedAsteroidId: asteroidId, selectedPlanetId: null });
+  },
 
   updateSystemPosition: (systemId, position) => {
     set((state) => ({
@@ -234,6 +282,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         tunnels: state.tunnels,
         currentSystemId: state.currentSystemId,
         currentTurn: state.currentTurn,
+        selectedPlanetId: state.selectedPlanetId,
+        selectedAsteroidId: state.selectedAsteroidId,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (error) {
@@ -251,6 +301,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           tunnels: data.tunnels || [],
           currentSystemId: data.currentSystemId || null,
           currentTurn: data.currentTurn || 1,
+          selectedPlanetId: data.selectedPlanetId || null,
+          selectedAsteroidId: data.selectedAsteroidId || null,
         });
       }
     } catch (error) {

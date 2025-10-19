@@ -58,11 +58,19 @@ const ViewToggle: React.FC = () => {
                 setActiveView("solar");
                 changeView("solar");
                 window.dispatchEvent(new CustomEvent("focusHomePlanet"));
-              } else {
-                // If clicking the active System tab, emit reset event
-                if (view.key === "solar" && activeView === "solar") {
+              } else if (view.key === "solar") {
+                // Handle solar view switching
+                if (activeView === "solar") {
+                  // If clicking the active System tab, emit reset event
                   window.dispatchEvent(new CustomEvent("resetSolarView"));
+                } else {
+                  // Switching to solar view
+                  setActiveView("solar");
+                  changeView("solar");
+                  setIsHomeFocused(false);
                 }
+              } else {
+                // Handle other views (constellation, etc.)
                 // Reset home focus when switching views
                 if (view.key !== "solar") {
                   setIsHomeFocused(false);

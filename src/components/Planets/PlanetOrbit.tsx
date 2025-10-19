@@ -61,12 +61,13 @@ export const PlanetOrbit: React.FC<PlanetOrbitProps> = ({
       {/* Orbital path ring */}
       {showOrbit && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[distance - 0.01, distance + 0.01, 64]} />
+          <ringGeometry args={[distance - 0.01, distance + 0.01, 96]} />
           <meshBasicMaterial
-            color="#ffffff"
+            color="#c8d6ff"
             transparent
-            opacity={0.1}
+            opacity={0.35}
             side={THREE.DoubleSide}
+            depthWrite={false}
           />
         </mesh>
       )}
@@ -76,5 +77,3 @@ export const PlanetOrbit: React.FC<PlanetOrbitProps> = ({
     </>
   );
 };
-
-

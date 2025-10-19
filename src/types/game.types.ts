@@ -1,4 +1,5 @@
 import { PlanetData } from "./planet.types";
+import { AsteroidBeltData } from "./asteroid.types";
 
 export interface Player {
   id: string;
@@ -33,6 +34,7 @@ export interface SolarSystem {
   position: [number, number, number];
   star: StarData;
   planets: PlanetData[]; // Use full PlanetData instead of simple Planet
+  asteroidBelts?: AsteroidBeltData[]; // Optional asteroid belts
   connections: string[]; // IDs of connected systems
   discovered: boolean;
   colonized: boolean;

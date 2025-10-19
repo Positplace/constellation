@@ -4,6 +4,7 @@ import { useMultiplayerStore } from "../../store/multiplayerStore";
 import { useSocket } from "../../hooks/useSocket";
 import { generateSolarSystem } from "../../utils/systemFactory";
 import PlanetDetailsCard from "./PlanetDetailsCard";
+import AsteroidDetailsCard from "./AsteroidDetailsCard";
 
 const HUD: React.FC = () => {
   const {
@@ -14,16 +15,56 @@ const HUD: React.FC = () => {
     solarSystems,
     currentSystemId,
     selectedPlanetId,
+    selectedAsteroidId,
     setSelectedPlanet,
+    setSelectedAsteroid,
   } = useGameStore();
   const { players, isConnected, currentRoom } = useMultiplayerStore();
   const { togglePlayPauseSocket, emitPlanetSelected } = useSocket();
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
 
+  // Create a combined sorted list of planets and asteroid belts by orbital distance
+  type SystemObject =
+    | { type: "planet"; data: any; orbitalDistance: number }
+    | { type: "asteroidBelt"; data: any; orbitalDistance: number };
+
+  const sortedSystemObjects: SystemObject[] = [];
+
+  if (currentSystem) {
+    // Add planets
+    currentSystem.planets.forEach((planet) => {
+      sortedSystemObjects.push({
+        type: "planet",
+        data: planet,
+        orbitalDistance: planet.orbitalDistance || 0,
+      });
+    });
+
+    // Add asteroid belts (use the middle of the belt as orbital distance)
+    currentSystem.asteroidBelts?.forEach((belt) => {
+      const middleDistance = (belt.innerRadius + belt.outerRadius) / 2;
+      sortedSystemObjects.push({
+        type: "asteroidBelt",
+        data: belt,
+        orbitalDistance: middleDistance,
+      });
+    });
+
+    // Sort all objects by orbital distance
+    sortedSystemObjects.sort((a, b) => a.orbitalDistance - b.orbitalDistance);
+  }
+
   // Find selected planet
   const selectedPlanet = selectedPlanetId
     ? currentSystem?.planets.find((p) => p.id === selectedPlanetId)
+    : null;
+
+  // Find selected asteroid
+  const selectedAsteroid = selectedAsteroidId
+    ? currentSystem?.asteroidBelts
+        ?.flatMap((belt) => belt.asteroids)
+        .find((a) => a.id === selectedAsteroidId)
     : null;
 
   const formatTime = (seconds: number) => {
@@ -73,6 +114,81 @@ const HUD: React.FC = () => {
 
   return (
     <>
+      {/* Bottom Right - System Outline */}
+      {activeView === "solar" && currentSystem && (
+        <div
+          className="fixed bottom-4 right-4 z-[60]"
+          style={{ pointerEvents: "auto" }}
+        >
+          <div className="bg-black/90 border-2 border-cyan-500 rounded px-3 py-2 text-xs text-white shadow-2xl max-h-[50vh] overflow-auto min-w-[200px]">
+            <div className="space-y-0.5">
+              {/* Sun */}
+              <button
+                className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
+                onClick={() => {
+                  // Ask SolarSystemView to reset view to center on sun
+                  window.dispatchEvent(new CustomEvent("resetSolarView"));
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
+                <span className="truncate max-w-[160px]">
+                  {currentSystem.star.name}
+                </span>
+              </button>
+              <div className="h-px bg-white/10 my-1" />
+
+              {/* Planets and Asteroid Belts sorted by orbital distance */}
+              {sortedSystemObjects.map((obj) => {
+                if (obj.type === "planet") {
+                  const planet = obj.data;
+                  return (
+                    <button
+                      key={`planet-${planet.id}`}
+                      className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
+                      onClick={() => {
+                        // Ask SolarSystemView to focus this planet
+                        window.dispatchEvent(
+                          new CustomEvent("focusPlanet", {
+                            detail: { planetId: planet.id },
+                          })
+                        );
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
+                      <span className="truncate max-w-[160px]">
+                        {planet.name}
+                      </span>
+                    </button>
+                  );
+                } else {
+                  // Asteroid belt
+                  const belt = obj.data;
+                  return (
+                    <button
+                      key={`belt-${belt.id}`}
+                      className="flex items-center gap-2 w-full text-left hover:text-white transition-colors cursor-pointer"
+                      onClick={() => {
+                        // Ask SolarSystemView to focus a random asteroid from this belt
+                        window.dispatchEvent(
+                          new CustomEvent("focusAsteroidBelt", {
+                            detail: { beltId: belt.id },
+                          })
+                        );
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-300 inline-block" />
+                      <span className="truncate max-w-[160px]">
+                        {belt.name} ({belt.asteroids.length})
+                      </span>
+                    </button>
+                  );
+                }
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Right - Game Controls */}
       <div className="absolute top-4 right-4 z-50">
         <div className="glass-panel p-4 space-y-3">
@@ -130,6 +246,17 @@ const HUD: React.FC = () => {
             if (isConnected) {
               emitPlanetSelected(null);
             }
+          }}
+        />
+      )}
+
+      {/* Asteroid Details Card - Bottom Left (when asteroid selected) */}
+      {selectedAsteroid && (
+        <AsteroidDetailsCard
+          asteroid={selectedAsteroid}
+          onClose={() => {
+            setSelectedAsteroid(null);
+            // TODO: Add asteroid deselection socket event
           }}
         />
       )}

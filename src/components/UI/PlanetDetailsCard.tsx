@@ -11,7 +11,10 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
   onClose,
 }) => {
   return (
-    <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[80vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+    <div 
+      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[80vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+      style={{ pointerEvents: "auto" }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>

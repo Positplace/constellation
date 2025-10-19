@@ -6,6 +6,8 @@ import Planet from "../Planets/Planet";
 import TunnelGate from "./TunnelGate";
 import TravelAnimation from "./TravelAnimation";
 import Starfield from "../Background/Starfield";
+import { AsteroidBelt } from "../Asteroids/AsteroidBelt";
+// import { SimpleAsteroidTest } from "../Asteroids/SimpleAsteroidTest";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
 import { useSocket } from "../../hooks/useSocket";
@@ -32,15 +34,16 @@ const SolarSystemView: React.FC = () => {
     solarSystems,
     currentSystemId,
     selectedPlanetId,
+    selectedAsteroidId,
     setSelectedPlanet,
+    setSelectedAsteroid,
     setCurrentSystem,
-    setActiveView,
   } = useGameStore();
-  const { emitPlanetSelected, emitCurrentSystemChanged, changeView } =
-    useSocket();
+  const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
 
   const selectedId = selectedPlanetId;
+  const shouldShowOrbits = !selectedPlanetId && !selectedAsteroidId;
 
   // Get current system
   const currentSystem = useMemo(() => {
@@ -81,6 +84,129 @@ const SolarSystemView: React.FC = () => {
       controls.update();
     }
   }, []);
+
+  // Listen for focusPlanet requests coming from HUD
+  useEffect(() => {
+    const onFocusPlanet = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { planetId: string };
+      if (!detail || !currentSystem || !controlsRef.current) return;
+      const planet = currentSystem.planets.find(
+        (p) => p.id === detail.planetId
+      );
+      if (!planet) return;
+
+      // Select planet; onSelectedFrame will provide its world position
+      setSelectedPlanet(planet.id);
+
+      // Compute a reasonable focus distance based on planet size similar to Home focus
+      const SUN_RADIUS_UNITS = currentSystem?.star?.size || 1;
+      const renderScale = Math.min(
+        0.16,
+        (SUN_RADIUS_UNITS * 0.7) / Math.max(0.001, planet.radius / 6371)
+      );
+      const radiusUnits = (planet.radius / 6371) * renderScale;
+      const atmosphereRadius = radiusUnits * 1.06;
+      const minSafeDistance = (atmosphereRadius * 2) / 0.6;
+      const focusDistance = Math.max(
+        minSafeDistance,
+        Math.min(4, radiusUnits * 2.5)
+      );
+      pendingFocusDistanceRef.current = focusDistance;
+    };
+
+    window.addEventListener("focusPlanet", onFocusPlanet as EventListener);
+    return () =>
+      window.removeEventListener("focusPlanet", onFocusPlanet as EventListener);
+  }, [currentSystem, setSelectedPlanet]);
+
+  // Listen for focusRandomAsteroid requests coming from HUD
+  useEffect(() => {
+    const onFocusRandomAsteroid = () => {
+      if (!currentSystem || !controlsRef.current) return;
+      const allAsteroids =
+        currentSystem.asteroidBelts?.flatMap((b) => b.asteroids) || [];
+      if (allAsteroids.length === 0) return;
+      const rand = Math.floor(Math.random() * allAsteroids.length);
+      const asteroid = allAsteroids[rand];
+
+      // Focus on this random asteroid with zoom animation
+      focusOnAsteroid(asteroid.id);
+    };
+
+    window.addEventListener("focusRandomAsteroid", onFocusRandomAsteroid);
+    return () =>
+      window.removeEventListener("focusRandomAsteroid", onFocusRandomAsteroid);
+  }, [currentSystem, setSelectedAsteroid]);
+
+  // Listen for focusAsteroidBelt requests (focus on specific belt)
+  useEffect(() => {
+    const onFocusAsteroidBelt = (event: Event) => {
+      const customEvent = event as CustomEvent<{ beltId: string }>;
+      if (!currentSystem || !controlsRef.current) return;
+      const belt = currentSystem.asteroidBelts?.find(
+        (b) => b.id === customEvent.detail.beltId
+      );
+      if (!belt || belt.asteroids.length === 0) return;
+
+      // Pick a random asteroid from this specific belt
+      const rand = Math.floor(Math.random() * belt.asteroids.length);
+      const asteroid = belt.asteroids[rand];
+
+      // Focus on this asteroid with zoom animation
+      focusOnAsteroid(asteroid.id);
+    };
+
+    window.addEventListener(
+      "focusAsteroidBelt",
+      onFocusAsteroidBelt as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "focusAsteroidBelt",
+        onFocusAsteroidBelt as EventListener
+      );
+  }, [currentSystem, setSelectedAsteroid]);
+
+  // Helper function to focus on a specific asteroid with zoom animation
+  const focusOnAsteroid = (asteroidId: string) => {
+    if (!currentSystem || !controlsRef.current) return;
+    const allAsteroids =
+      currentSystem.asteroidBelts?.flatMap((b) => b.asteroids) || [];
+    const asteroid = allAsteroids.find((a) => a.id === asteroidId);
+    if (!asteroid) return;
+
+    setSelectedAsteroid(asteroid.id);
+
+    // Immediately set selected position to asteroid's current position for zoom
+    const pos = new THREE.Vector3(
+      asteroid.position[0],
+      asteroid.position[1],
+      asteroid.position[2]
+    );
+    setSelectedPos(pos);
+
+    // Determine a small focus distance appropriate for tiny asteroids
+    const focusDistance = 0.3; // close-up
+    if (controlsRef.current) {
+      const controls = controlsRef.current;
+      const cam = controls.object as THREE.PerspectiveCamera;
+      const offset = cam.position.clone().sub(controls.target);
+      const dir =
+        offset.length() > 0
+          ? offset.clone().normalize()
+          : new THREE.Vector3(0, 0, 1);
+      zoomAnimRef.current = {
+        active: true,
+        start: performance.now(),
+        duration: 700,
+        fromDistance: offset.length(),
+        toDistance: focusDistance,
+        dir,
+        fromTarget: controls.target.clone(),
+        toTarget: pos.clone(),
+      };
+    }
+  };
 
   // Listen for reset solar view event (from clicking active System tab)
   useEffect(() => {
@@ -131,10 +257,12 @@ const SolarSystemView: React.FC = () => {
         }
       }
       setSelectedPlanet(null);
+      setSelectedAsteroid(null);
       setSelectedPos(new THREE.Vector3(0, 0, 0));
       // Emit to server if connected
       if (isConnected) {
         emitPlanetSelected(null);
+        // TODO: Add asteroid deselection socket event
       }
     };
     window.addEventListener("resetSolarView", handleReset);
@@ -319,12 +447,14 @@ const SolarSystemView: React.FC = () => {
   const planetsToRender = useMemo(() => {
     if (!currentSystem) return [];
 
-    return currentSystem.planets.map((planet, idx) => ({
-      planet,
-      distance: planet.orbitalDistance * 1.5, // Scale for visualization
-      speed: planet.orbitalSpeed * 0.1, // Slow down for easier interaction
-      angle: (idx * Math.PI) / currentSystem.planets.length,
-    }));
+    return (
+      currentSystem?.planets?.map((planet, idx) => ({
+        planet,
+        distance: planet.orbitalDistance * 1.5, // Scale for visualization
+        speed: planet.orbitalSpeed * 0.1, // Slow down for easier interaction
+        angle: (idx * Math.PI) / (currentSystem.planets.length || 1),
+      })) || []
+    );
   }, [currentSystem]);
 
   // Listen for focus Home planet event (from clicking Home button)
@@ -332,14 +462,16 @@ const SolarSystemView: React.FC = () => {
     const handleFocusHome = () => {
       if (!currentSystem) return;
 
-      // Focus on the home planet - prioritize colonized earth-like planets
+      // Focus on the home planet - prioritize earth-like planets
       const homePlanet =
-        currentSystem.planets.find((p) => p.colonized) ||
-        currentSystem.planets.find((p) => p.type === "earth_like") ||
-        currentSystem.planets[0];
+        currentSystem?.planets?.find((p) => p.type === "earth_like") ||
+        currentSystem?.planets?.find((p) =>
+          ["earth_like", "terrestrial", "ocean_world"].includes(p.type)
+        ) ||
+        currentSystem?.planets?.[0];
 
       if (homePlanet) {
-        const SUN_RADIUS_UNITS = currentSystem.star.size;
+        const SUN_RADIUS_UNITS = currentSystem?.star?.size || 1;
         const renderScale = Math.min(
           0.16,
           (SUN_RADIUS_UNITS * 0.7) / Math.max(0.001, homePlanet.radius / 6371)
@@ -416,6 +548,7 @@ const SolarSystemView: React.FC = () => {
       };
     }
     setSelectedPlanet(null);
+    setSelectedAsteroid(null);
     setSelectedPos(new THREE.Vector3(0, 0, 0));
   };
 
@@ -428,8 +561,9 @@ const SolarSystemView: React.FC = () => {
     const controls = controlsRef.current;
     const cam = controls.object as THREE.PerspectiveCamera;
 
-    // Clear planet selection when traveling
+    // Clear planet and asteroid selection when traveling
     setSelectedPlanet(null);
+    setSelectedAsteroid(null);
 
     // Start travel animation with approach phase
     setTravelState({
@@ -453,7 +587,7 @@ const SolarSystemView: React.FC = () => {
   const tunnelGates = useMemo(() => {
     if (!currentSystem) return [];
 
-    return currentSystem.connections
+    return currentSystem?.connections
       .map((connectedSystemId, index) => {
         const connectedSystem = solarSystems.find(
           (s) => s.id === connectedSystemId
@@ -461,7 +595,8 @@ const SolarSystemView: React.FC = () => {
         if (!connectedSystem) return null;
 
         // Calculate position for tunnel gate (evenly spaced around the system)
-        const angleStep = (Math.PI * 2) / currentSystem.connections.length;
+        const angleStep =
+          (Math.PI * 2) / (currentSystem?.connections?.length || 1);
         const angle = index * angleStep;
         const gateDistance = 15; // Distance from sun
         const position: [number, number, number] = [
@@ -523,7 +658,7 @@ const SolarSystemView: React.FC = () => {
   return (
     <group onPointerMissed={handleResetView}>
       {/* Starfield background that adapts to star type */}
-      <Starfield starType={currentSystem.star.type} />
+      <Starfield starType={currentSystem?.star?.type || "yellow_star"} />
 
       <OrbitControls
         ref={controlsRef}
@@ -708,10 +843,37 @@ const SolarSystemView: React.FC = () => {
               }
             }}
             renderScale={renderScale}
-            showOrbit={!selectedId}
+            showOrbit={shouldShowOrbits}
           />
         );
       })}
+
+      {/* Asteroid Belts */}
+      {currentSystem.asteroidBelts?.map((belt) => (
+        <AsteroidBelt
+          key={belt.id}
+          belt={belt}
+          timeScale={timeScale}
+          selectedId={selectedAsteroidId || undefined}
+          showBeltRing={shouldShowOrbits}
+          onAsteroidSelect={(asteroidId) => {
+            // Use the helper function to focus with zoom animation
+            focusOnAsteroid(asteroidId);
+            // Clear planet selection when selecting asteroid
+            setSelectedPlanet(null);
+            // Emit to server if connected
+            if (isConnected) {
+              // TODO: Add asteroid selection socket event
+            }
+          }}
+          onSelectedFrame={(asteroidId, position) => {
+            // Continuously update position for camera tracking while asteroid is selected
+            if (selectedAsteroidId === asteroidId) {
+              setSelectedPos(position);
+            }
+          }}
+        />
+      ))}
 
       {/* Tunnel Gates for connected systems */}
       {tunnelGates.map((gate) => (
@@ -723,6 +885,9 @@ const SolarSystemView: React.FC = () => {
           onClick={() => handleTravelToSystem(gate.id, gate.position)}
         />
       ))}
+
+      {/* Simple asteroid size test - disabled to reduce clutter */}
+      {/* {process.env.NODE_ENV === "development" && <SimpleAsteroidTest />} */}
 
       {/* Star Name Display - Top of screen */}
       <Html fullscreen>
@@ -753,7 +918,7 @@ const SolarSystemView: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: "22px", marginBottom: "2px" }}>
-                {currentSystem.name}
+                {currentSystem?.name || "Unknown System"}
               </div>
               <div
                 style={{
@@ -763,7 +928,7 @@ const SolarSystemView: React.FC = () => {
                   fontWeight: "normal",
                 }}
               >
-                {currentSystem.star.name}
+                {currentSystem?.star?.name || "Unknown Star"}
               </div>
             </div>
           </div>
@@ -774,7 +939,7 @@ const SolarSystemView: React.FC = () => {
       <ambientLight intensity={0.5} color={SUN_COLOR} />
       <pointLight
         position={[0, 0, 0]}
-        intensity={currentSystem.star.luminosity * 12}
+        intensity={(currentSystem?.star?.luminosity || 1) * 12}
         distance={0}
         decay={1.2}
         color={SUN_COLOR}

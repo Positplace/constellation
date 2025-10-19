@@ -3,6 +3,10 @@ import { SolarSystem, StarType, StarData } from "../types/game.types";
 import { PlanetData, PlanetType } from "../types/planet.types";
 import { createPlanet } from "./planetFactory";
 import { randomInt, randomRange } from "./noiseUtils";
+import {
+  generateAsteroidBelt,
+  calculateAsteroidBeltPositions,
+} from "./asteroidFactory";
 
 const SYSTEM_NAMES = [
   "Alpha",
@@ -244,6 +248,30 @@ export function generateSolarSystem(
   // Calculate system position
   const systemPosition = position ?? [0, 0, 0];
 
+  // Generate asteroid belts
+  const asteroidBelts = [];
+  const planetOrbits = orbitalDistances;
+  const beltPositions = calculateAsteroidBeltPositions(
+    planetOrbits,
+    systemSeed + 5000
+  );
+
+  for (const beltPos of beltPositions) {
+    const asteroidCount = randomInt(
+      50,
+      200,
+      systemSeed + asteroidBelts.length * 1000
+    );
+    const belt = generateAsteroidBelt({
+      innerRadius: beltPos.innerRadius,
+      outerRadius: beltPos.outerRadius,
+      asteroidCount,
+      beltType: beltPos.beltType,
+      seed: systemSeed + asteroidBelts.length * 1000,
+    });
+    asteroidBelts.push(belt);
+  }
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: `system-${systemSeed}`,
@@ -251,6 +279,7 @@ export function generateSolarSystem(
     position: systemPosition,
     star,
     planets: planets as any[], // Convert PlanetData to Planet for now
+    asteroidBelts: asteroidBelts.length > 0 ? asteroidBelts : undefined,
     connections: [],
     discovered: true,
     colonized: false,
