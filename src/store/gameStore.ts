@@ -18,6 +18,7 @@ import {
   getObjectWorldPosition,
   calculateFlightTime,
   getNextSpaceshipPosition,
+  predictObjectPosition,
 } from "../utils/spaceshipUtils";
 
 const STORAGE_KEY = "constellation-game-state";
@@ -427,15 +428,47 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state.gameTime
     );
 
-    // console.log("Spaceship launch positions:", {
-    //   fromId,
-    //   fromType,
-    //   toId,
-    //   toType,
-    //   gameTime: state.gameTime,
-    //   originPos: originPos?.toArray(),
-    //   destinationPos: destinationPos?.toArray(),
-    // });
+    // Calculate estimated travel time and predict where destination will be
+    const estimatedTravelTime =
+      originPos && destinationPos
+        ? originPos.distanceTo(destinationPos) / 4.0
+        : 0;
+    const predictedDestinationPos =
+      originPos && destinationPos
+        ? predictObjectPosition(
+            toId,
+            toType,
+            currentSystem,
+            state.gameTime,
+            state.gameTime + estimatedTravelTime
+          )
+        : null;
+
+    // DEBUG: Log spaceship launch information
+    console.log("🚀 Spaceship LAUNCH DEBUG:", {
+      fromId,
+      fromType,
+      toId,
+      toType,
+      gameTime: state.gameTime.toFixed(2),
+      originPos: originPos?.toArray().map((v: number) => v.toFixed(2)),
+      currentDestinationPos: destinationPos
+        ?.toArray()
+        .map((v: number) => v.toFixed(2)),
+      predictedDestinationPos: predictedDestinationPos
+        ?.toArray()
+        .map((v: number) => v.toFixed(2)),
+      usingPredictedDestination: !!predictedDestinationPos,
+      distance:
+        originPos && destinationPos
+          ? originPos.distanceTo(destinationPos).toFixed(2)
+          : "N/A",
+      estimatedTravelTime: estimatedTravelTime.toFixed(2) + "s",
+      predictionAccuracy:
+        predictedDestinationPos && destinationPos
+          ? predictedDestinationPos.distanceTo(destinationPos).toFixed(2)
+          : "N/A",
+    });
 
     if (!originPos || !destinationPos) {
       console.warn(
@@ -461,7 +494,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       spaceshipId,
       { id: fromId, type: fromType },
       { id: toId, type: toType },
-      launchPosition
+      launchPosition,
+      predictedDestinationPos || destinationPos // Use predicted position if available
     );
 
     // Calculate total flight time
@@ -473,6 +507,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Automatically select the launched spaceship for tracking
     set({ selectedObject: { id: spaceship.id, type: "spaceship" } });
+
+    // Enable debug mode for the newly launched spaceship
+    (spaceship as any).debugMode = true;
+    console.log(
+      `🐛 Debug mode enabled for newly launched spaceship ${spaceship.id}`
+    );
   },
 
   updateSpaceship: (id, updates) => {
@@ -505,12 +545,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // Find the spaceship to get its current position
+    // Calculate predicted destination position for the new journey
     const spaceship = state.spaceships.find((ship) => ship.id === id);
     if (!spaceship) {
       console.warn("Spaceship not found for destination change");
       return;
     }
+
+    const estimatedTravelTime =
+      spaceship.position.distanceTo(newDestinationPos) / 4.0;
+    const predictedNewDestinationPos = predictObjectPosition(
+      newDestination.id,
+      newDestination.type,
+      currentSystem,
+      state.gameTime,
+      state.gameTime + estimatedTravelTime
+    );
+
+    console.log("🚀 Spaceship DESTINATION CHANGE DEBUG:", {
+      spaceshipId: id,
+      newDestination: newDestination,
+      currentDestinationPos: newDestinationPos
+        .toArray()
+        .map((v: number) => v.toFixed(2)),
+      predictedNewDestinationPos: predictedNewDestinationPos
+        ?.toArray()
+        .map((v: number) => v.toFixed(2)),
+      estimatedTravelTime: estimatedTravelTime.toFixed(2) + "s",
+      predictionAccuracy: predictedNewDestinationPos
+        ? predictedNewDestinationPos.distanceTo(newDestinationPos).toFixed(2)
+        : "N/A",
+    });
 
     // Update the spaceship's destination and reset its state to traveling
     // Update the trail positions to start from current position
@@ -525,6 +590,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
               stateStartTime: Date.now(),
               // Update trail to start from current position for new journey
               trailPositions: [ship.position.clone()], // Start new trail from current position
+              // Store the new fixed destination position (use predicted if available)
+              fixedDestination: predictedNewDestinationPos
+                ? predictedNewDestinationPos.clone()
+                : newDestinationPos.clone(),
             }
           : ship
       ),
@@ -575,11 +644,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         continue;
       }
 
+      // Calculate delta time for orbital mechanics
+      const delta = state.lastSpaceshipUpdate
+        ? (now - state.lastSpaceshipUpdate) / 1000
+        : 1 / 60;
+
       // Calculate new position
       const newPosition = getNextSpaceshipPosition(
         spaceship,
         originPos,
-        destinationPos
+        destinationPos,
+        undefined, // Use default config
+        delta
       );
 
       // Debug logging for selected spaceships
@@ -610,22 +686,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let newStateStartTime = spaceship.stateStartTime;
 
       switch (spaceship.state) {
-        case "launching":
-          if (stateElapsed >= 2.0) {
+        case "orbiting_origin":
+          // After orbiting origin for a few seconds, start traveling
+          if (stateElapsed >= 3.0) {
             newState = "traveling";
-            newStateStartTime = now;
-          }
-          break;
-        case "traveling": {
-          const distance = originPos.distanceTo(destinationPos);
-          const travelTime = distance / 4.0;
-          if (stateElapsed >= travelTime) {
-            newState = "orbiting";
             newStateStartTime = now;
             console.log(
               `Spaceship ${
                 spaceship.id
-              } transitioning from traveling to orbiting after ${stateElapsed.toFixed(
+              } transitioning from orbiting_origin to traveling after ${stateElapsed.toFixed(
+                2
+              )}s`
+            );
+          }
+          break;
+        case "traveling": {
+          // Use the fixed destination for travel time calculation (where we're traveling TO)
+          const fixedDestination =
+            (spaceship as any).fixedDestination || destinationPos;
+          const launchOrigin = spaceship.trailPositions[0] || originPos;
+          const distance = launchOrigin.distanceTo(fixedDestination);
+          const travelTime = distance / 4.0;
+          if (stateElapsed >= travelTime) {
+            newState = "orbiting_destination";
+            newStateStartTime = now;
+            console.log(
+              `Spaceship ${
+                spaceship.id
+              } transitioning from traveling to orbiting_destination after ${stateElapsed.toFixed(
                 2
               )}s (travelTime: ${travelTime.toFixed(
                 2
@@ -634,22 +722,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
           break;
         }
-        case "orbiting":
-          if (stateElapsed >= 1.0) {
-            newState = "landing";
-            newStateStartTime = now;
-          }
-          break;
-        case "landing":
-          if (stateElapsed >= 2.0) {
-            // Ship has landed - transition to waiting in orbit
-            newState = "waiting";
-            newStateStartTime = now;
-          }
-          break;
-        case "waiting":
-          // Ship is waiting in orbit - no state change needed
-          // The ship will continue orbiting the destination
+        case "orbiting_destination":
+          // Ship continues orbiting destination indefinitely - no state change needed
           break;
       }
 

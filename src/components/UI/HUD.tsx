@@ -589,9 +589,9 @@ const LaunchShipDialog: React.FC<{
               No destinations found
             </div>
           ) : (
-            filteredDestinations.map((destination) => (
+            filteredDestinations.map((destination, index) => (
               <button
-                key={`${destination.type}-${destination.id}`}
+                key={`${destination.type}-${destination.id}-${index}`}
                 onClick={() => setSelectedDestination(destination)}
                 className={`w-full text-left p-2 rounded border transition-colors ${
                   selectedDestination?.id === destination.id

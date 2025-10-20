@@ -1,11 +1,9 @@
 import * as THREE from "three";
 
 export type SpaceshipState =
-  | "launching"
-  | "traveling"
-  | "orbiting"
-  | "landing"
-  | "waiting";
+  | "orbiting_origin" // Orbiting around the origin object
+  | "traveling" // Traveling to destination
+  | "orbiting_destination"; // Orbiting around the destination object
 export type ObjectType = "planet" | "moon" | "asteroid" | "sun"; // Added sun for completeness, though not used for launch yet
 
 export interface FlightPath {

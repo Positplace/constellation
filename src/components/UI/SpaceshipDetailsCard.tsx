@@ -308,9 +308,9 @@ export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
               </p>
 
               <div className="max-h-60 overflow-y-auto space-y-1">
-                {getAvailableDestinations().map((dest) => (
+                {getAvailableDestinations().map((dest, index) => (
                   <button
-                    key={`${dest.type}-${dest.id}`}
+                    key={`${dest.type}-${dest.id}-${index}`}
                     onClick={() => setSelectedDestination(dest)}
                     className={`w-full text-left p-2 rounded text-sm transition-colors ${
                       selectedDestination?.id === dest.id
