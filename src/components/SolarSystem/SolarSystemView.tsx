@@ -9,6 +9,7 @@ import Starfield from "../Background/Starfield";
 import { AsteroidBelt } from "../Asteroids/AsteroidBelt";
 import BinaryStar from "./BinaryStar";
 import BlackHole from "./BlackHole";
+import Comet from "../Comets/Comet";
 // import { SimpleAsteroidTest } from "../Asteroids/SimpleAsteroidTest";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
@@ -56,6 +57,8 @@ const SolarSystemView: React.FC = () => {
     selectedObject?.type === "moon" ? selectedObject.id : null;
   const selectedSpaceshipId =
     selectedObject?.type === "spaceship" ? selectedObject.id : null;
+  const selectedCometId =
+    selectedObject?.type === "comet" ? selectedObject.id : null;
 
   // Get current system
   const currentSystem = useMemo(() => {
@@ -1337,6 +1340,50 @@ const SolarSystemView: React.FC = () => {
 
       {/* Spaceships */}
       <SpaceshipManager />
+
+      {/* Comets */}
+      {currentSystem.comets?.map((comet) => (
+        <Comet
+          key={comet.id}
+          comet={comet}
+          timeScale={timeScale}
+          selectedId={selectedCometId || undefined}
+          showOrbit={shouldShowPlanetOrbits}
+          onSelect={(id, pos) => {
+            setSelectedObject({ id, type: "comet" });
+            setSelectedPos(pos.clone());
+
+            // Zoom to comet
+            if (controlsRef.current) {
+              const controls = controlsRef.current;
+              const cam = controls.object as THREE.PerspectiveCamera;
+              const offset = cam.position.clone().sub(controls.target);
+              const dir =
+                offset.length() > 0
+                  ? offset.clone().normalize()
+                  : new THREE.Vector3(0, 0, 1);
+              zoomAnimRef.current = {
+                active: true,
+                start: performance.now(),
+                duration: 700,
+                fromDistance: offset.length(),
+                toDistance: 0.5, // Close-up view for comets
+                dir,
+              };
+            }
+
+            // Emit to server if connected
+            if (isConnected) {
+              // TODO: Add comet selection socket event
+            }
+          }}
+          onSelectedFrame={(id, pos) => {
+            if (selectedCometId === id) {
+              setSelectedPos(pos.clone());
+            }
+          }}
+        />
+      ))}
 
       {/* Simple asteroid size test - disabled to reduce clutter */}
       {/* {process.env.NODE_ENV === "development" && <SimpleAsteroidTest />} */}

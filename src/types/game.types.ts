@@ -1,5 +1,6 @@
 import { PlanetData } from "./planet.types";
 import { AsteroidBeltData } from "./asteroid.types";
+import { CometData } from "./comet.types";
 
 export interface Player {
   id: string;
@@ -60,6 +61,7 @@ export interface SolarSystem {
   star: StarData;
   planets: PlanetData[]; // Use full PlanetData instead of simple Planet
   asteroidBelts?: AsteroidBeltData[]; // Optional asteroid belts
+  comets?: CometData[]; // Optional comets
   connections: string[]; // IDs of connected systems
   discovered: boolean;
   colonized: boolean;
@@ -101,7 +103,8 @@ export type SelectedObjectType =
   | "planet"
   | "asteroid"
   | "moon"
-  | "spaceship";
+  | "spaceship"
+  | "comet";
 
 export interface SelectedObject {
   id: string;

@@ -7,6 +7,7 @@ import PlanetDetailsCard from "./PlanetDetailsCard";
 import AsteroidDetailsCard from "./AsteroidDetailsCard";
 import { MoonDetailsCard } from "./MoonDetailsCard";
 import { SpaceshipDetailsCard } from "./SpaceshipDetailsCard";
+import CometDetailsCard from "./CometDetailsCard";
 import { ObjectType } from "../../types/spaceship.types";
 
 const HUD: React.FC = () => {
@@ -137,6 +138,8 @@ const HUD: React.FC = () => {
     selectedObject?.type === "asteroid" ? selectedObject.id : null;
   const selectedMoonId =
     selectedObject?.type === "moon" ? selectedObject.id : null;
+  const selectedCometId =
+    selectedObject?.type === "comet" ? selectedObject.id : null;
 
   // Create a combined sorted list of planets and asteroid belts by orbital distance
   type SystemObject =
@@ -179,6 +182,11 @@ const HUD: React.FC = () => {
     ? currentSystem?.asteroidBelts
         ?.flatMap((belt) => belt.asteroids)
         .find((a) => a.id === selectedAsteroidId)
+    : null;
+
+  // Find selected comet
+  const selectedComet = selectedCometId
+    ? currentSystem?.comets?.find((c) => c.id === selectedCometId)
     : null;
 
   const formatTime = (seconds: number) => {
@@ -496,6 +504,17 @@ const HUD: React.FC = () => {
             />
           ) : null;
         })()}
+
+      {/* Comet Details Card - Bottom Left (when comet selected) */}
+      {selectedComet && (
+        <CometDetailsCard
+          comet={selectedComet}
+          onClose={() => {
+            setSelectedObject(null);
+            // TODO: Add comet deselection socket event
+          }}
+        />
+      )}
 
       {/* Launch Ship Dialog - Full Screen Modal */}
       {showLaunchDialog && (

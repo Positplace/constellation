@@ -7,6 +7,7 @@ import {
   generateAsteroidBelt,
   calculateAsteroidBeltPositions,
 } from "./asteroidFactory";
+import { generateSystemComets } from "./cometFactory";
 
 const SYSTEM_NAMES = [
   "Alpha",
@@ -510,6 +511,15 @@ export function generateSolarSystem(
     asteroidBelts.push(belt);
   }
 
+  // Generate comets
+  const comets = generateSystemComets(
+    habitableZoneMin,
+    habitableZoneMax,
+    outerBoundary,
+    selectedStarType,
+    systemSeed
+  );
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: systemId,
@@ -518,6 +528,7 @@ export function generateSolarSystem(
     star,
     planets: planets as any[], // Convert PlanetData to Planet for now
     asteroidBelts: asteroidBelts.length > 0 ? asteroidBelts : undefined,
+    comets: comets.length > 0 ? comets : undefined,
     connections: [],
     discovered: true,
     colonized: false,

@@ -1,0 +1,69 @@
+2. Nebulae
+   Colorful space clouds/gas clouds in the background
+   Different types: emission, reflection, planetary nebulae
+   Could add atmospheric fog/glow effects around certain systems
+   Great for making systems feel unique
+
+3. Pulsars/Neutron Stars
+   Rapidly rotating remnants of supernovae
+   Emit beams of radiation
+   Could create lighthouse effect as they rotate
+   Extreme magnetic fields affecting nearby objects
+
+4. Supernovae/Supernova Remnants
+   Expanding shells of gas from exploded stars
+   Could have a "dying star" system type that's about to go supernova
+   Remnant nebulae with interesting structures
+
+5. Space Stations/Megastructures
+   Orbital habitats around planets
+   Dyson Spheres or Dyson Swarms around stars
+   Mining stations in asteroid belts
+   Could be player-built or procedurally generated
+
+6. Rogue Planets
+   Planets not bound to any star
+   Drifting through deep space between systems
+   Very cold and dark
+   Could be discovered during travel
+
+7. Planetary Features
+   Solar flares from stars (bursts of energy)
+   Auroras on planets with magnetic fields
+   Storms visible on gas giants (like Jupiter's Great Red Spot)
+   Volcanic activity on lava worlds
+
+8. Wormholes (different from your tunnel gates)
+   Unstable, time-limited connections
+   Visual distortion/gravitational lensing
+   Could be dangerous or unpredictable
+
+9. Debris Fields
+   Destroyed spacecraft/stations
+   Could be lootable or dangerous to navigate
+   Story elements about past civilizations
+
+10. Stellar Phenomena
+    Brown dwarfs - Failed stars
+    Protostars - Stars still forming
+    Variable stars - Stars that change brightness
+    Magnetars - Neutron stars with extreme magnetic fields
+
+11. Gravitational Effects
+    Lagrange points - Stable orbital positions
+    Gravitational lensing around black holes (visual warping)
+    Tidal forces showing gravitational influence visually
+
+12. Exotic Objects
+    Quasars - Extremely bright galactic cores
+    Dark matter halos (visual representation)
+    Strange matter objects
+    Hawking radiation visualization around black holes (you have this in data but might not be visual)
+
+Quick Wins (Easiest to Implement):
+Comets - Similar to asteroids but with trails
+Space stations - Static objects in orbit
+Solar flares - Particle effects from your stars
+Planetary storms - Animated textures on gas giants
+Rogue planets - Just planets in the void between systems
+Would you like me to help implement any of these? I'd recommend starting with comets since you already have the directory structure and they'd be relatively straightforward given your asteroid system!
