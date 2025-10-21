@@ -7,16 +7,20 @@ interface CometTailProps {
   comet: CometData;
   position: THREE.Vector3;
   starPosition: THREE.Vector3;
+  isSecondaryTail?: boolean; // For binary star systems
+  secondaryIntensity?: number; // Dynamic intensity for secondary tail
 }
 
 /**
- * Renders a single beautiful tail for a comet
- * Simplified from dual tails to a single elegant plume
+ * Renders a single tail for a comet, pointing away from a star
+ * In binary star systems, comets will have two tails (one per star)
  */
 const CometTail: React.FC<CometTailProps> = ({
   comet,
   position,
   starPosition,
+  isSecondaryTail = false,
+  secondaryIntensity = 1,
 }) => {
   const tailRef = useRef<THREE.Mesh>(null);
 
@@ -35,7 +39,11 @@ const CometTail: React.FC<CometTailProps> = ({
   const tailGeometry = useMemo(() => {
     if (!shouldRenderTail) return null;
 
-    const length = comet.tail.length * 1.3;
+    // Secondary tail length also scales with distance from companion
+    const baseLength = comet.tail.length * 1.3;
+    const length = isSecondaryTail
+      ? baseLength * secondaryIntensity
+      : baseLength;
     const baseWidth = 0.1;
     const segments = 32;
 
@@ -60,7 +68,12 @@ const CometTail: React.FC<CometTailProps> = ({
     positions.needsUpdate = true;
 
     return geometry;
-  }, [comet.tail.length, shouldRenderTail]);
+  }, [
+    comet.tail.length,
+    shouldRenderTail,
+    isSecondaryTail,
+    secondaryIntensity,
+  ]);
 
   // Create beautiful gradient texture blending blue and white/yellow
   const tailTexture = useMemo(() => {
@@ -72,11 +85,19 @@ const CometTail: React.FC<CometTailProps> = ({
     // Create radial gradient with mixed colors
     const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
 
-    // Blend of cyan-white-yellow for a single beautiful tail
-    gradient.addColorStop(0, "rgba(200, 230, 255, 1)"); // Bright cyan-white at center
-    gradient.addColorStop(0.3, "rgba(150, 200, 255, 0.8)"); // Light blue
-    gradient.addColorStop(0.6, "rgba(255, 240, 200, 0.4)"); // Yellowish tint
-    gradient.addColorStop(1, "rgba(200, 220, 255, 0)"); // Fade to transparent
+    if (isSecondaryTail) {
+      // Secondary tail - more yellowish/amber tint to differentiate
+      gradient.addColorStop(0, "rgba(255, 240, 200, 1)"); // Warm white-yellow at center
+      gradient.addColorStop(0.3, "rgba(255, 220, 180, 0.8)"); // Amber
+      gradient.addColorStop(0.6, "rgba(200, 220, 255, 0.4)"); // Bluish tint
+      gradient.addColorStop(1, "rgba(220, 200, 255, 0)"); // Fade to transparent
+    } else {
+      // Primary tail - cyan-white-yellow blend
+      gradient.addColorStop(0, "rgba(200, 230, 255, 1)"); // Bright cyan-white at center
+      gradient.addColorStop(0.3, "rgba(150, 200, 255, 0.8)"); // Light blue
+      gradient.addColorStop(0.6, "rgba(255, 240, 200, 0.4)"); // Yellowish tint
+      gradient.addColorStop(1, "rgba(200, 220, 255, 0)"); // Fade to transparent
+    }
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 256, 256);
@@ -84,7 +105,7 @@ const CometTail: React.FC<CometTailProps> = ({
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     return texture;
-  }, []);
+  }, [isSecondaryTail]);
 
   useFrame(() => {
     if (!shouldRenderTail || !tailRef.current) return;
@@ -110,17 +131,29 @@ const CometTail: React.FC<CometTailProps> = ({
     return null;
   }
 
+  // Secondary tail uses dynamic intensity based on distance from companion star
+  const tailColor = isSecondaryTail ? "#fff0c8" : "#c8e6ff";
+  const tailOpacity = isSecondaryTail
+    ? secondaryIntensity * 0.5 // Use dynamic intensity for secondary tail
+    : comet.tail.intensity * 0.6;
+
   return (
     <group position={position}>
       {/* Single beautiful tail */}
-      <mesh ref={tailRef} geometry={tailGeometry} position={[0, 0, 0]}>
+      <mesh
+        ref={tailRef}
+        geometry={tailGeometry}
+        position={[0, 0, 0]}
+        renderOrder={100} // Render after sun glow layers
+      >
         <meshBasicMaterial
-          color="#c8e6ff"
+          color={tailColor}
           transparent
-          opacity={comet.tail.intensity * 0.6}
+          opacity={tailOpacity}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          depthTest={true}
           map={tailTexture}
         />
       </mesh>

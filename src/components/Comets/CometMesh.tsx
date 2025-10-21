@@ -90,7 +90,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
       {comaIntensity > 0.05 && (
         <>
           {/* Inner coma - bright */}
-          <mesh ref={glowRef}>
+          <mesh ref={glowRef} renderOrder={100}>
             <sphereGeometry args={[nucleusRadius * 3, 16, 16]} />
             <meshBasicMaterial
               color={comaColor}
@@ -98,11 +98,12 @@ const CometMesh: React.FC<CometMeshProps> = ({
               opacity={comaIntensity * 0.4}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
+              depthTest={true}
             />
           </mesh>
 
           {/* Outer coma - softer glow */}
-          <mesh>
+          <mesh renderOrder={100}>
             <sphereGeometry args={[nucleusRadius * 5, 16, 16]} />
             <meshBasicMaterial
               color={comaColor}
@@ -110,6 +111,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
               opacity={comaIntensity * 0.2}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
+              depthTest={true}
             />
           </mesh>
         </>

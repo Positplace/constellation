@@ -1,6 +1,7 @@
 import { PlanetData } from "./planet.types";
 import { AsteroidBeltData } from "./asteroid.types";
 import { CometData } from "./comet.types";
+import { NebulaData } from "./nebula.types";
 
 export interface Player {
   id: string;
@@ -62,6 +63,7 @@ export interface SolarSystem {
   planets: PlanetData[]; // Use full PlanetData instead of simple Planet
   asteroidBelts?: AsteroidBeltData[]; // Optional asteroid belts
   comets?: CometData[]; // Optional comets
+  nebulae?: NebulaData[]; // Optional nebulae
   connections: string[]; // IDs of connected systems
   discovered: boolean;
   colonized: boolean;

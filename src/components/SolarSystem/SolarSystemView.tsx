@@ -10,6 +10,7 @@ import { AsteroidBelt } from "../Asteroids/AsteroidBelt";
 import BinaryStar from "./BinaryStar";
 import BlackHole from "./BlackHole";
 import Comet from "../Comets/Comet";
+import Nebula from "../Nebula/Nebula";
 // import { SimpleAsteroidTest } from "../Asteroids/SimpleAsteroidTest";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
@@ -1044,6 +1045,11 @@ const SolarSystemView: React.FC = () => {
       {/* Starfield background that adapts to star type */}
       <Starfield starType={currentSystem?.star?.type || "yellow_star"} />
 
+      {/* Nebulae - Render in the background */}
+      {currentSystem.nebulae?.map((nebula) => (
+        <Nebula key={nebula.id} nebula={nebula} timeScale={timeScale} />
+      ))}
+
       <OrbitControls
         ref={controlsRef}
         enablePan={true}
@@ -1091,6 +1097,7 @@ const SolarSystemView: React.FC = () => {
           <Sphere
             args={[SUN_RADIUS_UNITS * 1.15, 32, 32]}
             position={[0, 0, 0]}
+            renderOrder={10}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedObject({ id: currentSystem.star.id, type: "sun" });
@@ -1101,6 +1108,8 @@ const SolarSystemView: React.FC = () => {
               transparent
               opacity={0.6}
               blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              depthTest={true}
             />
           </Sphere>
 
@@ -1108,6 +1117,7 @@ const SolarSystemView: React.FC = () => {
           <Sphere
             args={[SUN_RADIUS_UNITS * 1.4, 32, 32]}
             position={[0, 0, 0]}
+            renderOrder={10}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedObject({ id: currentSystem.star.id, type: "sun" });
@@ -1118,6 +1128,8 @@ const SolarSystemView: React.FC = () => {
               transparent
               opacity={0.4}
               blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              depthTest={true}
             />
           </Sphere>
 
@@ -1125,6 +1137,7 @@ const SolarSystemView: React.FC = () => {
           <Sphere
             args={[SUN_RADIUS_UNITS * 1.8, 32, 32]}
             position={[0, 0, 0]}
+            renderOrder={10}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedObject({ id: currentSystem.star.id, type: "sun" });
@@ -1135,6 +1148,8 @@ const SolarSystemView: React.FC = () => {
               transparent
               opacity={0.2}
               blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              depthTest={true}
             />
           </Sphere>
 
@@ -1142,6 +1157,7 @@ const SolarSystemView: React.FC = () => {
           <Sphere
             args={[SUN_RADIUS_UNITS * 2.5, 32, 32]}
             position={[0, 0, 0]}
+            renderOrder={10}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedObject({ id: currentSystem.star.id, type: "sun" });
@@ -1152,6 +1168,8 @@ const SolarSystemView: React.FC = () => {
               transparent
               opacity={0.08}
               blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              depthTest={true}
             />
           </Sphere>
         </>
@@ -1349,6 +1367,11 @@ const SolarSystemView: React.FC = () => {
           timeScale={timeScale}
           selectedId={selectedCometId || undefined}
           showOrbit={shouldShowPlanetOrbits}
+          companionStar={
+            currentSystem.star.type === "binary_star"
+              ? currentSystem.star.companion
+              : undefined
+          }
           onSelect={(id, pos) => {
             setSelectedObject({ id, type: "comet" });
             setSelectedPos(pos.clone());

@@ -5,12 +5,14 @@ import { CometData } from "../../types/comet.types";
 import { updateCometTail } from "../../utils/cometFactory";
 import CometMesh from "./CometMesh";
 import CometTail from "./CometTail";
+import { CompanionStarData } from "../../types/game.types";
 
 interface CometProps {
   comet: CometData;
   timeScale: number;
   selectedId?: string;
   showOrbit?: boolean;
+  companionStar?: CompanionStarData; // For binary star systems
   onSelect?: (id: string, position: THREE.Vector3) => void;
   onSelectedFrame?: (id: string, position: THREE.Vector3) => void;
 }
@@ -23,12 +25,15 @@ const Comet: React.FC<CometProps> = ({
   timeScale,
   selectedId,
   showOrbit = false,
+  companionStar,
   onSelect,
   onSelectedFrame,
 }) => {
   const positionRef = useRef(new THREE.Vector3(...comet.position));
   const angleRef = useRef(comet.orbital.angle);
   const cometDataRef = useRef({ ...comet });
+  const companionAngleRef = useRef(companionStar?.orbitalAngle || 0);
+  const secondaryTailIntensityRef = useRef(0);
 
   const isSelected = selectedId === comet.id;
 
@@ -63,7 +68,34 @@ const Comet: React.FC<CometProps> = ({
 
     positionRef.current.set(x, y, z);
 
-    // Update tail intensity based on distance from star
+    // Update companion star angle if in binary system
+    if (companionStar) {
+      companionAngleRef.current +=
+        delta * companionStar.orbitalSpeed * timeScale;
+
+      // Calculate distance from companion star
+      const companionPos = new THREE.Vector3(
+        Math.cos(companionAngleRef.current) * companionStar.orbitalDistance,
+        0,
+        Math.sin(companionAngleRef.current) * companionStar.orbitalDistance
+      );
+      const distanceFromCompanion =
+        positionRef.current.distanceTo(companionPos);
+
+      // Calculate secondary tail intensity based on distance from companion
+      // Tail becomes visible within ~3.5 AU, peaks when close
+      if (distanceFromCompanion > 3.5) {
+        secondaryTailIntensityRef.current = 0;
+      } else {
+        const maxTailDistance = 3.5;
+        const intensity =
+          1 - Math.min(1, distanceFromCompanion / maxTailDistance);
+        // Apply power curve for more dramatic effect near star
+        secondaryTailIntensityRef.current = Math.pow(intensity, 0.7);
+      }
+    }
+
+    // Update tail intensity based on distance from primary star
     const distanceFromStar = positionRef.current.length();
     cometDataRef.current.tail = updateCometTail(comet, distanceFromStar);
 
@@ -79,6 +111,15 @@ const Comet: React.FC<CometProps> = ({
     }
   };
 
+  // Calculate companion star position if in binary system
+  const companionStarPosition = companionStar
+    ? new THREE.Vector3(
+        Math.cos(companionAngleRef.current) * companionStar.orbitalDistance,
+        0,
+        Math.sin(companionAngleRef.current) * companionStar.orbitalDistance
+      )
+    : null;
+
   return (
     <group>
       {/* Render comet nucleus (core) */}
@@ -89,12 +130,25 @@ const Comet: React.FC<CometProps> = ({
         selected={isSelected}
       />
 
-      {/* Render comet tail(s) */}
+      {/* Render primary tail (away from primary star) */}
       <CometTail
         comet={cometDataRef.current}
         position={positionRef.current}
         starPosition={new THREE.Vector3(0, 0, 0)}
       />
+
+      {/* Render secondary tail (away from companion star) in binary systems */}
+      {companionStar &&
+        companionStarPosition &&
+        secondaryTailIntensityRef.current > 0.05 && (
+          <CometTail
+            comet={cometDataRef.current}
+            position={positionRef.current}
+            starPosition={companionStarPosition}
+            isSecondaryTail={true}
+            secondaryIntensity={secondaryTailIntensityRef.current}
+          />
+        )}
 
       {/* Orbital path visualization when selected or when showing all orbits */}
       {(isSelected || showOrbit) && (

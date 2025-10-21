@@ -72,6 +72,8 @@ interface GameStore {
   initializeGame: () => void;
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
+  clearSavedGame: () => void; // Clear localStorage and restart
+  regenerateAllSystems: () => void; // Regenerate systems with latest features
 
   // Spaceship actions
   launchShip: (
@@ -604,6 +606,48 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({
       spaceships: state.spaceships.filter((ship) => ship.id !== id),
     }));
+  },
+
+  clearSavedGame: () => {
+    localStorage.removeItem(STORAGE_KEY);
+    // Reset to initial state
+    set({
+      solarSystems: [],
+      tunnels: [],
+      currentSystemId: null,
+      currentTurn: 1,
+      selectedObject: null,
+      spaceships: [],
+    });
+    // Initialize new game
+    get().initializeGame();
+    console.log("Game cleared and restarted with latest features!");
+  },
+
+  regenerateAllSystems: () => {
+    const state = get();
+    const oldSystems = state.solarSystems;
+
+    // Regenerate each system with the same seed to preserve structure but add new features
+    const newSystems = oldSystems.map((oldSystem) => {
+      const newSystem = generateSolarSystem(
+        oldSystem.star.type,
+        oldSystem.seed,
+        oldSystem.position,
+        oldSystem.name
+      );
+      // Preserve important state
+      newSystem.colonized = oldSystem.colonized;
+      newSystem.connections = oldSystem.connections;
+      newSystem.discovered = oldSystem.discovered;
+      return newSystem;
+    });
+
+    set({ solarSystems: newSystems });
+    get().saveToLocalStorage();
+    console.log(
+      "All systems regenerated with latest features (nebulae, etc.)!"
+    );
   },
 
   updateSpaceships: () => {

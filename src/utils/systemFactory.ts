@@ -8,6 +8,7 @@ import {
   calculateAsteroidBeltPositions,
 } from "./asteroidFactory";
 import { generateSystemComets } from "./cometFactory";
+import { generateSystemNebulae } from "./nebulaFactory";
 
 const SYSTEM_NAMES = [
   "Alpha",
@@ -520,6 +521,17 @@ export function generateSolarSystem(
     systemSeed
   );
 
+  // Generate nebulae
+  const nebulae = generateSystemNebulae(
+    selectedStarType,
+    outerBoundary,
+    systemSeed
+  );
+  // Log nebulae for debugging (optional)
+  // if (nebulae.length > 0) {
+  //   console.log(`🌌 ${systemName}: ${nebulae.length} nebula(e)`);
+  // }
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: systemId,
@@ -529,6 +541,7 @@ export function generateSolarSystem(
     planets: planets as any[], // Convert PlanetData to Planet for now
     asteroidBelts: asteroidBelts.length > 0 ? asteroidBelts : undefined,
     comets: comets.length > 0 ? comets : undefined,
+    nebulae: nebulae.length > 0 ? nebulae : undefined,
     connections: [],
     discovered: true,
     colonized: false,
