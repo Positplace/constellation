@@ -42,6 +42,10 @@ export interface BlackHoleData {
   hawkingRadiation: boolean;
 }
 
+export interface DysonSphereData {
+  completionPercentage: number; // 0-100
+}
+
 export interface StarData {
   id: string;
   type: StarType;
@@ -64,6 +68,7 @@ export interface SolarSystem {
   asteroidBelts?: AsteroidBeltData[]; // Optional asteroid belts
   comets?: CometData[]; // Optional comets
   nebulae?: NebulaData[]; // Optional nebulae
+  dysonSphere?: DysonSphereData; // Optional Dyson Sphere megastructure (very rare)
   connections: string[]; // IDs of connected systems
   discovered: boolean;
   colonized: boolean;

@@ -1,35 +1,3 @@
-2. Nebulae ✅ COMPLETE
-   Colorful space clouds/gas clouds in the background
-   Different types: emission, reflection, planetary nebulae
-   Could add atmospheric fog/glow effects around certain systems
-   Great for making systems feel unique
-
-   IMPLEMENTED:
-
-   - 5 nebula types: emission, reflection, planetary, dark, supernova_remnant
-   - Multi-layered rendering with irregular shapes
-   - Procedural generation based on star type
-   - Additive blending for glowing effect
-   - Slow rotation and animation
-   - ~25-40% spawn chance per system
-
-3. Pulsars/Neutron Stars
-   Rapidly rotating remnants of supernovae
-   Emit beams of radiation
-   Could create lighthouse effect as they rotate
-   Extreme magnetic fields affecting nearby objects
-
-4. Supernovae/Supernova Remnants
-   Expanding shells of gas from exploded stars
-   Could have a "dying star" system type that's about to go supernova
-   Remnant nebulae with interesting structures
-
-5. Space Stations/Megastructures
-   Orbital habitats around planets
-   Dyson Spheres or Dyson Swarms around stars
-   Mining stations in asteroid belts
-   Could be player-built or procedurally generated
-
 6. Rogue Planets
    Planets not bound to any star
    Drifting through deep space between systems

@@ -532,6 +532,37 @@ export function generateSolarSystem(
   //   console.log(`🌌 ${systemName}: ${nebulae.length} nebula(e)`);
   // }
 
+  // Generate Dyson Sphere (very rare, 3% chance)
+  // More likely for advanced star types (white stars, blue giants)
+  // Never for black holes
+  let dysonSphere = undefined;
+  const dysonRoll = randomRange(0, 1, systemSeed + 9999);
+
+  if (selectedStarType !== "black_hole") {
+    let dysonChance = 0.03; // Base 3% chance
+
+    // Increase chance for more advanced star types
+    if (
+      selectedStarType === "white_star" ||
+      selectedStarType === "blue_giant"
+    ) {
+      dysonChance = 0.05; // 5% for advanced stars
+    } else if (selectedStarType === "yellow_star") {
+      dysonChance = 0.04; // 4% for yellow stars
+    }
+
+    if (dysonRoll < dysonChance) {
+      // Random completion between 5% and 90%
+      const completion = Math.floor(randomRange(5, 90, systemSeed + 10000));
+      dysonSphere = {
+        completionPercentage: completion,
+      };
+      console.log(
+        `🛸 ${systemName}: Dyson Sphere detected! ${completion}% complete`
+      );
+    }
+  }
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: systemId,
@@ -542,6 +573,7 @@ export function generateSolarSystem(
     asteroidBelts: asteroidBelts.length > 0 ? asteroidBelts : undefined,
     comets: comets.length > 0 ? comets : undefined,
     nebulae: nebulae.length > 0 ? nebulae : undefined,
+    dysonSphere,
     connections: [],
     discovered: true,
     colonized: false,

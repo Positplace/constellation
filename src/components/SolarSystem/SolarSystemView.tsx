@@ -17,6 +17,7 @@ import { useGameLoop } from "../../hooks/useGameLoop";
 import { useSocket } from "../../hooks/useSocket";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
 import SpaceshipManager from "../Spaceships/SpaceshipManager";
+import DysonSphere from "./DysonSphere";
 
 const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
@@ -119,16 +120,48 @@ const SolarSystemView: React.FC = () => {
   // Start the game loop so gameTime advances when playing
   useGameLoop();
 
-  // Set default top-down camera view on mount
+  // Calculate initial camera distance based on system size
+  const initialCameraDistance = useMemo(() => {
+    if (!currentSystem) return 12;
+
+    const starSize = currentSystem.star.size;
+    let maxDistance = 0;
+
+    // Check planets
+    if (currentSystem.planets && currentSystem.planets.length > 0) {
+      for (const planet of currentSystem.planets) {
+        const visualDistance = planet.orbitalDistance * 1.5;
+        maxDistance = Math.max(maxDistance, visualDistance);
+      }
+    }
+
+    // Check asteroid belts
+    if (currentSystem.asteroidBelts && currentSystem.asteroidBelts.length > 0) {
+      for (const belt of currentSystem.asteroidBelts) {
+        const visualDistance = belt.outerRadius * 1.5;
+        maxDistance = Math.max(maxDistance, visualDistance);
+      }
+    }
+
+    // If we have objects, zoom to show them all
+    if (maxDistance > 0) {
+      return Math.max(starSize * 5, maxDistance * 1.5);
+    }
+
+    // Otherwise, base it on star size
+    return Math.max(starSize * 8, 3);
+  }, [currentSystem]);
+
+  // Set default top-down camera view on mount or when system changes
   useEffect(() => {
-    if (controlsRef.current) {
+    if (controlsRef.current && currentSystem) {
       const controls = controlsRef.current;
       const cam = controls.object as THREE.PerspectiveCamera;
       controls.target.set(0, 0, 0);
-      cam.position.set(0, 12, 0); // top-down view from above
+      cam.position.set(0, initialCameraDistance, 0); // top-down view from above
       controls.update();
     }
-  }, []);
+  }, [currentSystemId, initialCameraDistance]);
 
   // Listen for focusPlanet requests coming from HUD
   useEffect(() => {
@@ -1183,6 +1216,16 @@ const SolarSystemView: React.FC = () => {
             timeScale={timeScale}
           />
         )}
+
+      {/* Dyson Sphere - Rare megastructure */}
+      {currentSystem.dysonSphere && (
+        <DysonSphere
+          starSize={SUN_RADIUS_UNITS}
+          starColor={SUN_COLOR}
+          timeScale={timeScale}
+          completionPercentage={currentSystem.dysonSphere.completionPercentage}
+        />
+      )}
 
       {/* Procedurally generated planets */}
       {planetsToRender.map((g) => {
