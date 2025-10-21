@@ -10,26 +10,7 @@ interface DysonSphereProps {
 }
 
 /**
- * Creates a triangular shape geometry
- */
-const createTriangleShape = (radius: number) => {
-  const shape = new THREE.Shape();
-  for (let i = 0; i < 3; i++) {
-    const angle = ((Math.PI * 2) / 3) * i - Math.PI / 2; // Start from top
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    if (i === 0) {
-      shape.moveTo(x, y);
-    } else {
-      shape.lineTo(x, y);
-    }
-  }
-  shape.closePath();
-  return shape;
-};
-
-/**
- * Renders a half-complete Dyson Sphere with triangular panels
+ * Renders a Dyson Sphere by filling in sections of the wireframe mesh
  * A megastructure built around a star to capture its energy
  */
 export const DysonSphere: React.FC<DysonSphereProps> = ({
@@ -43,62 +24,149 @@ export const DysonSphere: React.FC<DysonSphereProps> = ({
   // Dyson sphere closer to the star
   const sphereRadius = starSize * 2.2;
 
-  // Create triangular geometry once
-  const triangleGeometry = useMemo(() => {
-    const triangleShape = createTriangleShape(sphereRadius * 0.18);
-    return new THREE.ShapeGeometry(triangleShape);
-  }, [sphereRadius]);
+  // Create filled sections geometry based on completion percentage
+  const filledGeometry = useMemo(() => {
+    const widthSegments = 16;
+    const heightSegments = 12;
 
-  // Generate panel positions based on completion percentage
-  const panels = useMemo(() => {
-    const panelData: Array<{
-      position: THREE.Vector3;
-      normal: THREE.Vector3;
-      id: number;
-    }> = [];
+    // Create base sphere geometry
+    const baseGeometry = new THREE.SphereGeometry(
+      sphereRadius,
+      widthSegments,
+      heightSegments
+    );
 
-    const latDivisions = 10;
-    const panelSize = sphereRadius * 0.18;
+    // Get the position attribute
+    const positionAttribute = baseGeometry.attributes.position;
+    const indexAttribute = baseGeometry.index;
 
-    let id = 0;
-    for (let lat = 0; lat < latDivisions; lat++) {
-      const phi = (Math.PI * (lat + 0.5)) / latDivisions;
-      const y = Math.cos(phi) * sphereRadius;
-      const rowRadius = Math.sin(phi) * sphereRadius;
-      const rowCircumference = 2 * Math.PI * rowRadius;
+    if (!indexAttribute) return new THREE.BufferGeometry();
 
-      // Calculate how many panels fit in this row with smaller spacing
-      const panelsInRow = Math.max(
-        3,
-        Math.floor(rowCircumference / (panelSize * 1.6))
-      );
+    // Calculate how many faces to fill
+    const totalFaces = indexAttribute.count / 3;
+    const facesToFill = Math.floor((totalFaces * completionPercentage) / 100);
 
-      // Offset alternating rows for better tessellation
-      const rowOffset = (lat % 2) * (Math.PI / panelsInRow);
+    // Fill faces in contiguous clusters instead of random spread
+    const filledFaces = new Set<number>();
 
-      for (let lon = 0; lon < panelsInRow; lon++) {
-        const theta = (Math.PI * 2 * lon) / panelsInRow + rowOffset;
+    // Create adjacency map for faces
+    const adjacencyMap = new Map<number, Set<number>>();
 
-        const x = Math.cos(theta) * rowRadius;
-        const z = Math.sin(theta) * rowRadius;
+    for (let faceIdx = 0; faceIdx < totalFaces; faceIdx++) {
+      const i0 = indexAttribute.getX(faceIdx * 3);
+      const i1 = indexAttribute.getX(faceIdx * 3 + 1);
+      const i2 = indexAttribute.getX(faceIdx * 3 + 2);
 
-        const position = new THREE.Vector3(x, y, z);
-        const normal = position.clone().normalize();
+      // Check other faces for shared vertices
+      const neighbors = new Set<number>();
+      for (let otherIdx = 0; otherIdx < totalFaces; otherIdx++) {
+        if (otherIdx === faceIdx) continue;
 
-        panelData.push({
-          position,
-          normal,
-          id: id++,
-        });
+        const j0 = indexAttribute.getX(otherIdx * 3);
+        const j1 = indexAttribute.getX(otherIdx * 3 + 1);
+        const j2 = indexAttribute.getX(otherIdx * 3 + 2);
+
+        // Share at least 2 vertices = adjacent face
+        const sharedVertices = [i0, i1, i2].filter((v) =>
+          [j0, j1, j2].includes(v)
+        ).length;
+
+        if (sharedVertices >= 2) {
+          neighbors.add(otherIdx);
+        }
+      }
+      adjacencyMap.set(faceIdx, neighbors);
+    }
+
+    // Start from a seed face and grow clusters
+    const startFace = Math.floor(
+      (Math.sin(completionPercentage * 78.233) * 43758.5453) % totalFaces
+    );
+    const queue: number[] = [Math.abs(startFace)];
+
+    while (filledFaces.size < facesToFill && queue.length > 0) {
+      const currentFace = queue.shift()!;
+
+      if (filledFaces.has(currentFace)) continue;
+
+      // Occasionally skip a face to create gaps (15% chance)
+      const skipChance =
+        Math.sin(currentFace * 9.898 + completionPercentage * 3.14) * 0.5 + 0.5;
+      if (skipChance > 0.85 && filledFaces.size < facesToFill * 0.9) {
+        // Add back to queue for later
+        queue.push(currentFace);
+        continue;
+      }
+
+      filledFaces.add(currentFace);
+
+      // Add neighboring faces to queue with some randomness
+      const neighbors = adjacencyMap.get(currentFace);
+      if (neighbors) {
+        const neighborArray = Array.from(neighbors).filter(
+          (n) => !filledFaces.has(n)
+        );
+        // Sort by pseudo-random but add some to maintain growth pattern
+        neighborArray.sort(
+          () => Math.sin(currentFace * 12.9898 + completionPercentage) - 0.5
+        );
+        queue.push(...neighborArray.slice(0, 3)); // Take up to 3 neighbors
       }
     }
 
-    // Filter panels based on completion percentage
-    // Show panels in a progressive pattern from one side
-    const totalPanels = panelData.length;
-    const panelsToShow = Math.floor((totalPanels * completionPercentage) / 100);
+    // Create new geometry with only filled faces
+    const positions: number[] = [];
+    const normals: number[] = [];
 
-    return panelData.slice(0, panelsToShow);
+    for (const faceIndex of filledFaces) {
+      const i0 = indexAttribute.getX(faceIndex * 3);
+      const i1 = indexAttribute.getX(faceIndex * 3 + 1);
+      const i2 = indexAttribute.getX(faceIndex * 3 + 2);
+
+      // Get vertices for this face
+      const v0 = new THREE.Vector3(
+        positionAttribute.getX(i0),
+        positionAttribute.getY(i0),
+        positionAttribute.getZ(i0)
+      );
+      const v1 = new THREE.Vector3(
+        positionAttribute.getX(i1),
+        positionAttribute.getY(i1),
+        positionAttribute.getZ(i1)
+      );
+      const v2 = new THREE.Vector3(
+        positionAttribute.getX(i2),
+        positionAttribute.getY(i2),
+        positionAttribute.getZ(i2)
+      );
+
+      // Calculate face normal
+      const edge1 = new THREE.Vector3().subVectors(v1, v0);
+      const edge2 = new THREE.Vector3().subVectors(v2, v0);
+      const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+
+      // Add triangle vertices
+      positions.push(v0.x, v0.y, v0.z);
+      positions.push(v1.x, v1.y, v1.z);
+      positions.push(v2.x, v2.y, v2.z);
+
+      // Add normals
+      normals.push(normal.x, normal.y, normal.z);
+      normals.push(normal.x, normal.y, normal.z);
+      normals.push(normal.x, normal.y, normal.z);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3)
+    );
+    geometry.setAttribute(
+      "normal",
+      new THREE.Float32BufferAttribute(normals, 3)
+    );
+
+    return geometry;
   }, [sphereRadius, completionPercentage]);
 
   // Slow rotation of the entire structure
@@ -121,30 +189,19 @@ export const DysonSphere: React.FC<DysonSphereProps> = ({
         />
       </mesh>
 
-      {/* Triangular solar panels on half the sphere */}
-      {panels.map((panel) => {
-        // Create quaternion to align panel with sphere surface
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), panel.normal);
-
-        return (
-          <mesh
-            key={`panel-${panel.id}`}
-            position={panel.position}
-            quaternion={quaternion}
-            geometry={triangleGeometry}
-          >
-            <meshStandardMaterial
-              color="#4488aa"
-              metalness={0.85}
-              roughness={0.15}
-              emissive={starColor}
-              emissiveIntensity={0.08}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        );
-      })}
+      {/* Filled sections representing completed panels - blocks star light but glows */}
+      <mesh geometry={filledGeometry} castShadow receiveShadow>
+        <meshStandardMaterial
+          color="#4488aa"
+          metalness={0.9}
+          roughness={0.1}
+          emissive="#ff8833"
+          emissiveIntensity={0.25}
+          side={THREE.DoubleSide}
+          opacity={1.0}
+          transparent={false}
+        />
+      </mesh>
     </group>
   );
 };

@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Sphere, Ring } from "@react-three/drei";
 import * as THREE from "three";
 import { BlackHoleData } from "../../types/game.types";
@@ -21,6 +21,9 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
   const eventHorizonRef = useRef<THREE.Mesh>(null);
   const accretionDiskRef = useRef<THREE.Mesh>(null);
   const outerDiskRef = useRef<THREE.Mesh>(null);
+  const topArcRef = useRef<THREE.Mesh>(null);
+  const bottomArcRef = useRef<THREE.Mesh>(null);
+  const { camera } = useThree();
 
   useFrame((_, delta) => {
     // Rotate accretion disk
@@ -36,6 +39,55 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
       const scale = 1.0 + Math.sin(Date.now() * 0.001) * 0.05;
       eventHorizonRef.current.scale.setScalar(scale);
     }
+
+    // Position lensing arcs based on camera angle - smooth billboarding
+    if (topArcRef.current && bottomArcRef.current) {
+      // Check if camera is looking up or down at the disk
+      const cameraIsAbove = camera.position.y > 0;
+      const arcOffset = 0.4;
+
+      const cameraPos = camera.position.clone();
+
+      if (cameraIsAbove) {
+        // Camera above: arcs in normal positions
+        topArcRef.current.position.set(0, arcOffset, 0);
+        bottomArcRef.current.position.set(0, -arcOffset, 0);
+
+        // Calculate rotation to face camera from above
+        const up = new THREE.Vector3(0, 1, 0);
+        const direction = cameraPos.clone().normalize();
+        const right = new THREE.Vector3()
+          .crossVectors(up, direction)
+          .normalize();
+        const forward = new THREE.Vector3().crossVectors(right, up).normalize();
+
+        const matrix = new THREE.Matrix4();
+        matrix.makeBasis(right, up, forward);
+        const quaternion = new THREE.Quaternion().setFromRotationMatrix(matrix);
+
+        topArcRef.current.quaternion.copy(quaternion);
+        bottomArcRef.current.quaternion.copy(quaternion);
+      } else {
+        // Camera below: flip the positions
+        topArcRef.current.position.set(0, -arcOffset, 0);
+        bottomArcRef.current.position.set(0, arcOffset, 0);
+
+        // Calculate rotation to face camera from below (inverted up vector)
+        const up = new THREE.Vector3(0, -1, 0);
+        const direction = cameraPos.clone().normalize();
+        const right = new THREE.Vector3()
+          .crossVectors(up, direction)
+          .normalize();
+        const forward = new THREE.Vector3().crossVectors(right, up).normalize();
+
+        const matrix = new THREE.Matrix4();
+        matrix.makeBasis(right, up, forward);
+        const quaternion = new THREE.Quaternion().setFromRotationMatrix(matrix);
+
+        topArcRef.current.quaternion.copy(quaternion);
+        bottomArcRef.current.quaternion.copy(quaternion);
+      }
+    }
   });
 
   return (
@@ -49,20 +101,56 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
         <meshBasicMaterial color="#000000" />
       </Sphere>
 
-      {/* Gravitational lensing effect - dark distortion ring */}
+      {/* Photon ring - bright ring at event horizon */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <ringGeometry
+          args={[
+            blackHoleData.eventHorizonRadius * 0.98,
+            blackHoleData.eventHorizonRadius * 1.15,
+            64,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.3}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Gravitational lensing - bright rim */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <ringGeometry
+          args={[
+            blackHoleData.eventHorizonRadius * 1.15,
+            blackHoleData.eventHorizonRadius * 1.4,
+            64,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ff9944"
+          transparent
+          opacity={0.6}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Shadow region */}
       <Sphere
-        args={[blackHoleData.eventHorizonRadius * 1.3, 64, 64]}
+        args={[blackHoleData.eventHorizonRadius * 1.5, 64, 64]}
         position={[0, 0, 0]}
       >
         <meshBasicMaterial
-          color="#0a0a0a"
+          color="#000000"
           transparent
-          opacity={0.8}
+          opacity={0.7}
           side={THREE.BackSide}
         />
       </Sphere>
 
-      {/* Inner accretion disk - bright and hot */}
+      {/* Very bright inner accretion disk */}
       <mesh
         ref={accretionDiskRef}
         rotation={[Math.PI / 2, 0, 0]}
@@ -71,24 +159,42 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
         <ringGeometry
           args={[
             blackHoleData.accretionDiskInnerRadius,
-            blackHoleData.accretionDiskInnerRadius * 1.5,
+            blackHoleData.accretionDiskInnerRadius * 1.3,
             64,
           ]}
         />
         <meshBasicMaterial
-          color={blackHoleData.accretionDiskColor}
+          color="#ffdd44"
           transparent
-          opacity={0.9}
+          opacity={1.0}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Middle accretion disk */}
+      {/* Bright inner glow layer */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <ringGeometry
+          args={[
+            blackHoleData.accretionDiskInnerRadius * 0.95,
+            blackHoleData.accretionDiskInnerRadius * 1.35,
+            64,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ffaa22"
+          transparent
+          opacity={0.8}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Middle accretion disk - warm */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry
           args={[
-            blackHoleData.accretionDiskInnerRadius * 1.5,
+            blackHoleData.accretionDiskInnerRadius * 1.3,
             blackHoleData.accretionDiskInnerRadius * 2.0,
             64,
           ]}
@@ -96,13 +202,13 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
         <meshBasicMaterial
           color={blackHoleData.accretionDiskColor}
           transparent
-          opacity={0.7}
+          opacity={0.85}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Outer accretion disk - cooler and dimmer */}
+      {/* Outer accretion disk - dimmer red/orange */}
       <mesh
         ref={outerDiskRef}
         rotation={[Math.PI / 2, 0, 0]}
@@ -118,11 +224,76 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
         <meshBasicMaterial
           color={new THREE.Color(
             blackHoleData.accretionDiskColor
-          ).multiplyScalar(0.6)}
+          ).multiplyScalar(0.5)}
+          transparent
+          opacity={0.6}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Far outer disk - very dim */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
+        <ringGeometry
+          args={[
+            blackHoleData.accretionDiskOuterRadius,
+            blackHoleData.accretionDiskOuterRadius * 1.3,
+            64,
+          ]}
+        />
+        <meshBasicMaterial
+          color={new THREE.Color(
+            blackHoleData.accretionDiskColor
+          ).multiplyScalar(0.3)}
+          transparent
+          opacity={0.4}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Gravitational lensing arcs - camera-relative and flip correctly */}
+      {/* Top arc */}
+      <mesh ref={topArcRef}>
+        <ringGeometry
+          args={[
+            blackHoleData.accretionDiskInnerRadius * 1.2,
+            blackHoleData.accretionDiskInnerRadius * 1.8,
+            128,
+            8,
+            0,
+            Math.PI,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ff8833"
           transparent
           opacity={0.5}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Bottom arc */}
+      <mesh ref={bottomArcRef}>
+        <ringGeometry
+          args={[
+            blackHoleData.accretionDiskInnerRadius * 1.2,
+            blackHoleData.accretionDiskInnerRadius * 1.8,
+            128,
+            8,
+            0,
+            Math.PI,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ff8833"
+          transparent
+          opacity={0.4}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
         />
       </mesh>
 
@@ -154,13 +325,30 @@ export const BlackHole: React.FC<BlackHoleProps> = ({
         </>
       )}
 
-      {/* Faint ambient light from accretion disk */}
+      {/* Bright light from accretion disk */}
       <pointLight
         position={[0, 0, 0]}
-        intensity={2}
+        intensity={8}
+        distance={30}
+        decay={1.5}
+        color="#ff8833"
+      />
+
+      {/* Additional glow for dramatic effect */}
+      <pointLight
+        position={[0, 0.5, 0]}
+        intensity={4}
         distance={20}
         decay={2}
-        color={blackHoleData.accretionDiskColor}
+        color="#ffaa44"
+      />
+
+      <pointLight
+        position={[0, -0.5, 0]}
+        intensity={3}
+        distance={20}
+        decay={2}
+        color="#ff6622"
       />
 
       {/* Particle jets (simplified representation) */}
