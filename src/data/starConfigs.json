@@ -216,7 +216,80 @@
       "gasGiantProbability": 0.05
     },
     "systemAge": "ancient"
+  },
+  "binary_star": {
+    "name": "Binary Star System",
+    "description": "Two stars orbiting their common center of mass",
+    "visual": {
+      "color": "#ffd700",
+      "glowColor": "#ffcc00",
+      "size": 0.5,
+      "temperature": 5800,
+      "luminosity": 1.2
+    },
+    "companion": {
+      "possibleTypes": ["orange_star", "red_dwarf", "white_star"],
+      "orbitalDistance": 3.0,
+      "orbitalSpeed": 0.15
+    },
+    "habitableZone": {
+      "min": 1.2,
+      "max": 2.5
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 3,
+        "max": 7
+      },
+      "types": {
+        "terrestrial": 0.2,
+        "desert_world": 0.15,
+        "earth_like": 0.1,
+        "ice_world": 0.15,
+        "ocean_world": 0.1,
+        "gas_giant": 0.2,
+        "ice_giant": 0.05,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.45
+    },
+    "systemAge": "mature"
+  },
+  "black_hole": {
+    "name": "Black Hole",
+    "description": "An infinitely dense singularity from a collapsed massive star",
+    "visual": {
+      "color": "#000000",
+      "glowColor": "#1a1a2e",
+      "size": 0.8,
+      "temperature": 1000000,
+      "luminosity": 0.0
+    },
+    "blackHoleProperties": {
+      "accretionDiskColor": "#ff6b35",
+      "accretionDiskInnerRadius": 1.5,
+      "accretionDiskOuterRadius": 3.5,
+      "eventHorizonRadius": 0.8,
+      "hawkingRadiation": true
+    },
+    "habitableZone": {
+      "min": 8.0,
+      "max": 20.0
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 1,
+        "max": 3
+      },
+      "types": {
+        "barren_world": 0.3,
+        "frozen_world": 0.25,
+        "ice_world": 0.2,
+        "dwarf_planet": 0.15,
+        "ice_giant": 0.1
+      },
+      "gasGiantProbability": 0.1
+    },
+    "systemAge": "ancient"
   }
 }
-
-

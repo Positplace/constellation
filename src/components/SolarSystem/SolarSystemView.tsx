@@ -7,6 +7,8 @@ import TunnelGate from "./TunnelGate";
 import TravelAnimation from "./TravelAnimation";
 import Starfield from "../Background/Starfield";
 import { AsteroidBelt } from "../Asteroids/AsteroidBelt";
+import BinaryStar from "./BinaryStar";
+import BlackHole from "./BlackHole";
 // import { SimpleAsteroidTest } from "../Asteroids/SimpleAsteroidTest";
 import { useGameStore } from "../../store/gameStore";
 import { useGameLoop } from "../../hooks/useGameLoop";
@@ -977,11 +979,18 @@ const SolarSystemView: React.FC = () => {
           Math.sin(angle) * gateDistance,
         ];
 
+        // Use accretion disk color for black holes instead of pure black
+        const gateColor =
+          connectedSystem.star.type === "black_hole" &&
+          connectedSystem.star.blackHole?.accretionDiskColor
+            ? connectedSystem.star.blackHole.accretionDiskColor
+            : connectedSystem.star.color;
+
         return {
           id: connectedSystemId,
           position,
           connectedSystemName: connectedSystem.name,
-          connectedStarColor: connectedSystem.star.color,
+          connectedStarColor: gateColor,
         };
       })
       .filter(Boolean) as Array<{
@@ -1052,86 +1061,107 @@ const SolarSystemView: React.FC = () => {
         }}
       />
 
-      {/* Sun with enhanced glow layers */}
-      <Sphere
-        ref={sunRef}
-        args={[SUN_RADIUS_UNITS, 32, 32]}
-        position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-        }}
-      >
-        <meshBasicMaterial color={SUN_COLOR} />
-      </Sphere>
-
-      {/* Inner glow - bright */}
-      <Sphere
-        args={[SUN_RADIUS_UNITS * 1.15, 32, 32]}
-        position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-        }}
-      >
-        <meshBasicMaterial
-          color={SUN_COLOR}
-          transparent
-          opacity={0.6}
-          blending={THREE.AdditiveBlending}
+      {/* Render Black Hole or Regular Star */}
+      {currentSystem.star.type === "black_hole" &&
+      currentSystem.star.blackHole ? (
+        <BlackHole
+          blackHoleData={currentSystem.star.blackHole}
+          size={SUN_RADIUS_UNITS}
+          timeScale={timeScale}
         />
-      </Sphere>
+      ) : (
+        <>
+          {/* Sun with enhanced glow layers */}
+          <Sphere
+            ref={sunRef}
+            args={[SUN_RADIUS_UNITS, 32, 32]}
+            position={[0, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
+            }}
+          >
+            <meshBasicMaterial color={SUN_COLOR} />
+          </Sphere>
 
-      {/* Middle glow */}
-      <Sphere
-        args={[SUN_RADIUS_UNITS * 1.4, 32, 32]}
-        position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-        }}
-      >
-        <meshBasicMaterial
-          color={SUN_GLOW_COLOR}
-          transparent
-          opacity={0.4}
-          blending={THREE.AdditiveBlending}
-        />
-      </Sphere>
+          {/* Inner glow - bright */}
+          <Sphere
+            args={[SUN_RADIUS_UNITS * 1.15, 32, 32]}
+            position={[0, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
+            }}
+          >
+            <meshBasicMaterial
+              color={SUN_COLOR}
+              transparent
+              opacity={0.6}
+              blending={THREE.AdditiveBlending}
+            />
+          </Sphere>
 
-      {/* Outer glow - soft halo */}
-      <Sphere
-        args={[SUN_RADIUS_UNITS * 1.8, 32, 32]}
-        position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-        }}
-      >
-        <meshBasicMaterial
-          color={SUN_GLOW_COLOR}
-          transparent
-          opacity={0.2}
-          blending={THREE.AdditiveBlending}
-        />
-      </Sphere>
+          {/* Middle glow */}
+          <Sphere
+            args={[SUN_RADIUS_UNITS * 1.4, 32, 32]}
+            position={[0, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
+            }}
+          >
+            <meshBasicMaterial
+              color={SUN_GLOW_COLOR}
+              transparent
+              opacity={0.4}
+              blending={THREE.AdditiveBlending}
+            />
+          </Sphere>
 
-      {/* Far glow - atmospheric effect */}
-      <Sphere
-        args={[SUN_RADIUS_UNITS * 2.5, 32, 32]}
-        position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-        }}
-      >
-        <meshBasicMaterial
-          color={SUN_GLOW_COLOR}
-          transparent
-          opacity={0.08}
-          blending={THREE.AdditiveBlending}
-        />
-      </Sphere>
+          {/* Outer glow - soft halo */}
+          <Sphere
+            args={[SUN_RADIUS_UNITS * 1.8, 32, 32]}
+            position={[0, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
+            }}
+          >
+            <meshBasicMaterial
+              color={SUN_GLOW_COLOR}
+              transparent
+              opacity={0.2}
+              blending={THREE.AdditiveBlending}
+            />
+          </Sphere>
+
+          {/* Far glow - atmospheric effect */}
+          <Sphere
+            args={[SUN_RADIUS_UNITS * 2.5, 32, 32]}
+            position={[0, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
+            }}
+          >
+            <meshBasicMaterial
+              color={SUN_GLOW_COLOR}
+              transparent
+              opacity={0.08}
+              blending={THREE.AdditiveBlending}
+            />
+          </Sphere>
+        </>
+      )}
+
+      {/* Render companion star for binary systems */}
+      {currentSystem.star.type === "binary_star" &&
+        currentSystem.star.companion && (
+          <BinaryStar
+            companion={currentSystem.star.companion}
+            timeScale={timeScale}
+          />
+        )}
 
       {/* Procedurally generated planets */}
       {planetsToRender.map((g) => {
@@ -1358,20 +1388,30 @@ const SolarSystemView: React.FC = () => {
       </Html>
 
       {/* Lighting - ambient light tinted by star color for atmosphere */}
-      <ambientLight intensity={0.5} color={SUN_COLOR} />
-      <pointLight
-        position={[0, 0, 0]}
-        intensity={(currentSystem?.star?.luminosity || 1) * 12}
-        distance={0}
-        decay={1.2}
-        color={SUN_COLOR}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-near={0.1}
-        shadow-camera-far={100}
-        shadow-radius={2}
+      <ambientLight
+        intensity={currentSystem.star.type === "black_hole" ? 0.1 : 0.5}
+        color={currentSystem.star.type === "black_hole" ? "#1a1a2e" : SUN_COLOR}
       />
+      {/* Primary star light (or accretion disk light for black holes) */}
+      {currentSystem.star.type !== "black_hole" && (
+        <pointLight
+          position={[0, 0, 0]}
+          intensity={
+            currentSystem.star.type === "binary_star"
+              ? (currentSystem?.star?.luminosity || 1) * 50
+              : (currentSystem?.star?.luminosity || 1) * 12
+          }
+          distance={0}
+          decay={currentSystem.star.type === "binary_star" ? 0.5 : 1.2}
+          color={SUN_COLOR}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-near={0.1}
+          shadow-camera-far={100}
+          shadow-radius={2}
+        />
+      )}
     </group>
   );
 };

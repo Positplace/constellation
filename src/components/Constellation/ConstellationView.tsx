@@ -211,7 +211,14 @@ const ConstellationView: React.FC = () => {
           const isSelected = system.id === currentSystemId;
           const isHovered = system.id === hoveredSystemId;
           const isDragging = system.id === draggingSystemId;
-          const starColor = system.star.color;
+          const isBlackHole = system.star.type === "black_hole";
+          const isBinary = system.star.type === "binary_star";
+          const starColor = isBlackHole
+            ? system.star.blackHole?.accretionDiskColor || "#ff6b35"
+            : system.star.color;
+          const companionColor = isBinary
+            ? system.star.companion?.color || "#ff8c42"
+            : null;
 
           return (
             <group
@@ -235,36 +242,200 @@ const ConstellationView: React.FC = () => {
                 }
               }}
             >
-              {/* System node */}
-              <Sphere
-                args={[isDragging ? 0.3 : isSelected ? 0.25 : 0.2, 16, 16]}
-              >
-                <meshBasicMaterial color={starColor} />
-              </Sphere>
+              {isBlackHole ? (
+                <>
+                  {/* Black hole event horizon - small dark sphere */}
+                  <Sphere
+                    args={[isDragging ? 0.15 : isSelected ? 0.12 : 0.1, 16, 16]}
+                  >
+                    <meshBasicMaterial color="#000000" />
+                  </Sphere>
 
-              {/* Inner glow */}
-              <Sphere
-                args={[isDragging ? 0.4 : isSelected ? 0.35 : 0.26, 16, 16]}
-              >
-                <meshBasicMaterial
-                  color={starColor}
-                  transparent
-                  opacity={isDragging ? 0.8 : isSelected ? 0.7 : 0.4}
-                  blending={THREE.AdditiveBlending}
-                />
-              </Sphere>
+                  {/* Gravitational lensing effect */}
+                  <Sphere
+                    args={[isDragging ? 0.2 : isSelected ? 0.17 : 0.15, 16, 16]}
+                  >
+                    <meshBasicMaterial
+                      color="#1a1a2e"
+                      transparent
+                      opacity={0.6}
+                    />
+                  </Sphere>
 
-              {/* Outer glow */}
-              <Sphere
-                args={[isDragging ? 0.6 : isSelected ? 0.5 : 0.4, 16, 16]}
-              >
-                <meshBasicMaterial
-                  color={starColor}
-                  transparent
-                  opacity={isDragging ? 0.5 : isSelected ? 0.4 : 0.2}
-                  blending={THREE.AdditiveBlending}
-                />
-              </Sphere>
+                  {/* Accretion disk glow - horizontal ring */}
+                  <mesh rotation={[Math.PI / 2, 0, 0]}>
+                    <ringGeometry
+                      args={[
+                        isDragging ? 0.2 : isSelected ? 0.17 : 0.15,
+                        isDragging ? 0.4 : isSelected ? 0.35 : 0.3,
+                        32,
+                      ]}
+                    />
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={0.9}
+                      side={THREE.DoubleSide}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </mesh>
+
+                  {/* Outer accretion disk glow */}
+                  <mesh rotation={[Math.PI / 2, 0, 0]}>
+                    <ringGeometry
+                      args={[
+                        isDragging ? 0.3 : isSelected ? 0.27 : 0.22,
+                        isDragging ? 0.6 : isSelected ? 0.5 : 0.45,
+                        32,
+                      ]}
+                    />
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={0.5}
+                      side={THREE.DoubleSide}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </mesh>
+
+                  {/* Polar jet - top */}
+                  <mesh position={[0, isDragging ? 0.5 : isSelected ? 0.4 : 0.35, 0]}>
+                    <cylinderGeometry
+                      args={[
+                        0.02,
+                        0.01,
+                        isDragging ? 1.0 : isSelected ? 0.8 : 0.7,
+                        8,
+                      ]}
+                    />
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={0.7}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </mesh>
+
+                  {/* Polar jet - bottom */}
+                  <mesh position={[0, isDragging ? -0.5 : isSelected ? -0.4 : -0.35, 0]}>
+                    <cylinderGeometry
+                      args={[
+                        0.01,
+                        0.02,
+                        isDragging ? 1.0 : isSelected ? 0.8 : 0.7,
+                        8,
+                      ]}
+                    />
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={0.7}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </mesh>
+
+                  {/* Hawking radiation glow */}
+                  <Sphere
+                    args={[isDragging ? 0.25 : isSelected ? 0.22 : 0.18, 16, 16]}
+                  >
+                    <meshBasicMaterial
+                      color="#4a5fff"
+                      transparent
+                      opacity={0.2}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+                </>
+              ) : isBinary ? (
+                <>
+                  {/* Binary star system - Primary star */}
+                  <Sphere
+                    args={[isDragging ? 0.25 : isSelected ? 0.2 : 0.16, 16, 16]}
+                    position={[-0.08, 0, 0]}
+                  >
+                    <meshBasicMaterial color={starColor} />
+                  </Sphere>
+
+                  {/* Primary star glow */}
+                  <Sphere
+                    args={[isDragging ? 0.35 : isSelected ? 0.28 : 0.22, 16, 16]}
+                    position={[-0.08, 0, 0]}
+                  >
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={isDragging ? 0.7 : isSelected ? 0.6 : 0.35}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+
+                  {/* Companion star - smaller */}
+                  <Sphere
+                    args={[isDragging ? 0.2 : isSelected ? 0.16 : 0.12, 16, 16]}
+                    position={[0.08, 0, 0]}
+                  >
+                    <meshBasicMaterial color={companionColor} />
+                  </Sphere>
+
+                  {/* Companion star glow */}
+                  <Sphere
+                    args={[isDragging ? 0.28 : isSelected ? 0.22 : 0.18, 16, 16]}
+                    position={[0.08, 0, 0]}
+                  >
+                    <meshBasicMaterial
+                      color={companionColor}
+                      transparent
+                      opacity={isDragging ? 0.6 : isSelected ? 0.5 : 0.3}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+
+                  {/* Combined outer glow */}
+                  <Sphere
+                    args={[isDragging ? 0.6 : isSelected ? 0.5 : 0.4, 16, 16]}
+                  >
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={isDragging ? 0.4 : isSelected ? 0.3 : 0.15}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+                </>
+              ) : (
+                <>
+                  {/* Regular star - System node */}
+                  <Sphere
+                    args={[isDragging ? 0.3 : isSelected ? 0.25 : 0.2, 16, 16]}
+                  >
+                    <meshBasicMaterial color={starColor} />
+                  </Sphere>
+
+                  {/* Inner glow */}
+                  <Sphere
+                    args={[isDragging ? 0.4 : isSelected ? 0.35 : 0.26, 16, 16]}
+                  >
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={isDragging ? 0.8 : isSelected ? 0.7 : 0.4}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+
+                  {/* Outer glow */}
+                  <Sphere
+                    args={[isDragging ? 0.6 : isSelected ? 0.5 : 0.4, 16, 16]}
+                  >
+                    <meshBasicMaterial
+                      color={starColor}
+                      transparent
+                      opacity={isDragging ? 0.5 : isSelected ? 0.4 : 0.2}
+                      blending={THREE.AdditiveBlending}
+                    />
+                  </Sphere>
+                </>
+              )}
 
               {/* Current system indicator - animated rotating 3D torus rings */}
               {isSelected && (

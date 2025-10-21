@@ -126,6 +126,18 @@ const STAR_TYPE_PALETTES = {
     accent: new THREE.Color(0xe8e8e8),
     fogColor: new THREE.Color(0x050505),
   },
+  binary_star: {
+    nebula: new THREE.Color(0x0a0810),
+    starfield: new THREE.Color(0xffeedd),
+    accent: new THREE.Color(0xff9955),
+    fogColor: new THREE.Color(0x050508),
+  },
+  black_hole: {
+    nebula: new THREE.Color(0x0a0205),
+    starfield: new THREE.Color(0xddddff),
+    accent: new THREE.Color(0xff6b35),
+    fogColor: new THREE.Color(0x000000),
+  },
 };
 
 const Starfield: React.FC<StarfieldProps> = ({

@@ -204,6 +204,8 @@ export function generateSolarSystem(
     "blue_giant",
     "red_giant",
     "white_dwarf",
+    "binary_star",
+    "black_hole",
   ];
   const selectedStarType = starType ?? starTypes[systemSeed % starTypes.length];
 
@@ -224,6 +226,50 @@ export function generateSolarSystem(
     temperature: starConfig.visual.temperature,
     luminosity: starConfig.visual.luminosity,
   };
+
+  // Add companion star for binary systems
+  if (selectedStarType === "binary_star" && starConfig.companion) {
+    const companionConfig = starConfig.companion;
+    const possibleCompanionTypes = companionConfig.possibleTypes || [
+      "orange_star",
+      "red_dwarf",
+    ];
+    const companionTypeKey = possibleCompanionTypes[
+      systemSeed % possibleCompanionTypes.length
+    ] as StarType;
+    const companionStarConfig = (starConfigs as any)[companionTypeKey];
+
+    if (companionStarConfig) {
+      star.companion = {
+        type: companionTypeKey,
+        color: companionStarConfig.visual.color,
+        glowColor: companionStarConfig.visual.glowColor,
+        size: companionStarConfig.visual.size * 0.8, // Slightly smaller
+        temperature: companionStarConfig.visual.temperature,
+        luminosity: companionStarConfig.visual.luminosity * 0.7,
+        orbitalDistance: companionConfig.orbitalDistance,
+        orbitalSpeed: companionConfig.orbitalSpeed,
+        orbitalAngle: randomRange(0, Math.PI * 2, systemSeed + 999),
+      };
+      // Increase total system luminosity due to second star
+      star.luminosity += star.companion.luminosity;
+    }
+  }
+
+  // Add black hole properties
+  if (selectedStarType === "black_hole" && starConfig.blackHoleProperties) {
+    star.blackHole = {
+      accretionDiskColor:
+        starConfig.blackHoleProperties.accretionDiskColor || "#ff6b35",
+      accretionDiskInnerRadius:
+        starConfig.blackHoleProperties.accretionDiskInnerRadius || 1.5,
+      accretionDiskOuterRadius:
+        starConfig.blackHoleProperties.accretionDiskOuterRadius || 3.5,
+      eventHorizonRadius:
+        starConfig.blackHoleProperties.eventHorizonRadius || 0.8,
+      hawkingRadiation: starConfig.blackHoleProperties.hawkingRadiation ?? true,
+    };
+  }
 
   // Generate system name
   const systemName = name ?? generateSystemName(systemSeed);
@@ -281,7 +327,7 @@ export function generateSolarSystem(
   const orbitalDistances: number[] = [];
 
   // First, determine planet types and sizes to calculate appropriate spacing
-  const planetTypes: string[] = [];
+  const planetTypes: PlanetType[] = [];
   const planetSizes: number[] = [];
 
   for (let i = 0; i < planetCount; i++) {

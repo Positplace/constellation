@@ -16,7 +16,29 @@ export type StarType =
   | "white_star"
   | "blue_giant"
   | "red_giant"
-  | "white_dwarf";
+  | "white_dwarf"
+  | "binary_star"
+  | "black_hole";
+
+export interface CompanionStarData {
+  type: StarType;
+  color: string;
+  glowColor: string;
+  size: number;
+  temperature: number;
+  luminosity: number;
+  orbitalDistance: number; // Distance from primary star
+  orbitalSpeed: number;
+  orbitalAngle: number; // Current angle in orbit
+}
+
+export interface BlackHoleData {
+  accretionDiskColor: string;
+  accretionDiskInnerRadius: number;
+  accretionDiskOuterRadius: number;
+  eventHorizonRadius: number;
+  hawkingRadiation: boolean;
+}
 
 export interface StarData {
   id: string;
@@ -27,6 +49,8 @@ export interface StarData {
   size: number;
   temperature: number;
   luminosity: number;
+  companion?: CompanionStarData; // For binary star systems
+  blackHole?: BlackHoleData; // For black hole systems
 }
 
 export interface SolarSystem {
