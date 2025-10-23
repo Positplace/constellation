@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { PlanetData } from "../../types/planet.types";
 import { generateSurfaceTextures } from "../../utils/textureGenerators";
@@ -26,6 +26,14 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
     [planet.id]
   );
 
+  // Dispose textures when component unmounts or planet changes
+  useEffect(() => {
+    return () => {
+      map.dispose();
+      displacementMap.dispose();
+    };
+  }, [map, displacementMap]);
+
   const radiusUnits = (planet.radius / EARTH_RADIUS_KM) * renderScale;
 
   // Only ice planets should be glossy
@@ -49,6 +57,51 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
   const isWaterPlanet = isEarthLike || isOceanWorld;
   const glowIntensity = hasStrongGlow ? (isWaterPlanet ? 0.95 : 1.0) : 0.6;
 
+  // Memoize all geometries
+  const mainGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits, 128, 128),
+    [radiusUnits]
+  );
+  const atmosphereGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 1.06, 64, 64),
+    [radiusUnits]
+  );
+  const innerGlowGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 1.08, 32, 32),
+    [radiusUnits]
+  );
+  const outerGlowGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 1.15, 32, 32),
+    [radiusUnits]
+  );
+  const extendedGlowGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 1.25, 32, 32),
+    [radiusUnits]
+  );
+  const rotationMarkerGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 0.05, 16, 16),
+    [radiusUnits]
+  );
+
+  // Dispose all geometries on cleanup
+  useEffect(() => {
+    return () => {
+      mainGeometry.dispose();
+      atmosphereGeometry.dispose();
+      innerGlowGeometry.dispose();
+      outerGlowGeometry.dispose();
+      extendedGlowGeometry.dispose();
+      rotationMarkerGeometry.dispose();
+    };
+  }, [
+    mainGeometry,
+    atmosphereGeometry,
+    innerGlowGeometry,
+    outerGlowGeometry,
+    extendedGlowGeometry,
+    rotationMarkerGeometry,
+  ]);
+
   return (
     <group>
       {/* Main planet sphere */}
@@ -68,7 +121,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
           document.body.style.cursor = "auto";
         }}
       >
-        <sphereGeometry args={[radiusUnits, 128, 128]} />
+        <primitive object={mainGeometry} />
         <meshPhongMaterial
           map={map}
           displacementMap={displacementMap}
@@ -92,7 +145,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
       {/* Atmosphere - non-interactive */}
       {planet.atmosphere.present && (
         <mesh raycast={() => null}>
-          <sphereGeometry args={[radiusUnits * 1.06, 64, 64]} />
+          <primitive object={atmosphereGeometry} />
           <meshBasicMaterial
             color={planet.atmosphere.color}
             transparent
@@ -104,7 +157,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
 
       {/* Inner glow - subtle atmospheric rim - non-interactive */}
       <mesh raycast={() => null}>
-        <sphereGeometry args={[radiusUnits * 1.08, 32, 32]} />
+        <primitive object={innerGlowGeometry} />
         <meshBasicMaterial
           color={glowColor}
           transparent
@@ -116,7 +169,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
 
       {/* Outer glow - soft halo - non-interactive */}
       <mesh raycast={() => null}>
-        <sphereGeometry args={[radiusUnits * 1.15, 32, 32]} />
+        <primitive object={outerGlowGeometry} />
         <meshBasicMaterial
           color={glowColor}
           transparent
@@ -129,7 +182,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
       {/* Extended glow for gas giants - non-interactive */}
       {hasStrongGlow && (
         <mesh raycast={() => null}>
-          <sphereGeometry args={[radiusUnits * 1.25, 32, 32]} />
+          <primitive object={extendedGlowGeometry} />
           <meshBasicMaterial
             color={glowColor}
             transparent
@@ -142,7 +195,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
 
       {/* Rotation marker - a small dot to make rotation visible */}
       <mesh position={[radiusUnits * 0.95, 0, 0]} raycast={() => null}>
-        <sphereGeometry args={[radiusUnits * 0.05, 16, 16]} />
+        <primitive object={rotationMarkerGeometry} />
         <meshBasicMaterial color="#ff0000" />
       </mesh>
     </group>

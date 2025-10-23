@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { AsteroidData, MaterialType } from "../../types/asteroid.types";
@@ -225,6 +225,14 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
       emissiveIntensity: materialProps.emissiveIntensity || 0,
     });
   }, [materialProps]);
+
+  // Dispose geometry and material when component unmounts or asteroid changes
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
 
   // Handle rotation animation
   useFrame((_state, delta) => {

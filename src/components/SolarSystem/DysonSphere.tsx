@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -169,6 +169,20 @@ export const DysonSphere: React.FC<DysonSphereProps> = ({
     return geometry;
   }, [sphereRadius, completionPercentage]);
 
+  // Memoize wireframe geometry
+  const wireframeGeometry = useMemo(
+    () => new THREE.SphereGeometry(sphereRadius, 16, 12),
+    [sphereRadius]
+  );
+
+  // Dispose geometries on cleanup
+  useEffect(() => {
+    return () => {
+      filledGeometry.dispose();
+      wireframeGeometry.dispose();
+    };
+  }, [filledGeometry, wireframeGeometry]);
+
   // Slow rotation of the entire structure
   useFrame((_, delta) => {
     if (groupRef.current) {
@@ -180,7 +194,7 @@ export const DysonSphere: React.FC<DysonSphereProps> = ({
     <group ref={groupRef}>
       {/* Wireframe sphere showing the full structure */}
       <mesh>
-        <sphereGeometry args={[sphereRadius, 16, 12]} />
+        <primitive object={wireframeGeometry} />
         <meshBasicMaterial
           color={starColor}
           wireframe

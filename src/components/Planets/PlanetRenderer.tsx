@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { PlanetData } from "../../types/planet.types";
 import { generateSurfaceTextures } from "../../utils/textureGenerators";
@@ -22,10 +22,30 @@ const PlanetRenderer: React.FC<PlanetRendererProps> = ({
 
   const radiusUnits = (planet.radius / EARTH_RADIUS_KM) * renderScale;
 
+  // Memoize geometries
+  const planetGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits, 128, 128),
+    [radiusUnits]
+  );
+  const atmosphereGeometry = useMemo(
+    () => new THREE.SphereGeometry(radiusUnits * 1.06, 64, 64),
+    [radiusUnits]
+  );
+
+  // Dispose textures and geometries on cleanup
+  useEffect(() => {
+    return () => {
+      map.dispose();
+      displacementMap.dispose();
+      planetGeometry.dispose();
+      atmosphereGeometry.dispose();
+    };
+  }, [map, displacementMap, planetGeometry, atmosphereGeometry]);
+
   return (
     <group rotation={new THREE.Euler(0, 0, 0)}>
       <mesh>
-        <sphereGeometry args={[radiusUnits, 128, 128]} />
+        <primitive object={planetGeometry} />
         <meshPhongMaterial
           map={map}
           displacementMap={displacementMap}
@@ -38,7 +58,7 @@ const PlanetRenderer: React.FC<PlanetRendererProps> = ({
       {/* Atmosphere shells */}
       {planet.atmosphere.present && (
         <mesh>
-          <sphereGeometry args={[radiusUnits * 1.06, 64, 64]} />
+          <primitive object={atmosphereGeometry} />
           <meshBasicMaterial
             color={planet.atmosphere.color}
             transparent

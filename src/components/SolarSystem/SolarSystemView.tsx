@@ -619,7 +619,42 @@ const SolarSystemView: React.FC = () => {
             const totalGates = currentSystem.maxConnections;
             const angleStep = (Math.PI * 2) / totalGates;
             const angle = connectionIndex * angleStep;
-            const gateDistance = 15;
+
+            // Calculate gate distance dynamically (same logic as gate rendering)
+            let gateDistance = 15; // Default fallback
+
+            // Collect all occupied orbital distances (planets and asteroid belts)
+            const occupiedDistances: number[] = [];
+
+            if (currentSystem.planets && currentSystem.planets.length > 0) {
+              currentSystem.planets.forEach((p) => {
+                occupiedDistances.push(p.orbitalDistance * 1.5);
+              });
+            }
+
+            if (
+              currentSystem.asteroidBelts &&
+              currentSystem.asteroidBelts.length > 0
+            ) {
+              currentSystem.asteroidBelts.forEach((belt) => {
+                occupiedDistances.push(belt.innerRadius * 1.5);
+                occupiedDistances.push(belt.outerRadius * 1.5);
+              });
+            }
+
+            if (occupiedDistances.length > 0) {
+              const minOccupiedDistance = Math.min(...occupiedDistances);
+              const maxOccupiedDistance = Math.max(...occupiedDistances);
+
+              const innerGateDistance = minOccupiedDistance - 1.5;
+              const outerGateDistance = maxOccupiedDistance + 2.0;
+
+              if (innerGateDistance > 3.0) {
+                gateDistance = innerGateDistance;
+              } else {
+                gateDistance = outerGateDistance;
+              }
+            }
 
             exitGatePos = new THREE.Vector3(
               Math.cos(angle) * gateDistance,
@@ -1125,7 +1160,45 @@ const SolarSystemView: React.FC = () => {
 
     // Calculate angle step for evenly spacing all gates
     const angleStep = (Math.PI * 2) / totalGates;
-    const gateDistance = 15; // Distance from sun
+
+    // Calculate gate distance dynamically to avoid planet orbits and asteroid belts
+    // Planets and asteroids are rendered at orbitalDistance * 1.5
+    let gateDistance = 15; // Default fallback
+
+    // Collect all occupied orbital distances (planets and asteroid belts)
+    const occupiedDistances: number[] = [];
+
+    if (currentSystem.planets && currentSystem.planets.length > 0) {
+      currentSystem.planets.forEach((p) => {
+        occupiedDistances.push(p.orbitalDistance * 1.5);
+      });
+    }
+
+    if (currentSystem.asteroidBelts && currentSystem.asteroidBelts.length > 0) {
+      currentSystem.asteroidBelts.forEach((belt) => {
+        // Add both inner and outer radius of each belt (scaled by 1.5)
+        occupiedDistances.push(belt.innerRadius * 1.5);
+        occupiedDistances.push(belt.outerRadius * 1.5);
+      });
+    }
+
+    if (occupiedDistances.length > 0) {
+      const minOccupiedDistance = Math.min(...occupiedDistances);
+      const maxOccupiedDistance = Math.max(...occupiedDistances);
+
+      // Place gates either inside the innermost orbit or outside the outermost orbit
+      // Prefer inside if there's enough space (> 3 units), otherwise place outside
+      const innerGateDistance = minOccupiedDistance - 1.5; // 1.5 units inside innermost object
+      const outerGateDistance = maxOccupiedDistance + 2.0; // 2 units outside outermost object
+
+      if (innerGateDistance > 3.0) {
+        // Enough space inside - place gates there
+        gateDistance = innerGateDistance;
+      } else {
+        // Not enough space inside - place gates outside all objects
+        gateDistance = outerGateDistance;
+      }
+    }
 
     // Connected gates (excluding the pending one)
     const connectedGates = actualConnections

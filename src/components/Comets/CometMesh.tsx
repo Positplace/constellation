@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CometData } from "../../types/comet.types";
@@ -43,6 +43,39 @@ const CometMesh: React.FC<CometMeshProps> = ({
   const comaIntensity = comet.tail.intensity;
   const comaColor = comet.composition.ice > 60 ? "#e6f0ff" : "#fff5e6"; // Bluer for icy, yellower for dusty
 
+  // Memoize geometries to prevent recreation every render
+  const nucleusGeometry = useMemo(
+    () => new THREE.IcosahedronGeometry(nucleusRadius, 1),
+    [nucleusRadius]
+  );
+  const selectionGeometry = useMemo(
+    () => new THREE.SphereGeometry(nucleusRadius * 1.5, 16, 16),
+    [nucleusRadius]
+  );
+  const comaInnerGeometry = useMemo(
+    () => new THREE.SphereGeometry(nucleusRadius * 3, 16, 16),
+    [nucleusRadius]
+  );
+  const comaOuterGeometry = useMemo(
+    () => new THREE.SphereGeometry(nucleusRadius * 5, 16, 16),
+    [nucleusRadius]
+  );
+
+  // Dispose geometries on cleanup
+  useEffect(() => {
+    return () => {
+      nucleusGeometry.dispose();
+      selectionGeometry.dispose();
+      comaInnerGeometry.dispose();
+      comaOuterGeometry.dispose();
+    };
+  }, [
+    nucleusGeometry,
+    selectionGeometry,
+    comaInnerGeometry,
+    comaOuterGeometry,
+  ]);
+
   useFrame(() => {
     // Pulsate glow based on distance from star (coma effect)
     if (glowRef.current) {
@@ -71,7 +104,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
         scale={[1.5, 0.8, 0.9]} // Elongated ellipsoid
       >
         {/* Use icosahedron for bumpy, irregular surface */}
-        <icosahedronGeometry args={[nucleusRadius, 1]} />
+        <primitive object={nucleusGeometry} />
         <meshStandardMaterial
           color={nucleusColor}
           roughness={0.9}
@@ -84,7 +117,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
       {/* Selection indicator */}
       {selected && (
         <mesh>
-          <sphereGeometry args={[nucleusRadius * 1.5, 16, 16]} />
+          <primitive object={selectionGeometry} />
           <meshBasicMaterial
             color="#ffff00"
             transparent
@@ -99,7 +132,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
         <>
           {/* Inner coma - bright */}
           <mesh ref={glowRef} renderOrder={100}>
-            <sphereGeometry args={[nucleusRadius * 3, 16, 16]} />
+            <primitive object={comaInnerGeometry} />
             <meshBasicMaterial
               color={comaColor}
               transparent
@@ -112,7 +145,7 @@ const CometMesh: React.FC<CometMeshProps> = ({
 
           {/* Outer coma - softer glow */}
           <mesh renderOrder={100}>
-            <sphereGeometry args={[nucleusRadius * 5, 16, 16]} />
+            <primitive object={comaOuterGeometry} />
             <meshBasicMaterial
               color={comaColor}
               transparent

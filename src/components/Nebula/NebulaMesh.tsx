@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { NebulaData } from "../../types/nebula.types";
@@ -153,6 +153,25 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
 
   const secondaryColor = new THREE.Color(nebula.secondaryColor || nebula.color);
 
+  // Memoize geometries to prevent recreation
+  const nebulaGeometry = useMemo(
+    () => new THREE.SphereGeometry(nebula.size, 32, 32),
+    [nebula.size]
+  );
+  const coreGeometry = useMemo(
+    () => new THREE.SphereGeometry(nebula.size, 16, 16),
+    [nebula.size]
+  );
+
+  // Dispose shader material and geometries on cleanup
+  useEffect(() => {
+    return () => {
+      shaderMaterial.dispose();
+      nebulaGeometry.dispose();
+      coreGeometry.dispose();
+    };
+  }, [shaderMaterial, nebulaGeometry, coreGeometry]);
+
   return (
     <group ref={meshRef} position={nebula.position} rotation={nebula.rotation}>
       {layers.map((layer, i) => (
@@ -165,7 +184,7 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
             layer.scale * (0.95 + Math.sin(i * 0.3) * 0.1),
           ]}
         >
-          <sphereGeometry args={[nebula.size, 32, 32]} />
+          <primitive object={nebulaGeometry} />
           <meshBasicMaterial
             color={i < 2 ? nebula.color : secondaryColor}
             transparent={true}
@@ -179,7 +198,7 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
 
       {/* Subtle bright core */}
       <mesh scale={0.15}>
-        <sphereGeometry args={[nebula.size, 16, 16]} />
+        <primitive object={coreGeometry} />
         <meshBasicMaterial
           color="#ffffff"
           transparent={true}

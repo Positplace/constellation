@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { MoonData } from "../../types/planet.types";
 
@@ -48,6 +48,19 @@ export const MoonMesh: React.FC<MoonMeshProps> = ({
     }
   }, [moon.type]);
 
+  // Memoize geometry to prevent recreation every render
+  const moonGeometry = useMemo(
+    () => new THREE.SphereGeometry(moonRadiusUnits, 16, 16),
+    [moonRadiusUnits]
+  );
+
+  // Dispose geometry on cleanup
+  useEffect(() => {
+    return () => {
+      moonGeometry.dispose();
+    };
+  }, [moonGeometry]);
+
   const handleClick = (e: any) => {
     e.stopPropagation();
     if (onClick) {
@@ -72,7 +85,7 @@ export const MoonMesh: React.FC<MoonMeshProps> = ({
         castShadow
         receiveShadow
       >
-        <sphereGeometry args={[moonRadiusUnits, 16, 16]} />
+        <primitive object={moonGeometry} />
         <meshPhongMaterial
           color={moonColor}
           shininess={5}

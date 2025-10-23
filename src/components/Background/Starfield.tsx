@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { StarType } from "../../types/game.types";
@@ -306,6 +306,17 @@ const Starfield: React.FC<StarfieldProps> = ({
 
     return geometry;
   }, [palette]);
+
+  // Dispose geometries and textures on cleanup
+  useEffect(() => {
+    return () => {
+      starGeometry.dispose();
+      milkyWayGeometry.dispose();
+      nebulaGeometry.dispose();
+      starTextures.round.dispose();
+      starTextures.spiky.dispose();
+    };
+  }, [starGeometry, milkyWayGeometry, nebulaGeometry, starTextures]);
 
   // Slow rotation for parallax effect
   useFrame((_state, delta) => {
