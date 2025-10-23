@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Text, Billboard } from "@react-three/drei";
 import * as THREE from "three";
 
 interface UndiscoveredGateProps {
@@ -140,56 +140,73 @@ const UndiscoveredGate: React.FC<UndiscoveredGateProps> = ({
         );
       })}
 
-      {/* Invisible clickable sphere behind the label to block raycasting */}
-      <mesh
+      {/* Billboard group that rotates labels to face camera */}
+      <Billboard
         position={[0, 0.8, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          console.log("Undiscovered gate clicked - generating new system");
-          onClick();
-        }}
-        onPointerEnter={() => {
-          setIsHovered(true);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerLeave={() => {
-          setIsHovered(false);
-          document.body.style.cursor = "default";
-        }}
+        follow={true}
+        lockX={false}
+        lockY={false}
+        lockZ={false}
       >
-        <sphereGeometry args={[0.8, 16, 16]} />
-        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Label - purely visual, clicks handled by invisible sphere */}
-      <Html
-        position={[0, 0.8, 0]}
-        center
-        zIndexRange={[100, 0]}
-        occlude={false}
-        transform
-        sprite
-      >
-        <div
-          style={{
-            background: "rgba(0, 0, 0, 0.85)",
-            color: "white",
-            padding: "6px 12px",
-            borderRadius: "6px",
-            fontSize: "13px",
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-            border: `2px solid ${gateColor}`,
-            boxShadow: `0 0 10px ${gateColor}60`,
-            transition: "all 0.2s ease",
-            userSelect: "none",
+        {/* Background plane for better text readability */}
+        <mesh
+          position={[0, 0, -0.01]}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          onPointerEnter={() => {
+            setIsHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerLeave={() => {
+            setIsHovered(false);
+            document.body.style.cursor = "default";
           }}
         >
-          <div style={{ fontWeight: "bold", fontStyle: "italic" }}>
-            ??? Undiscovered
-          </div>
-        </div>
-      </Html>
+          <planeGeometry args={[1.8, 0.25]} />
+          <meshBasicMaterial
+            color="#000000"
+            transparent
+            opacity={0.7}
+            depthTest={true}
+            depthWrite={false}
+          />
+        </mesh>
+
+        {/* 3D Text Label that can be occluded by planets and stars */}
+        <Text
+          position={[0, 0, 0]}
+          fontSize={0.15}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.01}
+          outlineColor={gateColor}
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log("Undiscovered gate clicked - generating new system");
+            onClick();
+          }}
+          onPointerEnter={() => {
+            setIsHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerLeave={() => {
+            setIsHovered(false);
+            document.body.style.cursor = "default";
+          }}
+        >
+          ??? Undiscovered
+          <meshBasicMaterial
+            color="white"
+            transparent
+            opacity={isHovered ? 1.0 : 0.9}
+            depthTest={true}
+            depthWrite={true}
+          />
+        </Text>
+      </Billboard>
     </group>
   );
 };
