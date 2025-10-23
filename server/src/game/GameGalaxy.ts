@@ -201,8 +201,11 @@ export class GameGalaxy {
    */
   getDiscoverableSystems(excludeSystemId?: string): SolarSystem[] {
     return this.gameState.solarSystems.filter((system) => {
+      // Never allow a system to connect to itself
       if (excludeSystemId && system.id === excludeSystemId) return false;
+
       const maxConnections = system.maxConnections || 3;
+      // Only return systems that still have unexplored gates
       return system.connections.length < maxConnections;
     });
   }
@@ -230,22 +233,33 @@ export class GameGalaxy {
       }
 
       // Get systems available for connection (excluding the source system and already connected ones)
+      // Only consider systems that:
+      // 1. Are NOT the source system (no self-loops)
+      // 2. Still have unexplored gates (connections.length < maxConnections)
+      // 3. Are NOT already connected to the source system
       const discoverableSystems = this.getDiscoverableSystems(
         fromSystemId
-      ).filter((system) => !fromSystem.connections.includes(system.id));
+      ).filter((system) => {
+        // Double-check: never allow connecting to self
+        if (system.id === fromSystemId) return false;
+        // Exclude already connected systems
+        return !fromSystem.connections.includes(system.id);
+      });
 
       // 40% chance to connect to existing system if available
       const shouldConnectToExisting =
         discoverableSystems.length > 0 && Math.random() < 0.4;
 
       if (shouldConnectToExisting) {
-        // Connect to random existing system
+        // Connect to random existing system that still has unexplored gates
         const randomIndex = Math.floor(
           Math.random() * discoverableSystems.length
         );
         targetSystem = discoverableSystems[randomIndex];
 
-        console.log(`🔗 Connecting to existing system: ${targetSystem.name}`);
+        console.log(
+          `🔗 Connecting to existing system: ${targetSystem.name} (has ${targetSystem.connections.length}/${targetSystem.maxConnections} connections)`
+        );
       } else {
         // Generate new system
         position = calculateConnectedSystemPosition(fromSystem.position, seed);
@@ -253,6 +267,11 @@ export class GameGalaxy {
         this.gameState.solarSystems.push(targetSystem);
 
         console.log(`✨ Generated new system: ${targetSystem.name}`);
+      }
+
+      // Final safety check: never create self-loops
+      if (targetSystem.id === fromSystemId) {
+        throw new Error("Cannot create a gate connecting a star to itself");
       }
 
       // Create tunnel connection

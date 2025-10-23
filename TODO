@@ -1,8 +1,10 @@
 TODO
 
+Cities should glow but the do not.
+
 Constellation view need some re-thinking for multiplayer, it proabaly should be per player.
 
-Not sure if all nebula types are rendering well
+Not sure if all nebula types are rendering well.
 
 Spaceship Physics: Spaceships aren't yet being managed by the server - they're still updated client-side. For full synchronization, you'd want to move the spaceship update loop to the server.
 
