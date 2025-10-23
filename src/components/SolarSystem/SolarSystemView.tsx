@@ -23,7 +23,14 @@ import DysonSphere from "./DysonSphere";
 const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
   const controlsRef = useRef<any>(null);
+  const lastCameraUpdateRef = useRef<number>(0);
   const [selectedPos, setSelectedPos] = useState<THREE.Vector3 | null>(null);
+  const [pendingSystemGeneration, setPendingSystemGeneration] = useState<{
+    fromSystemId: string;
+    gatePosition: [number, number, number];
+    requestTime: number;
+    generatedSystemId?: string; // Track which system was generated
+  } | null>(null);
   const [travelState, setTravelState] = useState<{
     active: boolean;
     fromSystemId: string;
@@ -45,10 +52,10 @@ const SolarSystemView: React.FC = () => {
     setSelectedObject,
     setCurrentSystem,
     spaceships,
-    generateAndAddSystem,
     canAddConnection,
   } = useGameStore();
-  const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
+  const { emitPlanetSelected, emitCurrentSystemChanged, emitGenerateSystem } =
+    useSocket();
   const { isConnected } = useMultiplayerStore();
 
   // Show planet orbital paths when the sun is selected
@@ -590,10 +597,15 @@ const SolarSystemView: React.FC = () => {
         controls.update();
 
         if (progress >= 1) {
-          // Switch to warp phase
-          setTravelState((prev) =>
-            prev ? { ...prev, phase: "warp", startTime: Date.now() } : null
-          );
+          // Switch to warp phase (only if we have a real destination, not "pending")
+          setTravelState((prev) => {
+            if (prev && prev.toSystemId !== "pending") {
+              return { ...prev, phase: "warp", startTime: Date.now() };
+            }
+            // If system is still pending, stay in approach phase
+            // (the useEffect watching for system generation will transition us)
+            return prev;
+          });
         }
       } else if (travelState.phase === "exit") {
         // Phase 3: Exit from gate to overview (1.5 seconds)
@@ -724,6 +736,77 @@ const SolarSystemView: React.FC = () => {
       controls.update();
     }
   }, [selectedPos]);
+
+  // Handle new system generation completion
+  useEffect(() => {
+    if (!pendingSystemGeneration || !travelState) return;
+    if (travelState.toSystemId !== "pending") return; // Already resolved
+
+    // Check if a new system has been added that's connected to our fromSystem
+    const fromSystem = solarSystems.find(
+      (s) => s.id === pendingSystemGeneration.fromSystemId
+    );
+    if (!fromSystem) return;
+
+    // Find all systems connected via tunnels (both directions)
+    const connectedSystemIds = new Set<string>();
+
+    // Check global tunnels list for connections to our system
+    const allTunnels = useGameStore.getState().tunnels;
+    allTunnels.forEach((tunnel) => {
+      if (tunnel.from === fromSystem.id) {
+        connectedSystemIds.add(tunnel.to);
+      }
+      if (tunnel.to === fromSystem.id) {
+        connectedSystemIds.add(tunnel.from);
+      }
+    });
+
+    // Find all connected systems
+    const connectedSystems = Array.from(connectedSystemIds)
+      .map((id) => solarSystems.find((s) => s.id === id))
+      .filter((s) => s !== undefined) as typeof solarSystems;
+
+    if (connectedSystems.length === 0) return;
+
+    // Get the most recently added system (assume it's the one we just generated)
+    const newSystem = connectedSystems[connectedSystems.length - 1];
+
+    console.log(`✨ New system generated: ${newSystem.name} (${newSystem.id})`);
+
+    // Store the generated system ID so we can hide it during travel
+    setPendingSystemGeneration((prev) =>
+      prev
+        ? {
+            ...prev,
+            generatedSystemId: newSystem.id,
+          }
+        : null
+    );
+
+    // Calculate minimum animation time (e.g., 1.5 seconds for approach phase)
+    const MINIMUM_APPROACH_TIME = 1500; // ms
+    const elapsedTime = Date.now() - pendingSystemGeneration.requestTime;
+    const remainingTime = Math.max(0, MINIMUM_APPROACH_TIME - elapsedTime);
+
+    // Wait for minimum animation time before transitioning to warp
+    setTimeout(() => {
+      setTravelState((prev) => {
+        if (prev && prev.toSystemId === "pending") {
+          console.log(`🌀 Starting warp to ${newSystem.name}`);
+          return {
+            ...prev,
+            toSystemId: newSystem.id,
+            phase: "warp", // Move to warp phase now that we have the destination
+            startTime: Date.now(),
+          };
+        }
+        return prev;
+      });
+      // Don't clear pendingSystemGeneration here - keep it to hide the gate
+      // It will be cleared when travel animation completes
+    }, remainingTime);
+  }, [solarSystems, pendingSystemGeneration, travelState]);
 
   // Ease function for smooth zoom (ease-in-out cubic)
   const easeInOutCubic = (t: number) =>
@@ -952,16 +1035,33 @@ const SolarSystemView: React.FC = () => {
 
   // Listen for focus Home planet event (from clicking Home button)
   useEffect(() => {
-    const handleFocusHome = () => {
+    const handleFocusHome = (event: any) => {
       if (!currentSystem) return;
 
-      // Focus on the home planet - prioritize earth-like planets
-      const homePlanet =
-        currentSystem?.planets?.find((p) => p.type === "earth_like") ||
-        currentSystem?.planets?.find((p) =>
-          ["earth_like", "terrestrial", "ocean_world"].includes(p.type)
-        ) ||
-        currentSystem?.planets?.[0];
+      // Try to use the specific planet ID from the event, or fall back to finding one
+      const planetId = event?.detail?.planetId;
+      let homePlanet;
+
+      if (planetId) {
+        // Use the specific home planet ID provided
+        homePlanet = currentSystem?.planets?.find((p) => p.id === planetId);
+        console.log(
+          "🏠 Focusing on specific home planet:",
+          planetId,
+          homePlanet?.name
+        );
+      }
+
+      if (!homePlanet) {
+        // Fallback: prioritize planets with life or earth-like planets
+        homePlanet =
+          currentSystem?.planets?.find((p) => p.hasLife) ||
+          currentSystem?.planets?.find((p) => p.type === "earth_like") ||
+          currentSystem?.planets?.find((p) =>
+            ["earth_like", "terrestrial", "ocean_world"].includes(p.type)
+          ) ||
+          currentSystem?.planets?.[0];
+      }
 
       if (homePlanet) {
         const SUN_RADIUS_UNITS = currentSystem?.star?.size || 1;
@@ -988,23 +1088,21 @@ const SolarSystemView: React.FC = () => {
         }
       }
     };
-    window.addEventListener("focusHomePlanet", handleFocusHome);
-    return () => window.removeEventListener("focusHomePlanet", handleFocusHome);
+    window.addEventListener(
+      "focusHomePlanet",
+      handleFocusHome as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "focusHomePlanet",
+        handleFocusHome as EventListener
+      );
   }, [currentSystem, isConnected, emitPlanetSelected, setSelectedObject]);
 
   // Visual radius for the sun (scene units) - from star data
   const SUN_RADIUS_UNITS = currentSystem?.star.size ?? 0.6;
   const SUN_COLOR = currentSystem?.star.color ?? "#ffd700";
   const SUN_GLOW_COLOR = currentSystem?.star.glowColor ?? "#ffcc00";
-
-  // If no current system, show loading or empty state
-  if (!currentSystem) {
-    return (
-      <group>
-        <ambientLight intensity={0.5} />
-      </group>
-    );
-  }
 
   // Handle clicking on empty space - deselect all objects
   const handleDeselectAll = () => {
@@ -1029,11 +1127,11 @@ const SolarSystemView: React.FC = () => {
 
     // Throttle camera updates to avoid performance issues
     const now = Date.now();
-    if (now - (window.lastCameraUpdate || 0) < 33) {
+    if (now - lastCameraUpdateRef.current < 33) {
       // ~30fps max
       return;
     }
-    window.lastCameraUpdate = now;
+    lastCameraUpdateRef.current = now;
 
     // Update camera target to follow the spaceship
     setSelectedPos(selectedSpaceship.position.clone());
@@ -1096,36 +1194,36 @@ const SolarSystemView: React.FC = () => {
       return;
     }
 
-    const controls = controlsRef.current;
-    const cam = controls.object as THREE.PerspectiveCamera;
-
     try {
-      // Generate new system WITHOUT connecting it yet - we'll connect during warp phase
-      const newSystem = generateAndAddSystem(currentSystemId);
-      console.log(
-        `Generated new system: ${newSystem.name} (ID: ${newSystem.id})`
-      );
+      const controls = controlsRef.current;
+      const cam = controls.object as THREE.PerspectiveCamera;
+
+      // Request new system generation from server
+      emitGenerateSystem(currentSystemId);
+      console.log(`🚀 Requested new system generation from ${currentSystemId}`);
 
       // Clear selection when traveling
       setSelectedObject(null);
 
-      // Start travel animation with approach phase, marking it as a new system
+      // Mark that we're waiting for system generation
+      setPendingSystemGeneration({
+        fromSystemId: currentSystemId,
+        gatePosition,
+        requestTime: Date.now(),
+      });
+
+      // Start approach animation immediately (approach the gate)
       setTravelState({
         active: true,
         fromSystemId: currentSystemId,
-        toSystemId: newSystem.id,
+        toSystemId: "pending", // Placeholder until server responds
         gatePosition,
         phase: "approach",
         startTime: Date.now(),
         initialCameraPos: cam.position.clone(),
         initialCameraTarget: controls.target.clone(),
-        isNewSystem: true, // Mark this as a newly discovered system
+        isNewSystem: true,
       });
-
-      // Emit to server if connected
-      if (isConnected) {
-        // TODO: emit system generated event
-      }
     } catch (error) {
       console.error("Failed to generate system:", error);
       alert("Failed to generate new system");
@@ -1133,27 +1231,43 @@ const SolarSystemView: React.FC = () => {
   };
 
   const completeTravelAnimation = () => {
-    // Clear travel state
+    // Clear travel state and pending generation
     setTravelState(null);
+    setPendingSystemGeneration(null);
   };
 
   // Calculate tunnel gate data for connected systems and undiscovered gates
   const { tunnelGates, undiscoveredGates } = useMemo(() => {
     if (!currentSystem) return { tunnelGates: [], undiscoveredGates: [] };
 
-    // If we're traveling to a newly discovered system from THIS system, hide that connection and show it as undiscovered
-    // Only apply this filter when we're still in the origin system (not after we've arrived at destination)
-    const pendingSystemId =
-      travelState?.isNewSystem && travelState.fromSystemId === currentSystemId
-        ? travelState.toSystemId
-        : null;
+    // Find systems that should remain hidden during discovery
+    const systemsToHide = new Set<string>();
+
+    // Hide system we're currently traveling to discover
+    if (
+      travelState?.isNewSystem &&
+      travelState.fromSystemId === currentSystemId
+    ) {
+      if (travelState.toSystemId && travelState.toSystemId !== "pending") {
+        systemsToHide.add(travelState.toSystemId);
+      }
+    }
+
+    // Also hide system that's being generated (use the exact system ID we tracked)
+    if (
+      pendingSystemGeneration &&
+      pendingSystemGeneration.fromSystemId === currentSystemId &&
+      pendingSystemGeneration.generatedSystemId
+    ) {
+      systemsToHide.add(pendingSystemGeneration.generatedSystemId);
+    }
 
     // Calculate total gates needed (connected + undiscovered)
     const totalGates = currentSystem.maxConnections;
 
-    // Filter out the pending connection when counting (only in origin system during travel)
+    // Filter out hidden systems when counting
     const actualConnections = currentSystem.connections.filter(
-      (id) => id !== pendingSystemId
+      (id) => !systemsToHide.has(id)
     );
     const connectedCount = actualConnections.length;
     const undiscoveredCount = totalGates - connectedCount;
@@ -1254,49 +1368,72 @@ const SolarSystemView: React.FC = () => {
     });
 
     return { tunnelGates: connectedGates, undiscoveredGates: undiscovered };
-  }, [currentSystem, solarSystems, travelState, currentSystemId]);
+  }, [
+    currentSystem,
+    solarSystems,
+    travelState,
+    currentSystemId,
+    pendingSystemGeneration,
+  ]);
 
   // Determine if we're in the tunnel phase
   const isInTunnelPhase = travelState?.active && travelState.phase === "warp";
 
-  // If in tunnel warp phase, show only the tunnel animation
-  if (isInTunnelPhase) {
-    const fromSystem = solarSystems.find(
-      (s) => s.id === travelState.fromSystemId
-    );
-    const toSystem = solarSystems.find((s) => s.id === travelState.toSystemId);
-
-    if (fromSystem && toSystem) {
-      return (
-        <TravelAnimation
-          fromSystemName={fromSystem.name}
-          toSystemName={toSystem.name}
-          fromStarColor={fromSystem.star.color}
-          toStarColor={toSystem.star.color}
-          onComplete={() => {
-            // Switch to new system and move to exit phase
-            if (travelState.toSystemId !== currentSystemId) {
-              setCurrentSystem(travelState.toSystemId);
-              // Emit to server if connected
-              if (isConnected) {
-                emitCurrentSystemChanged(travelState.toSystemId);
-              }
-            }
-            // Clear isNewSystem flag when we arrive - the discovery is complete!
-            setTravelState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    phase: "exit",
-                    startTime: Date.now(),
-                    isNewSystem: false,
-                  }
-                : null
-            );
-          }}
-        />
+  // Prepare tunnel animation data if needed
+  const tunnelAnimationData = useMemo(() => {
+    if (isInTunnelPhase) {
+      const fromSystem = solarSystems.find(
+        (s) => s.id === travelState?.fromSystemId
       );
+      const toSystem = solarSystems.find(
+        (s) => s.id === travelState?.toSystemId
+      );
+      return fromSystem && toSystem ? { fromSystem, toSystem } : null;
     }
+    return null;
+  }, [isInTunnelPhase, solarSystems, travelState]);
+
+  // If no current system, show loading or empty state (check AFTER all hooks)
+  if (!currentSystem) {
+    return (
+      <group>
+        <ambientLight intensity={0.5} />
+      </group>
+    );
+  }
+
+  // If in tunnel warp phase, show only the tunnel animation
+  if (isInTunnelPhase && tunnelAnimationData) {
+    const { fromSystem, toSystem } = tunnelAnimationData;
+    return (
+      <TravelAnimation
+        fromSystemName={fromSystem.name}
+        toSystemName={toSystem.name}
+        fromStarColor={fromSystem.star.color}
+        toStarColor={toSystem.star.color}
+        onComplete={() => {
+          // Switch to new system and move to exit phase
+          if (travelState!.toSystemId !== currentSystemId) {
+            setCurrentSystem(travelState!.toSystemId);
+            // Emit to server if connected
+            if (isConnected) {
+              emitCurrentSystemChanged(travelState!.toSystemId);
+            }
+          }
+          // Clear isNewSystem flag when we arrive - the discovery is complete!
+          setTravelState((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  phase: "exit",
+                  startTime: Date.now(),
+                  isNewSystem: false,
+                }
+              : null
+          );
+        }}
+      />
+    );
   }
 
   return (

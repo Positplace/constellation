@@ -15,16 +15,13 @@ const ConstellationView: React.FC = () => {
     currentSystemId,
     setCurrentSystem,
     setActiveView,
-    generateAndAddSystem,
-    canAddConnection,
     setSelectedObject,
     constellationCameraState,
     saveConstellationCameraState,
     updateSystemPosition,
-    clearSavedGame,
   } = useGameStore();
-  const { emitSystemGenerated, emitCurrentSystemChanged } = useSocket();
-  const { isConnected } = useMultiplayerStore();
+  const { emitCurrentSystemChanged } = useSocket();
+  const { isConnected, playerHomeSystemId } = useMultiplayerStore();
   const { camera, raycaster, gl } = useThree();
 
   const [hoveredSystemId, setHoveredSystemId] = useState<string | null>(null);
@@ -36,30 +33,9 @@ const ConstellationView: React.FC = () => {
   const dragPointRef = useRef(new THREE.Vector3());
   const lastUpdateTimeRef = useRef(0);
 
-  const handleExplore = () => {
-    if (!currentSystemId) return;
-
-    const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
-    if (!canAddConnection(currentSystemId)) {
-      alert(
-        `This system has reached the maximum of ${
-          currentSystem?.maxConnections || 3
-        } connections!`
-      );
-      return;
-    }
-
-    try {
-      const newSystem = generateAndAddSystem(currentSystemId);
-      // Emit to server if connected
-      if (isConnected) {
-        emitSystemGenerated(newSystem, currentSystemId);
-      }
-    } catch (error) {
-      console.error("Failed to generate system:", error);
-      alert("Failed to generate new system");
-    }
-  };
+  // WASD navigation state
+  const keysPressed = useRef<Set<string>>(new Set());
+  const moveSpeed = 0.15; // Units per frame
 
   const handleSystemClick = (systemId: string) => {
     // Don't transition if we were dragging
@@ -148,24 +124,32 @@ const ConstellationView: React.FC = () => {
     }
   };
 
-  // Restore saved camera state on mount
+  // Center camera on home star and restore saved state
   useEffect(() => {
-    if (
-      constellationCameraState &&
-      orbitControlsRef.current &&
-      !hasRestoredCamera.current
-    ) {
+    if (orbitControlsRef.current && !hasRestoredCamera.current) {
       const controls = orbitControlsRef.current;
-      const { position, target } = constellationCameraState;
 
-      // Restore camera position and target
-      camera.position.set(position[0], position[1], position[2]);
-      controls.target.set(target[0], target[1], target[2]);
+      // Get the home system position
+      const homeSystem = playerHomeSystemId
+        ? solarSystems.find((s) => s.id === playerHomeSystemId)
+        : solarSystems[0]; // Fallback to first system if no home system
+
+      if (constellationCameraState) {
+        // Restore saved camera position and target
+        const { position, target } = constellationCameraState;
+        camera.position.set(position[0], position[1], position[2]);
+        controls.target.set(target[0], target[1], target[2]);
+      } else if (homeSystem) {
+        // Center on home star with default camera position
+        const homePos = homeSystem.position;
+        controls.target.set(homePos[0], homePos[1], homePos[2]);
+        camera.position.set(homePos[0], homePos[1] + 5, homePos[2] + 10);
+      }
+
       controls.update();
-
       hasRestoredCamera.current = true;
     }
-  }, [constellationCameraState, camera]);
+  }, [constellationCameraState, camera, playerHomeSystemId, solarSystems]);
 
   // Prevent context menu while dragging
   useEffect(() => {
@@ -179,13 +163,91 @@ const ConstellationView: React.FC = () => {
     return () => window.removeEventListener("contextmenu", preventContextMenu);
   }, [draggingSystemId]);
 
-  // Animate ring rotation
+  // WASD keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (["w", "a", "s", "d", "q", "e", " "].includes(key)) {
+        keysPressed.current.add(key);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      keysPressed.current.delete(key);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  // Animate ring rotation and handle WASD movement
   useFrame((state, delta) => {
     ringRotationRef.current += delta * 2; // Rotate at 2 radians per second
+
+    // WASD camera movement
+    if (keysPressed.current.size > 0 && orbitControlsRef.current) {
+      const controls = orbitControlsRef.current;
+      const speed = moveSpeed * delta * 60; // Normalize for frame rate
+
+      // Get camera direction vectors
+      const forward = new THREE.Vector3();
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3(0, 1, 0);
+
+      // Calculate forward (camera looking direction projected on XZ plane)
+      camera.getWorldDirection(forward);
+      forward.y = 0; // Keep movement on horizontal plane
+      forward.normalize();
+
+      // Calculate right vector
+      right.crossVectors(forward, up).normalize();
+
+      const movement = new THREE.Vector3();
+
+      // WASD movement
+      if (keysPressed.current.has("w")) {
+        movement.add(forward.clone().multiplyScalar(speed));
+      }
+      if (keysPressed.current.has("s")) {
+        movement.add(forward.clone().multiplyScalar(-speed));
+      }
+      if (keysPressed.current.has("a")) {
+        movement.add(right.clone().multiplyScalar(-speed));
+      }
+      if (keysPressed.current.has("d")) {
+        movement.add(right.clone().multiplyScalar(speed));
+      }
+
+      // Vertical movement (Q/E or Space for up)
+      if (keysPressed.current.has("q")) {
+        movement.y -= speed;
+      }
+      if (keysPressed.current.has("e") || keysPressed.current.has(" ")) {
+        movement.y += speed;
+      }
+
+      // Apply movement to camera and controls target
+      if (movement.lengthSq() > 0) {
+        camera.position.add(movement);
+        controls.target.add(movement);
+        controls.update();
+      }
+    }
   });
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
-  const canExplore = currentSystemId && canAddConnection(currentSystemId);
+
+  // Get home system for centering
+  const homeSystem = playerHomeSystemId
+    ? solarSystems.find((s) => s.id === playerHomeSystemId)
+    : solarSystems[0];
+  const homePosition = homeSystem ? homeSystem.position : [0, 0, 0];
 
   return (
     <>
@@ -194,6 +256,7 @@ const ConstellationView: React.FC = () => {
 
       <OrbitControls
         ref={orbitControlsRef}
+        target={homePosition as [number, number, number]}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
@@ -593,118 +656,6 @@ const ConstellationView: React.FC = () => {
       {/* Lighting */}
       <ambientLight intensity={0.3} />
       <pointLight position={[0, 0, 0]} intensity={1} color="#ffffff" />
-
-      {/* Control Buttons */}
-      <Html fullscreen>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "20px",
-            right: "20px",
-            zIndex: 10,
-            pointerEvents: draggingSystemId ? "none" : "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            alignItems: "flex-end",
-          }}
-        >
-          {/* Explore Button */}
-          <button
-            onClick={handleExplore}
-            disabled={!canExplore}
-            style={{
-              background: canExplore
-                ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                : "#666",
-              color: "white",
-              border: "none",
-              padding: "12px 24px",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              cursor: canExplore ? "pointer" : "not-allowed",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: canExplore
-                ? "0 4px 15px rgba(102, 126, 234, 0.4)"
-                : "none",
-              transition: "all 0.3s ease",
-              opacity: canExplore ? 1 : 0.5,
-            }}
-            onMouseEnter={(e) => {
-              if (canExplore) {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow =
-                  "0 6px 20px rgba(102, 126, 234, 0.6)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = canExplore
-                ? "0 4px 15px rgba(102, 126, 234, 0.4)"
-                : "none";
-            }}
-          >
-            <span style={{ fontSize: "20px" }}>🚀</span>
-            <span>Explore</span>
-            {currentSystem && (
-              <span
-                style={{
-                  fontSize: "12px",
-                  opacity: 0.8,
-                  marginLeft: "4px",
-                }}
-              >
-                ({currentSystem.connections.length}/
-                {currentSystem.maxConnections})
-              </span>
-            )}
-          </button>
-
-          {/* Reset Button */}
-          <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Are you sure you want to reset the game? This will clear all progress and return to the starting system."
-                )
-              ) {
-                clearSavedGame();
-              }
-            }}
-            style={{
-              background: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
-              color: "white",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)",
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 20px rgba(220, 38, 38, 0.6)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 4px 15px rgba(220, 38, 38, 0.4)";
-            }}
-          >
-            <span style={{ fontSize: "16px" }}>🔄</span>
-            <span>Reset Game</span>
-          </button>
-        </div>
-      </Html>
     </>
   );
 };

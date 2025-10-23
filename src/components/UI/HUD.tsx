@@ -24,7 +24,7 @@ const HUD: React.FC = () => {
     launchShip,
     changeSpaceshipDestination,
   } = useGameStore();
-  const { players, isConnected, currentRoom } = useMultiplayerStore();
+  const { players, isConnected, currentGalaxy } = useMultiplayerStore();
   const { togglePlayPauseSocket } = useSocket();
 
   const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
@@ -232,8 +232,8 @@ const HUD: React.FC = () => {
       spaceships: [],
     }));
 
-    // Save to localStorage
-    useGameStore.getState().saveToLocalStorage();
+    // Note: In multiplayer mode, system regeneration should ideally go through the server
+    // For now, we regenerate locally (this won't sync to other players)
   };
 
   return (
@@ -401,9 +401,9 @@ const HUD: React.FC = () => {
             )}
 
             <div>Players: {players.length}</div>
-            {currentRoom && (
+            {currentGalaxy && (
               <div className="text-xs">
-                Room: <span className="font-mono">{currentRoom}</span>
+                Galaxy: <span className="font-mono">{currentGalaxy}</span>
               </div>
             )}
             <div

@@ -2,7 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { GameRoom } from "./game/GameRoom";
+import { GameGalaxy } from "./game/GameGalaxy";
 import { setupSocketHandlers } from "./socket/handlers";
 
 const app = express();
@@ -18,22 +18,24 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Game rooms management
-const gameRooms = new Map<string, GameRoom>();
+// Galaxies management
+const galaxies = new Map<string, GameGalaxy>();
 
 // Socket.io connection handling
 io.on("connection", (socket) => {
-  console.log(`Player connected: ${socket.id}`);
+  console.log(`🔌 Socket connected: ${socket.id}`);
 
-  setupSocketHandlers(socket, gameRooms);
+  setupSocketHandlers(socket, galaxies);
 
   socket.on("disconnect", () => {
-    console.log(`Player disconnected: ${socket.id}`);
+    console.log(`🔌 Socket disconnected: ${socket.id}`);
   });
 });
 
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`Constellation server running on port ${PORT}`);
+  console.log(`\n🌌 Constellation Server Running`);
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🚀 Ready to accept connections\n`);
 });

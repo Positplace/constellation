@@ -109,6 +109,7 @@ export const Planet: React.FC<PlanetProps> = ({
           planet={planet}
           renderScale={renderScale}
           onClick={handleClick}
+          sunPosition={new THREE.Vector3(0, 0, 0)} // Sun is at origin
         />
       </PlanetRotation>
 

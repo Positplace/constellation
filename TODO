@@ -1,46 +1,9 @@
-6. Rogue Planets
-   Planets not bound to any star
-   Drifting through deep space between systems
-   Very cold and dark
-   Could be discovered during travel
+TODO
 
-7. Planetary Features
-   Solar flares from stars (bursts of energy)
-   Auroras on planets with magnetic fields
-   Storms visible on gas giants (like Jupiter's Great Red Spot)
-   Volcanic activity on lava worlds
+Constellation view need some re-thinking for multiplayer, it proabaly should be per player.
 
-8. Wormholes (different from your tunnel gates)
-   Unstable, time-limited connections
-   Visual distortion/gravitational lensing
-   Could be dangerous or unpredictable
+Not sure if all nebula types are rendering well
 
-9. Debris Fields
-   Destroyed spacecraft/stations
-   Could be lootable or dangerous to navigate
-   Story elements about past civilizations
+Spaceship Physics: Spaceships aren't yet being managed by the server - they're still updated client-side. For full synchronization, you'd want to move the spaceship update loop to the server.
 
-10. Stellar Phenomena
-    Brown dwarfs - Failed stars
-    Protostars - Stars still forming
-    Variable stars - Stars that change brightness
-    Magnetars - Neutron stars with extreme magnetic fields
-
-11. Gravitational Effects
-    Lagrange points - Stable orbital positions
-    Gravitational lensing around black holes (visual warping)
-    Tidal forces showing gravitational influence visually
-
-12. Exotic Objects
-    Quasars - Extremely bright galactic cores
-    Dark matter halos (visual representation)
-    Strange matter objects
-    Hawking radiation visualization around black holes (you have this in data but might not be visual)
-
-Quick Wins (Easiest to Implement):
-Comets - Similar to asteroids but with trails
-Space stations - Static objects in orbit
-Solar flares - Particle effects from your stars
-Planetary storms - Animated textures on gas giants
-Rogue planets - Just planets in the void between systems
-Would you like me to help implement any of these? I'd recommend starting with comets since you already have the directory structure and they'd be relatively straightforward given your asteroid system!
+Connection Error Handling: Add better error handling and retry logic for when server is offline.

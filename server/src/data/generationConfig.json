@@ -1,0 +1,135 @@
+{
+  "starTypeWeights": {
+    "red_dwarf": 40,
+    "orange_star": 20,
+    "yellow_star": 15,
+    "white_star": 10,
+    "blue_giant": 5,
+    "red_giant": 5,
+    "white_dwarf": 3,
+    "binary_star": 2,
+    "black_hole": 0.5
+  },
+  "cometGeneration": {
+    "red_dwarf": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.5,
+        "halley_type": 0.3,
+        "long_period": 0.2
+      }
+    },
+    "white_dwarf": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.5,
+        "halley_type": 0.3,
+        "long_period": 0.2
+      }
+    },
+    "orange_star": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.4,
+        "halley_type": 0.35,
+        "long_period": 0.25
+      }
+    },
+    "yellow_star": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.4,
+        "halley_type": 0.35,
+        "long_period": 0.25
+      }
+    },
+    "white_star": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.3,
+        "halley_type": 0.3,
+        "long_period": 0.4
+      }
+    },
+    "blue_giant": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.3,
+        "halley_type": 0.3,
+        "long_period": 0.4
+      }
+    },
+    "red_giant": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.1,
+        "halley_type": 0.2,
+        "long_period": 0.7
+      }
+    },
+    "binary_star": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.2,
+        "halley_type": 0.4,
+        "long_period": 0.4
+      }
+    },
+    "black_hole": {
+      "count": { "min": 0, "max": 1 },
+      "typeWeights": {
+        "short_period": 0.0,
+        "halley_type": 0.2,
+        "long_period": 0.8
+      }
+    },
+    "globalRarityMultiplier": 0.5
+  },
+  "asteroidMaterials": {
+    "inner": {
+      "silicate": 70,
+      "iron": 25,
+      "nickel": 3,
+      "carbonaceous": 1,
+      "ice": 0,
+      "platinum": 0.5,
+      "gold": 0.3,
+      "rare_earth": 0.2
+    },
+    "outer": {
+      "silicate": 15,
+      "iron": 5,
+      "nickel": 1,
+      "carbonaceous": 40,
+      "ice": 35,
+      "platinum": 1,
+      "gold": 0.5,
+      "rare_earth": 2.5
+    }
+  },
+  "dysonSphere": {
+    "baseChance": 0.03,
+    "starTypeMultipliers": {
+      "white_star": 1.67,
+      "blue_giant": 1.67,
+      "yellow_star": 1.33,
+      "orange_star": 1.0,
+      "red_dwarf": 1.0,
+      "red_giant": 1.0,
+      "white_dwarf": 1.0,
+      "binary_star": 1.0,
+      "black_hole": 0.0
+    },
+    "completion": {
+      "min": 5,
+      "max": 90
+    }
+  },
+  "nebulaGeneration": {
+    "rarityMultipliers": {
+      "preferredStarType": 2.0,
+      "nonPreferredStarType": 0.5
+    }
+  }
+}
+

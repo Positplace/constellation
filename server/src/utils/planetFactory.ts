@@ -235,10 +235,11 @@ export function createPlanet(
   planet.rings = generateRingsForPlanet(planet, seed);
 
   // Update appearance effects based on rings
-  if (planet.rings) {
+  if (planet.rings && planet.rings.bands && planet.rings.bands.length > 0) {
     planet.appearance.effects.rings = true;
-    planet.appearance.effects.ringColor = planet.rings.color;
-    planet.appearance.effects.ringOpacity = planet.rings.opacity;
+    // Use the first band's color and average opacity
+    planet.appearance.effects.ringColor = planet.rings.bands[0].color;
+    planet.appearance.effects.ringOpacity = planet.rings.bands[0].opacity;
   }
 
   return planet;

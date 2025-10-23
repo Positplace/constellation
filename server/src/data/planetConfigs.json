@@ -1,0 +1,598 @@
+{
+  "terrestrial": {
+    "name": "Terrestrial Planet",
+    "description": "Rocky planet with solid surface",
+    "baseProperties": {
+      "radius": { "min": 0.5, "max": 1.5, "unit": "earth_radius" },
+      "mass": { "min": 0.1, "max": 5.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.3, "max": 2.0, "unit": "g" },
+      "rotationSpeed": { "min": 6, "max": 48, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 45, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": { "min": 0.0, "max": 0.8, "default": 0.3 },
+        "land": { "min": 0.2, "max": 1.0, "default": 0.7 },
+        "ice": { "min": 0.0, "max": 0.3, "default": 0.1 },
+        "desert": { "min": 0.0, "max": 0.6, "default": 0.2 },
+        "forest": { "min": 0.0, "max": 0.8, "default": 0.4 },
+        "mountains": { "min": 0.0, "max": 0.4, "default": 0.2 },
+        "plains": { "min": 0.0, "max": 0.6, "default": 0.3 }
+      },
+      "elevation": {
+        "minHeight": { "min": -8000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 12000, "unit": "meters" },
+        "roughness": { "min": 0.1, "max": 0.8, "default": 0.4 }
+      },
+      "continentCount": { "min": 1, "max": 8, "default": 4 },
+      "cityDensity": { "min": 0.0, "max": 0.1, "default": 0.02 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.0, "max": 0.8, "default": 0.78 },
+        "oxygen": { "min": 0.0, "max": 0.3, "default": 0.21 },
+        "carbonDioxide": { "min": 0.0, "max": 0.1, "default": 0.01 },
+        "argon": { "min": 0.0, "max": 0.05, "default": 0.009 }
+      },
+      "pressure": { "min": 0.1, "max": 10.0, "unit": "atm" },
+      "height": { "min": 50, "max": 200, "unit": "km" },
+      "color": "#87CEEB",
+      "opacity": { "min": 0.1, "max": 0.3, "default": 0.2 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#4A90E2", "#228B22", "#8B4513", "#D2B48C"],
+        "secondary": ["#1E90FF", "#32CD32", "#A0522D", "#F4A460"],
+        "accent": ["#87CEEB", "#90EE90", "#CD853F", "#DEB887"]
+      },
+      "surface": {
+        "albedo": { "min": 0.1, "max": 0.4, "default": 0.3 },
+        "roughness": { "min": 0.2, "max": 0.8, "default": 0.5 }
+      }
+    }
+  },
+  "ocean_world": {
+    "name": "Ocean World",
+    "description": "Planet covered mostly by oceans",
+    "baseProperties": {
+      "radius": { "min": 0.8, "max": 2.0, "unit": "earth_radius" },
+      "mass": { "min": 0.5, "max": 8.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.7, "max": 2.5, "unit": "g" },
+      "rotationSpeed": { "min": 8, "max": 36, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 30, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": { "min": 0.8, "max": 1.0, "default": 0.95 },
+        "land": { "min": 0.0, "max": 0.2, "default": 0.05 },
+        "ice": { "min": 0.0, "max": 0.1, "default": 0.02 },
+        "desert": { "min": 0.0, "max": 0.1, "default": 0.01 },
+        "forest": { "min": 0.0, "max": 0.1, "default": 0.02 },
+        "mountains": { "min": 0.0, "max": 0.05, "default": 0.01 }
+      },
+      "elevation": {
+        "minHeight": { "min": -12000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 3000, "unit": "meters" },
+        "roughness": { "min": 0.1, "max": 0.4, "default": 0.2 }
+      },
+      "continentCount": { "min": 0, "max": 3, "default": 1 },
+      "cityDensity": { "min": 0.0, "max": 0.05, "default": 0.01 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.0, "max": 0.9, "default": 0.8 },
+        "oxygen": { "min": 0.0, "max": 0.2, "default": 0.15 },
+        "waterVapor": { "min": 0.0, "max": 0.1, "default": 0.05 }
+      },
+      "pressure": { "min": 0.5, "max": 5.0, "unit": "atm" },
+      "height": { "min": 80, "max": 300, "unit": "km" },
+      "color": "#87CEEB",
+      "opacity": { "min": 0.2, "max": 0.5, "default": 0.3 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#4AA9FF", "#5BA3E8", "#4682B4", "#5F9EA0"],
+        "secondary": ["#87CEEB", "#6495ED", "#72C9E8", "#7DD3F0"],
+        "accent": ["#B0E0E6", "#C0E8F8", "#A8D8F0", "#95D5F2"]
+      },
+      "surface": {
+        "albedo": { "min": 0.25, "max": 0.4, "default": 0.32 },
+        "roughness": { "min": 0.1, "max": 0.3, "default": 0.2 }
+      }
+    }
+  },
+  "desert_world": {
+    "name": "Desert World",
+    "description": "Arid planet with minimal water",
+    "baseProperties": {
+      "radius": { "min": 0.4, "max": 1.2, "unit": "earth_radius" },
+      "mass": { "min": 0.1, "max": 3.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.3, "max": 1.5, "unit": "g" },
+      "rotationSpeed": { "min": 12, "max": 72, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 60, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": { "min": 0.0, "max": 0.1, "default": 0.02 },
+        "land": { "min": 0.9, "max": 1.0, "default": 0.98 },
+        "desert": { "min": 0.6, "max": 1.0, "default": 0.8 },
+        "mountains": { "min": 0.0, "max": 0.3, "default": 0.15 },
+        "plains": { "min": 0.0, "max": 0.4, "default": 0.2 },
+        "forest": { "min": 0.0, "max": 0.1, "default": 0.02 }
+      },
+      "elevation": {
+        "minHeight": { "min": -2000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 8000, "unit": "meters" },
+        "roughness": { "min": 0.2, "max": 0.7, "default": 0.4 }
+      },
+      "continentCount": { "min": 1, "max": 6, "default": 3 },
+      "cityDensity": { "min": 0.0, "max": 0.05, "default": 0.01 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.0, "max": 0.9, "default": 0.7 },
+        "oxygen": { "min": 0.0, "max": 0.1, "default": 0.05 },
+        "carbonDioxide": { "min": 0.0, "max": 0.3, "default": 0.2 },
+        "argon": { "min": 0.0, "max": 0.1, "default": 0.05 }
+      },
+      "pressure": { "min": 0.01, "max": 2.0, "unit": "atm" },
+      "height": { "min": 20, "max": 100, "unit": "km" },
+      "color": "#F4A460",
+      "opacity": { "min": 0.05, "max": 0.2, "default": 0.1 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#D2B48C", "#F4A460", "#CD853F", "#A0522D"],
+        "secondary": ["#DEB887", "#F5DEB3", "#D2691E", "#8B4513"],
+        "accent": ["#F0E68C", "#FFE4B5", "#FFA500", "#FF8C00"]
+      },
+      "surface": {
+        "albedo": { "min": 0.2, "max": 0.5, "default": 0.35 },
+        "roughness": { "min": 0.3, "max": 0.8, "default": 0.6 }
+      }
+    }
+  },
+  "ice_world": {
+    "name": "Ice World",
+    "description": "Frozen planet with ice-covered surface",
+    "baseProperties": {
+      "radius": { "min": 0.3, "max": 1.0, "unit": "earth_radius" },
+      "mass": { "min": 0.05, "max": 2.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.2, "max": 1.2, "unit": "g" },
+      "rotationSpeed": { "min": 6, "max": 48, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 90, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ice": { "min": 0.7, "max": 1.0, "default": 0.9 },
+        "ocean": { "min": 0.0, "max": 0.3, "default": 0.1 },
+        "land": { "min": 0.0, "max": 0.3, "default": 0.1 },
+        "mountains": { "min": 0.0, "max": 0.2, "default": 0.05 }
+      },
+      "elevation": {
+        "minHeight": { "min": -5000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 5000, "unit": "meters" },
+        "roughness": { "min": 0.1, "max": 0.5, "default": 0.3 }
+      },
+      "continentCount": { "min": 0, "max": 4, "default": 2 },
+      "cityDensity": { "min": 0.0, "max": 0.02, "default": 0.005 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.0, "max": 0.9, "default": 0.8 },
+        "oxygen": { "min": 0.0, "max": 0.1, "default": 0.05 },
+        "carbonDioxide": { "min": 0.0, "max": 0.2, "default": 0.1 },
+        "methane": { "min": 0.0, "max": 0.1, "default": 0.05 }
+      },
+      "pressure": { "min": 0.01, "max": 1.0, "unit": "atm" },
+      "height": { "min": 10, "max": 80, "unit": "km" },
+      "color": "#E0E0E0",
+      "opacity": { "min": 0.05, "max": 0.3, "default": 0.15 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#F0F8FF", "#E6E6FA", "#B0C4DE", "#87CEEB"],
+        "secondary": ["#FFFFFF", "#F5F5F5", "#DCDCDC", "#C0C0C0"],
+        "accent": ["#FFFAF0", "#FDF5E6", "#F0E68C", "#DDA0DD"]
+      },
+      "surface": {
+        "albedo": { "min": 0.6, "max": 0.9, "default": 0.8 },
+        "roughness": { "min": 0.1, "max": 0.4, "default": 0.2 }
+      }
+    }
+  },
+  "gas_giant": {
+    "name": "Gas Giant",
+    "description": "Large planet composed mostly of gas",
+    "baseProperties": {
+      "radius": { "min": 3.0, "max": 20.0, "unit": "earth_radius" },
+      "mass": { "min": 10.0, "max": 1000.0, "unit": "earth_mass" },
+      "gravity": { "min": 1.5, "max": 10.0, "unit": "g" },
+      "rotationSpeed": { "min": 6, "max": 18, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 30, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": 0.0,
+        "land": 0.0,
+        "ice": 0.0,
+        "desert": 0.0,
+        "forest": 0.0,
+        "mountains": 0.0,
+        "plains": 0.0
+      },
+      "elevation": {
+        "minHeight": 0,
+        "maxHeight": 0,
+        "roughness": 0.0
+      },
+      "continentCount": 0,
+      "cityDensity": 0.0
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "hydrogen": { "min": 0.7, "max": 0.9, "default": 0.8 },
+        "helium": { "min": 0.1, "max": 0.3, "default": 0.2 },
+        "methane": { "min": 0.0, "max": 0.1, "default": 0.02 },
+        "ammonia": { "min": 0.0, "max": 0.1, "default": 0.01 }
+      },
+      "pressure": { "min": 10.0, "max": 1000.0, "unit": "atm" },
+      "height": { "min": 500, "max": 2000, "unit": "km" },
+      "color": "#FFA500",
+      "opacity": { "min": 0.8, "max": 1.0, "default": 0.9 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#FFA500", "#FF8C00", "#FF6347", "#FF4500"],
+        "secondary": ["#FFD700", "#FFA500", "#FF8C00", "#FF7F50"],
+        "accent": ["#FFFF00", "#FFD700", "#FFA500", "#FF8C00"]
+      },
+      "surface": {
+        "albedo": { "min": 0.3, "max": 0.6, "default": 0.45 },
+        "roughness": { "min": 0.0, "max": 0.2, "default": 0.1 }
+      }
+    }
+  },
+  "lava_world": {
+    "name": "Lava World",
+    "description": "Volcanic planet with molten surface",
+    "baseProperties": {
+      "radius": { "min": 0.5, "max": 1.5, "unit": "earth_radius" },
+      "mass": { "min": 0.2, "max": 4.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.4, "max": 2.0, "unit": "g" },
+      "rotationSpeed": { "min": 8, "max": 48, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 45, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": 0.0,
+        "land": { "min": 0.8, "max": 1.0, "default": 0.9 },
+        "lava": { "min": 0.1, "max": 0.5, "default": 0.3 },
+        "mountains": { "min": 0.0, "max": 0.4, "default": 0.2 },
+        "desert": { "min": 0.0, "max": 0.3, "default": 0.1 }
+      },
+      "elevation": {
+        "minHeight": { "min": -3000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 10000, "unit": "meters" },
+        "roughness": { "min": 0.3, "max": 0.9, "default": 0.6 }
+      },
+      "continentCount": { "min": 1, "max": 6, "default": 3 },
+      "cityDensity": { "min": 0.0, "max": 0.02, "default": 0.005 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.0, "max": 0.8, "default": 0.6 },
+        "oxygen": { "min": 0.0, "max": 0.1, "default": 0.05 },
+        "carbonDioxide": { "min": 0.0, "max": 0.3, "default": 0.2 },
+        "sulfurDioxide": { "min": 0.0, "max": 0.2, "default": 0.1 }
+      },
+      "pressure": { "min": 0.1, "max": 5.0, "unit": "atm" },
+      "height": { "min": 30, "max": 150, "unit": "km" },
+      "color": "#FF4500",
+      "opacity": { "min": 0.3, "max": 0.8, "default": 0.5 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#FF4500", "#FF6347", "#DC143C", "#B22222"],
+        "secondary": ["#FF8C00", "#FF7F50", "#FF6347", "#FF4500"],
+        "accent": ["#FFD700", "#FFA500", "#FF8C00", "#FF7F50"]
+      },
+      "surface": {
+        "albedo": { "min": 0.1, "max": 0.3, "default": 0.2 },
+        "roughness": { "min": 0.4, "max": 0.9, "default": 0.7 },
+        "emission": { "min": 0.1, "max": 0.5, "default": 0.3 }
+      }
+    }
+  },
+  "earth_like": {
+    "name": "Earth-Like World",
+    "description": "A habitable world similar to Earth with oceans, continents, and atmosphere",
+    "baseProperties": {
+      "radius": { "min": 0.8, "max": 1.2, "unit": "earth_radius" },
+      "mass": { "min": 0.6, "max": 1.5, "unit": "earth_mass" },
+      "gravity": { "min": 0.85, "max": 1.15, "unit": "g" },
+      "rotationSpeed": { "min": 20, "max": 28, "unit": "hours" },
+      "axialTilt": { "min": 18, "max": 28, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": { "min": 0.7, "max": 0.71, "default": 0.71 },
+        "land": { "min": 0.29, "max": 0.3, "default": 0.29 },
+        "ice": { "min": 0.03, "max": 0.05, "default": 0.04 },
+        "desert": { "min": 0.08, "max": 0.1, "default": 0.09 },
+        "forest": { "min": 0.3, "max": 0.35, "default": 0.31 },
+        "mountains": { "min": 0.1, "max": 0.15, "default": 0.12 },
+        "plains": { "min": 0.2, "max": 0.25, "default": 0.22 }
+      },
+      "elevation": {
+        "minHeight": { "min": -11000, "max": -10000, "unit": "meters" },
+        "maxHeight": { "min": 8000, "max": 9000, "unit": "meters" },
+        "roughness": { "min": 0.4, "max": 0.5, "default": 0.45 }
+      },
+      "continentCount": { "min": 7, "max": 7, "default": 7 },
+      "cityDensity": { "min": 0.05, "max": 0.08, "default": 0.06 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.78, "max": 0.78, "default": 0.78 },
+        "oxygen": { "min": 0.21, "max": 0.21, "default": 0.21 },
+        "carbonDioxide": { "min": 0.0004, "max": 0.0004, "default": 0.0004 },
+        "argon": { "min": 0.0093, "max": 0.0093, "default": 0.0093 }
+      },
+      "pressure": { "min": 1.0, "max": 1.0, "unit": "atm" },
+      "height": { "min": 100, "max": 100, "unit": "km" },
+      "color": "#87CEEB",
+      "opacity": { "min": 0.25, "max": 0.3, "default": 0.27 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#4AA9FF", "#5BA3E8", "#3D9FE8"],
+        "secondary": ["#2FA84E", "#40B860", "#52C672"],
+        "accent": ["#A67C52", "#B88A5C", "#C99866"]
+      },
+      "surface": {
+        "albedo": { "min": 0.35, "max": 0.4, "default": 0.37 },
+        "roughness": { "min": 0.45, "max": 0.55, "default": 0.5 }
+      }
+    }
+  },
+  "dwarf_planet": {
+    "name": "Dwarf Planet",
+    "description": "Small rocky or icy body, smaller than regular planets",
+    "baseProperties": {
+      "radius": { "min": 0.1, "max": 0.4, "unit": "earth_radius" },
+      "mass": { "min": 0.001, "max": 0.1, "unit": "earth_mass" },
+      "gravity": { "min": 0.05, "max": 0.3, "unit": "g" },
+      "rotationSpeed": { "min": 4, "max": 120, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 180, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ice": { "min": 0.3, "max": 0.8, "default": 0.5 },
+        "land": { "min": 0.2, "max": 0.7, "default": 0.5 },
+        "mountains": { "min": 0.0, "max": 0.2, "default": 0.1 }
+      },
+      "elevation": {
+        "minHeight": { "min": -2000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 3000, "unit": "meters" },
+        "roughness": { "min": 0.2, "max": 0.6, "default": 0.4 }
+      },
+      "continentCount": { "min": 0, "max": 2, "default": 1 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": false,
+      "composition": {},
+      "pressure": { "min": 0.0, "max": 0.0, "unit": "atm" },
+      "height": { "min": 0, "max": 0, "unit": "km" },
+      "color": "#000000",
+      "opacity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#A0A0A0", "#808080", "#696969", "#606060"],
+        "secondary": ["#C0C0C0", "#B0B0B0", "#909090", "#707070"],
+        "accent": ["#E0E0E0", "#D0D0D0", "#A8A8A8", "#888888"]
+      },
+      "surface": {
+        "albedo": { "min": 0.1, "max": 0.4, "default": 0.2 },
+        "roughness": { "min": 0.6, "max": 0.9, "default": 0.8 }
+      }
+    }
+  },
+  "ice_giant": {
+    "name": "Ice Giant",
+    "description": "Large planet composed mainly of water, ammonia, and methane ices",
+    "baseProperties": {
+      "radius": { "min": 2.5, "max": 4.0, "unit": "earth_radius" },
+      "mass": { "min": 8.0, "max": 20.0, "unit": "earth_mass" },
+      "gravity": { "min": 0.8, "max": 1.5, "unit": "g" },
+      "rotationSpeed": { "min": 10, "max": 20, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 98, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ocean": 0.0,
+        "land": 0.0,
+        "ice": 0.0,
+        "desert": 0.0,
+        "forest": 0.0,
+        "mountains": 0.0,
+        "plains": 0.0
+      },
+      "elevation": {
+        "minHeight": 0,
+        "maxHeight": 0,
+        "roughness": 0.0
+      },
+      "continentCount": 0,
+      "cityDensity": 0.0
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "hydrogen": { "min": 0.5, "max": 0.8, "default": 0.7 },
+        "helium": { "min": 0.1, "max": 0.25, "default": 0.15 },
+        "methane": { "min": 0.02, "max": 0.1, "default": 0.05 },
+        "ammonia": { "min": 0.0, "max": 0.05, "default": 0.02 },
+        "water": { "min": 0.0, "max": 0.1, "default": 0.08 }
+      },
+      "pressure": { "min": 5.0, "max": 100.0, "unit": "atm" },
+      "height": { "min": 300, "max": 1000, "unit": "km" },
+      "color": "#E0F2FF",
+      "opacity": { "min": 0.7, "max": 0.95, "default": 0.85 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#F0F8FF", "#E6F3FF", "#D9EDFF", "#CCE7FF"],
+        "secondary": ["#FFFFFF", "#F5FAFF", "#EBF5FF", "#E0F0FF"],
+        "accent": ["#C9E4FF", "#B8DBFF", "#A7D2FF", "#96C9FF"]
+      },
+      "surface": {
+        "albedo": { "min": 0.7, "max": 0.9, "default": 0.8 },
+        "roughness": { "min": 0.0, "max": 0.05, "default": 0.02 }
+      }
+    }
+  },
+  "barren_world": {
+    "name": "Barren World",
+    "description": "Dead, airless rock with extreme temperatures (Mercury-like)",
+    "baseProperties": {
+      "radius": { "min": 0.3, "max": 0.7, "unit": "earth_radius" },
+      "mass": { "min": 0.05, "max": 0.4, "unit": "earth_mass" },
+      "gravity": { "min": 0.3, "max": 0.7, "unit": "g" },
+      "rotationSpeed": { "min": 100, "max": 1000, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 25, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "land": { "min": 1.0, "max": 1.0, "default": 1.0 },
+        "mountains": { "min": 0.1, "max": 0.3, "default": 0.2 }
+      },
+      "elevation": {
+        "minHeight": { "min": -5000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 8000, "unit": "meters" },
+        "roughness": { "min": 0.3, "max": 0.6, "default": 0.45 }
+      },
+      "continentCount": { "min": 0, "max": 0, "default": 0 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": false
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#6B6B6B", "#808080", "#5A5A5A", "#7A7A7A"],
+        "secondary": ["#8B8B8B", "#9C9C9C", "#7B7B7B", "#6C6C6C"],
+        "accent": ["#A0A0A0", "#B5B5B5", "#909090", "#858585"]
+      },
+      "surface": {
+        "albedo": { "min": 0.08, "max": 0.15, "default": 0.11 },
+        "roughness": { "min": 0.7, "max": 0.9, "default": 0.8 }
+      }
+    }
+  },
+  "volcanic_world": {
+    "name": "Volcanic World",
+    "description": "Hot planet with active volcanism and tectonic activity (Io-like)",
+    "baseProperties": {
+      "radius": { "min": 0.4, "max": 1.2, "unit": "earth_radius" },
+      "mass": { "min": 0.1, "max": 1.5, "unit": "earth_mass" },
+      "gravity": { "min": 0.4, "max": 1.3, "unit": "g" },
+      "rotationSpeed": { "min": 18, "max": 36, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 20, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "land": { "min": 0.9, "max": 1.0, "default": 0.95 },
+        "volcanic": { "min": 0.3, "max": 0.6, "default": 0.45 },
+        "mountains": { "min": 0.2, "max": 0.4, "default": 0.3 }
+      },
+      "elevation": {
+        "minHeight": { "min": -3000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 5000, "max": 15000, "unit": "meters" },
+        "roughness": { "min": 0.6, "max": 0.9, "default": 0.75 }
+      },
+      "continentCount": { "min": 1, "max": 4, "default": 2 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "sulfurDioxide": { "min": 0.4, "max": 0.7, "default": 0.6 },
+        "carbonDioxide": { "min": 0.2, "max": 0.5, "default": 0.35 },
+        "nitrogen": { "min": 0.0, "max": 0.2, "default": 0.05 }
+      },
+      "pressure": { "min": 0.2, "max": 3.0, "unit": "atm" },
+      "height": { "min": 40, "max": 80, "unit": "km" },
+      "color": "#FF6B35",
+      "opacity": { "min": 0.2, "max": 0.4, "default": 0.3 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#8B4513", "#A0522D", "#CD853F", "#D2691E"],
+        "secondary": ["#FF4500", "#FF6347", "#DC143C", "#B22222"],
+        "accent": ["#FFD700", "#FFA500", "#FF8C00", "#FF7F50"]
+      },
+      "surface": {
+        "albedo": { "min": 0.15, "max": 0.3, "default": 0.22 },
+        "roughness": { "min": 0.5, "max": 0.8, "default": 0.65 },
+        "emission": { "min": 0.05, "max": 0.2, "default": 0.1 }
+      }
+    }
+  },
+  "frozen_world": {
+    "name": "Frozen World",
+    "description": "Extremely cold world with nitrogen/methane ice (Pluto-like)",
+    "baseProperties": {
+      "radius": { "min": 0.15, "max": 0.6, "unit": "earth_radius" },
+      "mass": { "min": 0.001, "max": 0.1, "unit": "earth_mass" },
+      "gravity": { "min": 0.05, "max": 0.3, "unit": "g" },
+      "rotationSpeed": { "min": 100, "max": 300, "unit": "hours" },
+      "axialTilt": { "min": 0, "max": 50, "unit": "degrees" }
+    },
+    "surface": {
+      "terrainCoverage": {
+        "ice": { "min": 0.8, "max": 1.0, "default": 0.95 },
+        "land": { "min": 0.0, "max": 0.2, "default": 0.05 }
+      },
+      "elevation": {
+        "minHeight": { "min": -2000, "max": 0, "unit": "meters" },
+        "maxHeight": { "min": 0, "max": 3000, "unit": "meters" },
+        "roughness": { "min": 0.2, "max": 0.5, "default": 0.35 }
+      },
+      "continentCount": { "min": 0, "max": 2, "default": 0 },
+      "cityDensity": { "min": 0.0, "max": 0.0, "default": 0.0 }
+    },
+    "atmosphere": {
+      "present": true,
+      "composition": {
+        "nitrogen": { "min": 0.7, "max": 0.9, "default": 0.8 },
+        "methane": { "min": 0.05, "max": 0.2, "default": 0.15 },
+        "argon": { "min": 0.01, "max": 0.05, "default": 0.02 }
+      },
+      "pressure": { "min": 0.00001, "max": 0.001, "unit": "atm" },
+      "height": { "min": 10, "max": 30, "unit": "km" },
+      "color": "#B8D4E8",
+      "opacity": { "min": 0.05, "max": 0.15, "default": 0.1 }
+    },
+    "appearance": {
+      "baseColors": {
+        "primary": ["#D0E8F0", "#C0D8E8", "#B0C8E0", "#A0B8D8"],
+        "secondary": ["#E8F0F8", "#D8E8F0", "#C8D8E8", "#B8C8E0"],
+        "accent": ["#F0F8FF", "#E0F0FF", "#D0E8F8", "#C0D8F0"]
+      },
+      "surface": {
+        "albedo": { "min": 0.6, "max": 0.85, "default": 0.72 },
+        "roughness": { "min": 0.1, "max": 0.3, "default": 0.2 }
+      }
+    }
+  }
+}

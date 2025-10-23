@@ -9,15 +9,22 @@ import ConnectionDialog from "./components/UI/ConnectionDialog";
 import { useGameStore } from "./store/gameStore";
 import { useMultiplayerStore } from "./store/multiplayerStore";
 import { useGameLoop } from "./hooks/useGameLoop";
+import { useSocket } from "./hooks/useSocket";
 
 function App() {
-  const { activeView, togglePlayPause, initializeGame } = useGameStore();
-  const { showConnectionDialog, isConnected } = useMultiplayerStore();
+  const { activeView, togglePlayPause } = useGameStore();
+  const { currentGalaxy, setShowConnectionDialog } = useMultiplayerStore();
 
-  // Initialize game on mount
+  // Initialize socket connection ONCE at app level
+  useSocket();
+
+  // Show connection dialog on mount if not in a galaxy
   useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    // Always show connection dialog if player hasn't joined a galaxy yet
+    if (!currentGalaxy) {
+      setShowConnectionDialog(true);
+    }
+  }, [currentGalaxy, setShowConnectionDialog]);
 
   // Start the game loop
   useGameLoop();

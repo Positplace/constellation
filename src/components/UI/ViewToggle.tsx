@@ -15,7 +15,8 @@ const ViewToggle: React.FC = () => {
     setSelectedObject,
   } = useGameStore();
   const { changeView, emitCurrentSystemChanged } = useSocket();
-  const { isConnected } = useMultiplayerStore();
+  const { isConnected, playerHomeSystemId, playerHomePlanetId } =
+    useMultiplayerStore();
   const [isHomeFocused, setIsHomeFocused] = React.useState(false);
 
   // Listen for Home focus state changes
@@ -46,18 +47,23 @@ const ViewToggle: React.FC = () => {
             key={view.key}
             onClick={() => {
               if (view.key === "home") {
-                // Always switch to first solar system (home system)
-                if (solarSystems.length > 0) {
-                  const homeSystem = solarSystems[0];
-                  setCurrentSystem(homeSystem.id);
+                // Switch to player's home system
+                const homeSystemId = playerHomeSystemId || solarSystems[0]?.id;
+                if (homeSystemId) {
+                  setCurrentSystem(homeSystemId);
                   if (isConnected) {
-                    emitCurrentSystemChanged(homeSystem.id);
+                    emitCurrentSystemChanged(homeSystemId);
                   }
+                  console.log("🏠 Navigating to home system:", homeSystemId);
                 }
                 // Focus on Home planet in solar system
                 setActiveView("solar");
                 changeView("solar");
-                window.dispatchEvent(new CustomEvent("focusHomePlanet"));
+                window.dispatchEvent(
+                  new CustomEvent("focusHomePlanet", {
+                    detail: { planetId: playerHomePlanetId },
+                  })
+                );
               } else if (view.key === "solar") {
                 // Handle solar view switching
                 if (activeView === "solar") {

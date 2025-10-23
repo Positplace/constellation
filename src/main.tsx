@@ -8,9 +8,7 @@ import { useGameStore } from "./store/gameStore";
 if (typeof window !== "undefined") {
   (window as any).gameStore = useGameStore;
   console.log("🎮 Debug: Access game store via window.gameStore.getState()");
-  console.log("🎮 Commands:");
-  console.log("  - window.gameStore.getState().clearSavedGame()");
-  console.log("  - window.gameStore.getState().regenerateAllSystems()");
+  console.log("🎮 Note: Game state is now managed by the server");
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -1,0 +1,142 @@
+{
+  "emission": {
+    "name": "Emission Nebula",
+    "type": "emission",
+    "description": "Glowing clouds of ionized gas, emitting their own light from energized atoms",
+    "visual": {
+      "baseColor": "#ff4488",
+      "secondaryColor": "#ff8844",
+      "glowIntensity": 0.8,
+      "opacity": {
+        "min": 0.3,
+        "max": 0.6
+      },
+      "density": {
+        "min": 0.6,
+        "max": 0.9
+      },
+      "size": {
+        "min": 8,
+        "max": 18
+      },
+      "animationSpeed": {
+        "min": 0.05,
+        "max": 0.15
+      }
+    },
+    "rarity": 0.25,
+    "preferredStarTypes": ["blue_giant", "white_star", "binary_star"]
+  },
+  "reflection": {
+    "name": "Reflection Nebula",
+    "type": "reflection",
+    "description": "Blue clouds reflecting light from nearby stars",
+    "visual": {
+      "baseColor": "#4488ff",
+      "secondaryColor": "#88ccff",
+      "glowIntensity": 0.5,
+      "opacity": {
+        "min": 0.2,
+        "max": 0.5
+      },
+      "density": {
+        "min": 0.4,
+        "max": 0.7
+      },
+      "size": {
+        "min": 6,
+        "max": 15
+      },
+      "animationSpeed": {
+        "min": 0.03,
+        "max": 0.1
+      }
+    },
+    "rarity": 0.3,
+    "preferredStarTypes": ["yellow_star", "white_star", "orange_star"]
+  },
+  "planetary": {
+    "name": "Planetary Nebula",
+    "type": "planetary",
+    "description": "Expanding shell of gas ejected from a dying star",
+    "visual": {
+      "baseColor": "#44ff88",
+      "secondaryColor": "#44ffff",
+      "glowIntensity": 0.7,
+      "opacity": {
+        "min": 0.25,
+        "max": 0.55
+      },
+      "density": {
+        "min": 0.5,
+        "max": 0.8
+      },
+      "size": {
+        "min": 4,
+        "max": 10
+      },
+      "animationSpeed": {
+        "min": 0.08,
+        "max": 0.2
+      }
+    },
+    "rarity": 0.15,
+    "preferredStarTypes": ["white_dwarf", "red_giant"]
+  },
+  "dark": {
+    "name": "Dark Nebula",
+    "type": "dark",
+    "description": "Dense clouds of cold dust blocking background starlight",
+    "visual": {
+      "baseColor": "#1a0f2e",
+      "secondaryColor": "#2a1f3e",
+      "glowIntensity": 0.2,
+      "opacity": {
+        "min": 0.4,
+        "max": 0.7
+      },
+      "density": {
+        "min": 0.7,
+        "max": 0.95
+      },
+      "size": {
+        "min": 10,
+        "max": 20
+      },
+      "animationSpeed": {
+        "min": 0.02,
+        "max": 0.05
+      }
+    },
+    "rarity": 0.2,
+    "preferredStarTypes": ["red_dwarf", "black_hole"]
+  },
+  "supernova_remnant": {
+    "name": "Supernova Remnant",
+    "type": "supernova_remnant",
+    "description": "Explosive expanding shell from a stellar detonation",
+    "visual": {
+      "baseColor": "#ff6633",
+      "secondaryColor": "#ffaa33",
+      "glowIntensity": 0.9,
+      "opacity": {
+        "min": 0.35,
+        "max": 0.65
+      },
+      "density": {
+        "min": 0.5,
+        "max": 0.75
+      },
+      "size": {
+        "min": 12,
+        "max": 25
+      },
+      "animationSpeed": {
+        "min": 0.1,
+        "max": 0.25
+      }
+    },
+    "rarity": 0.1,
+    "preferredStarTypes": ["blue_giant", "binary_star", "black_hole"]
+  }
+}

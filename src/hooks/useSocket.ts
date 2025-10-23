@@ -3,143 +3,274 @@ import { io, Socket } from "socket.io-client";
 import { useGameStore } from "../store/gameStore";
 import { useMultiplayerStore } from "../store/multiplayerStore";
 
+// Global socket instance - shared across all hook calls
+let globalSocket: Socket | null = null;
+let listenersRegistered = false;
+
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
   const { setActiveView, togglePlayPause, updateGameTime } = useGameStore();
   const {
     setConnected,
-    setCurrentRoom,
+    setCurrentGalaxy,
     addPlayer,
     removePlayer,
     showConnectionDialog,
   } = useMultiplayerStore();
 
   useEffect(() => {
-    // Always connect to server for multiplayer
-    socketRef.current = io("http://localhost:3001");
+    // Use existing global socket if available, otherwise create new one
+    if (!globalSocket) {
+      console.log("🔌 Creating new socket connection");
+      globalSocket = io("http://localhost:3001");
+    }
 
+    socketRef.current = globalSocket;
     const socket = socketRef.current;
 
-    // Connection events
-    socket.on("connect", () => {
-      console.log("Connected to server");
-      setConnected(true);
-    });
+    // Only register event listeners once
+    if (!listenersRegistered) {
+      listenersRegistered = true;
 
-    socket.on("disconnect", () => {
-      console.log("Disconnected from server");
-      setConnected(false);
-    });
+      // Connection events
+      socket.on("connect", () => {
+        console.log("Connected to server");
+        setConnected(true);
+      });
 
-    // Game events
-    socket.on("room-joined", (data) => {
-      console.log("Joined room:", data.roomId);
-      setCurrentRoom(data.roomId);
-      // Update game state with server data
-      if (data.gameState) {
-        // Sync full game state from server
-        if (data.gameState.players) {
-          data.gameState.players.forEach((player: any) => {
-            addPlayer(player);
-          });
+      socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+        setConnected(false);
+      });
+
+      // Game events
+      socket.on("galaxy-joined", (data) => {
+        console.log("🌌 Joined galaxy:", data.galaxyId);
+        console.log("🎮 Game state received:", data.gameState);
+        console.log("👥 Players in galaxy:", data.gameState?.players);
+        console.log("🏠 Player home system:", data.playerHomeSystemId);
+        setCurrentGalaxy(data.galaxyId);
+
+        // Store player's home system and planet IDs
+        if (data.playerHomeSystemId) {
+          useMultiplayerStore
+            .getState()
+            .setPlayerHomeSystemId(data.playerHomeSystemId);
+
+          // Find the home planet ID from the home system
+          const homeSystem = data.gameState?.solarSystems?.find(
+            (s: any) => s.id === data.playerHomeSystemId
+          );
+          if (homeSystem) {
+            const homePlanet = homeSystem.planets?.find(
+              (p: any) => p.hasLife || p.type === "earth_like"
+            );
+            if (homePlanet) {
+              useMultiplayerStore
+                .getState()
+                .setPlayerHomePlanetId(homePlanet.id);
+              console.log("🏠 Home planet:", homePlanet.name, homePlanet.id);
+            }
+          }
         }
-        if (
-          data.gameState.solarSystems &&
-          data.gameState.solarSystems.length > 0
-        ) {
-          // Update solar systems from server
-          useGameStore.setState({
-            solarSystems: data.gameState.solarSystems,
-            tunnels: data.gameState.tunnels || [],
-            currentSystemId:
+
+        // Update game state with server data
+        if (data.gameState) {
+          // Sync full game state from server
+          if (data.gameState.players) {
+            // Clear existing players first, then add all players from server
+            useMultiplayerStore.setState({ players: [] });
+            data.gameState.players.forEach((player: any) => {
+              console.log("➕ Adding player:", player);
+              addPlayer(player);
+            });
+          }
+          if (
+            data.gameState.solarSystems &&
+            data.gameState.solarSystems.length > 0
+          ) {
+            // Update solar systems from server
+            // Use player's home system as starting point
+            const startingSystemId =
+              data.playerHomeSystemId ||
               data.gameState.currentSystemId ||
-              data.gameState.solarSystems[0]?.id,
-          });
+              data.gameState.solarSystems[0]?.id;
+
+            console.log("🎯 Starting in system:", startingSystemId);
+
+            useGameStore.setState({
+              solarSystems: data.gameState.solarSystems,
+              tunnels: data.gameState.tunnels || [],
+              currentSystemId: startingSystemId,
+            });
+          }
         }
-      }
-    });
+      });
 
-    socket.on("player-joined", (data) => {
-      console.log("Player joined:", data.player);
-      addPlayer(data.player);
-    });
+      socket.on("player-joined", (data) => {
+        console.log("Player joined:", data.player);
+        addPlayer(data.player);
+      });
 
-    socket.on("player-left", (data) => {
-      console.log("Player left:", data.playerId);
-      removePlayer(data.playerId);
-    });
+      socket.on("player-left", (data) => {
+        console.log("Player left:", data.playerId);
+        removePlayer(data.playerId);
+      });
 
-    socket.on("view-changed", (data) => {
-      console.log("View changed to:", data.view);
-      setActiveView(data.view);
-    });
+      socket.on("view-changed", (data) => {
+        console.log("View changed to:", data.view);
+        setActiveView(data.view);
+      });
 
-    socket.on("tunnel-constructed", (data) => {
-      console.log("Tunnel constructed:", data.tunnel);
-      // Add tunnel to game state
-    });
+      socket.on("tunnel-constructed", (data) => {
+        console.log("Tunnel constructed:", data.tunnel);
+        // Add tunnel to game state
+      });
 
-    socket.on("turn-progressed", (data) => {
-      console.log("Turn progressed to:", data.turn);
-      // Update turn counter
-    });
+      socket.on("turn-progressed", (data) => {
+        console.log("Turn progressed to:", data.turn);
+        // Update turn counter
+      });
 
-    socket.on("play-state-changed", (data) => {
-      console.log("Play state changed:", data.isPlaying);
-      // Sync play state with server
-    });
+      socket.on("play-state-changed", (data) => {
+        console.log("Play state changed:", data.isPlaying);
+        // Sync play state with server
+      });
 
-    socket.on("game-time-updated", (data) => {
-      console.log("Game time updated:", data.gameTime);
-      updateGameTime(data.gameTime);
-    });
+      socket.on("game-time-updated", (data) => {
+        console.log("Game time updated:", data.gameTime);
+        updateGameTime(data.gameTime);
+      });
 
-    socket.on("system-generated", (data) => {
-      console.log("System generated:", data.system);
-      // Add the system to the game state
-      useGameStore.getState().addSolarSystem(data.system);
-    });
+      socket.on(
+        "system-generated",
+        (data: { system: any; tunnel?: any; updatedSourceSystem?: any }) => {
+          console.log("System generated:", data.system);
 
-    socket.on("current-system-changed", (data) => {
-      console.log("Current system changed:", data.systemId);
-      useGameStore.getState().setCurrentSystem(data.systemId);
-    });
+          // Get current state
+          let state = useGameStore.getState();
 
-    socket.on("planet-selected", (data) => {
-      console.log("Planet selected:", data.planetId);
-      if (data.planetId) {
-        useGameStore
-          .getState()
-          .setSelectedObject({ id: data.planetId, type: "planet" });
-      } else {
-        useGameStore.getState().setSelectedObject(null);
-      }
-    });
+          // Check if system already exists (when connecting to existing system)
+          const systemExists = state.solarSystems.some(
+            (s) => s.id === data.system.id
+          );
 
-    socket.on("game-state-synced", (data) => {
-      console.log("Game state synced from server");
-      // Sync the entire game state
-      useGameStore.setState(data.gameState);
-    });
+          if (!systemExists) {
+            // Only add if it's a new system
+            console.log("✨ Adding new system:", data.system.name);
+            useGameStore.getState().addSolarSystem(data.system);
+          } else {
+            console.log("🔗 Connecting to existing system:", data.system.name);
+          }
 
+          // Refresh state after potential system addition
+          state = useGameStore.getState();
+
+          // Add the tunnel if it exists and not already present
+          if (data.tunnel) {
+            const tunnelExists = state.tunnels.some(
+              (t) => t.id === data.tunnel.id
+            );
+            if (!tunnelExists) {
+              console.log("Adding tunnel:", data.tunnel);
+              useGameStore.getState().addTunnel(data.tunnel);
+            } else {
+              console.log("Tunnel already exists:", data.tunnel.id);
+            }
+          }
+
+          // Update the source system with new connections
+          if (data.updatedSourceSystem) {
+            console.log("Updating source system connections");
+            // Refresh state again
+            state = useGameStore.getState();
+            const updatedSystems = state.solarSystems.map((sys) =>
+              sys.id === data.updatedSourceSystem.id
+                ? data.updatedSourceSystem
+                : sys
+            );
+            useGameStore.setState({ solarSystems: updatedSystems });
+          }
+        }
+      );
+
+      socket.on("current-system-changed", (data) => {
+        console.log("Current system changed:", data.systemId);
+        useGameStore.getState().setCurrentSystem(data.systemId);
+      });
+
+      socket.on("planet-selected", (data) => {
+        console.log("Planet selected:", data.planetId);
+        if (data.planetId) {
+          useGameStore
+            .getState()
+            .setSelectedObject({ id: data.planetId, type: "planet" });
+        } else {
+          useGameStore.getState().setSelectedObject(null);
+        }
+      });
+
+      socket.on("game-state-synced", (data) => {
+        console.log("Game state synced from server");
+        // Sync the entire game state
+        useGameStore.setState(data.gameState);
+      });
+
+      // Spaceship events
+      socket.on("spaceship-launched", (data) => {
+        console.log("Spaceship launched:", data.spaceship);
+        const state = useGameStore.getState();
+        useGameStore.setState({
+          spaceships: [...state.spaceships, data.spaceship],
+        });
+      });
+
+      socket.on("spaceship-destination-changed", (data) => {
+        console.log("Spaceship destination changed:", data);
+        const state = useGameStore.getState();
+        const updatedSpaceships = state.spaceships.map((ship) =>
+          ship.id === data.spaceshipId
+            ? { ...ship, destination: data.newDestination }
+            : ship
+        );
+        useGameStore.setState({ spaceships: updatedSpaceships });
+      });
+
+      socket.on("spaceship-removed", (data) => {
+        console.log("Spaceship removed:", data.spaceshipId);
+        const state = useGameStore.getState();
+        const updatedSpaceships = state.spaceships.filter(
+          (ship) => ship.id !== data.spaceshipId
+        );
+        useGameStore.setState({ spaceships: updatedSpaceships });
+      });
+
+      // Full state sync (for reconnections)
+      socket.on("game-state-full-sync", (data) => {
+        console.log("Full game state sync received");
+        useGameStore.setState(data.gameState);
+      });
+    } // End of listenersRegistered check
+
+    // Don't disconnect on cleanup since socket is shared globally
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // Socket persists across component unmounts
+      // Only disconnect when the entire app unmounts
     };
-  }, [
-    setActiveView,
-    togglePlayPause,
-    updateGameTime,
-    setConnected,
-    setCurrentRoom,
-    addPlayer,
-    removePlayer,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - socket and listeners are created once globally
 
-  const joinRoom = (roomId: string, playerName: string) => {
+  const joinGalaxy = (
+    galaxyId: string,
+    playerName: string,
+    playerUUID: string
+  ) => {
     if (socketRef.current) {
-      socketRef.current.emit("join-room", { roomId, playerName });
+      socketRef.current.emit("join-galaxy", {
+        galaxyId,
+        playerName,
+        playerUUID,
+      });
     }
   };
 
@@ -173,9 +304,9 @@ export const useSocket = () => {
     }
   };
 
-  const emitSystemGenerated = (system: any, fromSystemId: string) => {
+  const emitGenerateSystem = (fromSystemId?: string, starType?: string) => {
     if (socketRef.current) {
-      socketRef.current.emit("system-generated", { system, fromSystemId });
+      socketRef.current.emit("generate-system", { fromSystemId, starType });
     }
   };
 
@@ -197,16 +328,62 @@ export const useSocket = () => {
     }
   };
 
+  const emitLaunchSpaceship = (
+    fromId: string,
+    fromType: string,
+    toId: string,
+    toType: string,
+    spaceship: any
+  ) => {
+    if (socketRef.current) {
+      socketRef.current.emit("launch-spaceship", {
+        fromId,
+        fromType,
+        toId,
+        toType,
+        spaceship,
+      });
+    }
+  };
+
+  const emitChangeSpaceshipDestination = (
+    spaceshipId: string,
+    newDestination: { id: string; type: string }
+  ) => {
+    if (socketRef.current) {
+      socketRef.current.emit("change-spaceship-destination", {
+        spaceshipId,
+        newDestination,
+      });
+    }
+  };
+
+  const emitRemoveSpaceship = (spaceshipId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit("remove-spaceship", { spaceshipId });
+    }
+  };
+
+  const requestFullSync = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("request-full-sync");
+    }
+  };
+
   return {
-    joinRoom,
+    joinGalaxy,
     changeView,
     constructTunnel,
     nextTurn,
     togglePlayPauseSocket,
     updateGameTimeSocket,
-    emitSystemGenerated,
+    emitGenerateSystem,
     emitCurrentSystemChanged,
     emitPlanetSelected,
     syncGameState,
+    emitLaunchSpaceship,
+    emitChangeSpaceshipDestination,
+    emitRemoveSpaceship,
+    requestFullSync,
   };
 };

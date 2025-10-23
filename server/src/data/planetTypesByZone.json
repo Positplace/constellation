@@ -1,0 +1,59 @@
+{
+  "inferno": {
+    "description": "< 50% of habitable zone min - Extremely hot",
+    "planetTypes": [
+      { "type": "lava_world", "weight": 45, "cumulativeMax": 45 },
+      { "type": "volcanic_world", "weight": 25, "cumulativeMax": 70 },
+      { "type": "barren_world", "weight": 30, "cumulativeMax": 100 }
+    ]
+  },
+  "hot": {
+    "description": "50%-85% of habitable zone min - Too hot for comfort",
+    "planetTypes": [
+      { "type": "volcanic_world", "weight": 35, "cumulativeMax": 35 },
+      { "type": "desert_world", "weight": 25, "cumulativeMax": 60 },
+      { "type": "barren_world", "weight": 40, "cumulativeMax": 100 }
+    ]
+  },
+  "goldilocks": {
+    "description": "Habitable zone - Perfect for life",
+    "planetTypes": [
+      { "type": "earth_like", "weight": 30, "cumulativeMax": 30 },
+      { "type": "ocean_world", "weight": 25, "cumulativeMax": 55 },
+      { "type": "terrestrial", "weight": 15, "cumulativeMax": 70 },
+      { "type": "desert_world", "weight": 15, "cumulativeMax": 85 },
+      { "type": "ice_world", "weight": 10, "cumulativeMax": 95 },
+      { "type": "gas_giant", "weight": 1, "cumulativeMax": 100 }
+    ]
+  },
+  "cold": {
+    "description": "100%-150% of habitable zone max - Getting chilly",
+    "planetTypes": [
+      { "type": "gas_giant", "weight": 35, "cumulativeMax": 35 },
+      { "type": "terrestrial", "weight": 20, "cumulativeMax": 55 },
+      { "type": "barren_world", "weight": 15, "cumulativeMax": 70 },
+      { "type": "ice_world", "weight": 15, "cumulativeMax": 85 },
+      { "type": "frozen_world", "weight": 15, "cumulativeMax": 100 }
+    ]
+  },
+  "outer": {
+    "description": "150%-250% of habitable zone max - Very cold",
+    "planetTypes": [
+      { "type": "gas_giant", "weight": 35, "cumulativeMax": 35 },
+      { "type": "ice_giant", "weight": 25, "cumulativeMax": 60 },
+      { "type": "barren_world", "weight": 15, "cumulativeMax": 75 },
+      { "type": "frozen_world", "weight": 13, "cumulativeMax": 88 },
+      { "type": "ice_world", "weight": 12, "cumulativeMax": 100 }
+    ]
+  },
+  "deep_space": {
+    "description": "> 250% of habitable zone max - Frozen wasteland",
+    "planetTypes": [
+      { "type": "dwarf_planet", "weight": 35, "cumulativeMax": 35 },
+      { "type": "barren_world", "weight": 20, "cumulativeMax": 55 },
+      { "type": "frozen_world", "weight": 15, "cumulativeMax": 70 },
+      { "type": "ice_world", "weight": 15, "cumulativeMax": 85 },
+      { "type": "ice_giant", "weight": 15, "cumulativeMax": 100 }
+    ]
+  }
+}

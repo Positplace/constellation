@@ -2,11 +2,13 @@ import { useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { PlanetData } from "../../types/planet.types";
 import { generateSurfaceTextures } from "../../utils/textureGenerators";
+import { CityLights } from "./CityLights";
 
 interface PlanetMeshProps {
   planet: PlanetData;
   renderScale?: number;
   onClick?: () => void;
+  sunPosition?: THREE.Vector3;
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -19,6 +21,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
   planet,
   renderScale = 0.16,
   onClick,
+  sunPosition = new THREE.Vector3(0, 0, 0), // Default sun at origin
 }) => {
   // Generate textures
   const { map, displacementMap } = useMemo(
@@ -198,6 +201,13 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
         <primitive object={rotationMarkerGeometry} />
         <meshBasicMaterial color="#ff0000" />
       </mesh>
+
+      {/* City lights - glowing on dark side */}
+      <CityLights
+        planet={planet}
+        renderScale={renderScale}
+        sunPosition={sunPosition}
+      />
     </group>
   );
 };

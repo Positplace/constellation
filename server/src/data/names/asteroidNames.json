@@ -1,0 +1,49 @@
+{
+  "prefixes": [
+    "Alpha",
+    "Beta",
+    "Gamma",
+    "Delta",
+    "Epsilon",
+    "Zeta",
+    "Eta",
+    "Theta",
+    "Iota",
+    "Kappa",
+    "Lambda",
+    "Mu",
+    "Nu",
+    "Xi",
+    "Omicron",
+    "Pi",
+    "Sigma",
+    "Tau",
+    "Upsilon",
+    "Phi",
+    "Chi",
+    "Psi",
+    "Omega"
+  ],
+  "suffixes": [
+    "Rock",
+    "Stone",
+    "Boulder",
+    "Chunk",
+    "Fragment",
+    "Shard",
+    "Debris",
+    "Chip",
+    "Pebble",
+    "Grain",
+    "Mass",
+    "Node",
+    "Core",
+    "Vein"
+  ],
+  "rareMetals": {
+    "platinum": ["Platinum", "Palladium", "Iridium", "Rhodium"],
+    "gold": ["Gold", "Silver"],
+    "rare_earth": ["Neodymium", "Dysprosium", "Terbium", "Yttrium"]
+  }
+}
+

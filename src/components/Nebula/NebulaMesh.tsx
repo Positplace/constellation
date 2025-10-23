@@ -15,6 +15,21 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
+  // Debug: Log nebula data on mount
+  useEffect(() => {
+    console.log("🌌 Rendering nebula:", {
+      id: nebula.id,
+      type: nebula.type,
+      color: nebula.color,
+      secondaryColor: nebula.secondaryColor,
+      opacity: nebula.opacity,
+      size: nebula.size,
+      density: nebula.density,
+      glowIntensity: nebula.glowIntensity,
+      position: nebula.position,
+    });
+  }, [nebula]);
+
   // Create custom shader material for volumetric cloud effect
   const shaderMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -28,6 +43,10 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
         density: { value: nebula.density },
         glowIntensity: { value: nebula.glowIntensity * 2.5 }, // Boost glow
       },
+      transparent: true,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
       vertexShader: `
         varying vec3 vPosition;
         varying vec3 vNormal;
@@ -153,27 +172,33 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
 
   const secondaryColor = new THREE.Color(nebula.secondaryColor || nebula.color);
 
-  // Memoize geometries to prevent recreation
+  // Memoize main geometry to prevent recreation
   const nebulaGeometry = useMemo(
     () => new THREE.SphereGeometry(nebula.size, 32, 32),
     [nebula.size]
   );
-  const coreGeometry = useMemo(
-    () => new THREE.SphereGeometry(nebula.size, 16, 16),
-    [nebula.size]
-  );
 
-  // Dispose shader material and geometries on cleanup
+  // Dispose shader material and geometry on cleanup
   useEffect(() => {
     return () => {
       shaderMaterial.dispose();
       nebulaGeometry.dispose();
-      coreGeometry.dispose();
     };
-  }, [shaderMaterial, nebulaGeometry, coreGeometry]);
+  }, [shaderMaterial, nebulaGeometry]);
 
   return (
     <group ref={meshRef} position={nebula.position} rotation={nebula.rotation}>
+      {/* Main volumetric layer with shader */}
+      <mesh>
+        <primitive object={nebulaGeometry} />
+        <primitive
+          ref={materialRef}
+          object={shaderMaterial}
+          attach="material"
+        />
+      </mesh>
+
+      {/* Additional basic material layers for depth */}
       {layers.map((layer, i) => (
         <mesh
           key={i}
@@ -184,7 +209,7 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
             layer.scale * (0.95 + Math.sin(i * 0.3) * 0.1),
           ]}
         >
-          <primitive object={nebulaGeometry} />
+          <sphereGeometry args={[nebula.size, 32, 32]} />
           <meshBasicMaterial
             color={i < 2 ? nebula.color : secondaryColor}
             transparent={true}
@@ -198,7 +223,7 @@ const NebulaMesh: React.FC<NebulaMeshProps> = ({ nebula, timeScale }) => {
 
       {/* Subtle bright core */}
       <mesh scale={0.15}>
-        <primitive object={coreGeometry} />
+        <sphereGeometry args={[nebula.size, 16, 16]} />
         <meshBasicMaterial
           color="#ffffff"
           transparent={true}

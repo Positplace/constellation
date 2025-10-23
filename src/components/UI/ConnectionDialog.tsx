@@ -1,18 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSocket } from "../../hooks/useSocket";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
+import {
+  getPlayerUUID,
+  getStoredPlayerName,
+  storePlayerName,
+} from "../../utils/playerIdentity";
 
 const ConnectionDialog: React.FC = () => {
   const [playerName, setPlayerName] = useState("");
-  const [roomId, setRoomId] = useState("");
+  const [galaxyId, setGalaxyId] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [playerUUID] = useState(getPlayerUUID()); // Get or generate UUID on mount
 
-  const { joinRoom } = useSocket();
+  const { joinGalaxy } = useSocket();
+
+  // Load stored player name on mount
+  useEffect(() => {
+    const storedName = getStoredPlayerName();
+    if (storedName) {
+      setPlayerName(storedName);
+      console.log(`👤 Loaded stored player name: ${storedName}`);
+    }
+  }, []);
   const {
-    isConnected,
+    currentGalaxy,
     showConnectionDialog,
     setPlayerName: setStorePlayerName,
-    setCurrentRoom,
     setShowConnectionDialog,
   } = useMultiplayerStore();
 
@@ -21,11 +35,14 @@ const ConnectionDialog: React.FC = () => {
 
     setIsConnecting(true);
     setStorePlayerName(playerName);
-    setCurrentRoom(roomId || "default");
+    storePlayerName(playerName); // Save name to localStorage
 
-    joinRoom(roomId || "default", playerName);
+    // Send join request to server with UUID
+    console.log(`🚀 Joining galaxy with UUID: ${playerUUID}`);
+    joinGalaxy(galaxyId || "default", playerName, playerUUID);
 
-    // Simulate connection delay
+    // Wait a bit then stop the loading state
+    // The dialog will close automatically when currentGalaxy is set by the server
     setTimeout(() => {
       setIsConnecting(false);
     }, 1000);
@@ -37,8 +54,8 @@ const ConnectionDialog: React.FC = () => {
     }
   };
 
-  // Hide the dialog if we're connected or not showing
-  if (isConnected || !showConnectionDialog) return null;
+  // Hide the dialog if we've joined a galaxy or dialog is manually hidden
+  if (currentGalaxy || !showConnectionDialog) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-auto">
@@ -70,14 +87,14 @@ const ConnectionDialog: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">
-              Room ID (optional)
+              Galaxy ID (optional)
             </label>
             <input
               type="text"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
+              value={galaxyId}
+              onChange={(e) => setGalaxyId(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Leave empty for default room"
+              placeholder="Leave empty for default galaxy"
               className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:outline-none focus:border-space-400"
             />
           </div>
@@ -88,7 +105,7 @@ const ConnectionDialog: React.FC = () => {
           disabled={!playerName.trim() || isConnecting}
           className="w-full bg-space-600 hover:bg-space-700 disabled:bg-white/10 disabled:text-white/50 text-white py-3 px-4 rounded-md transition-colors font-medium"
         >
-          {isConnecting ? "Connecting..." : "Join Game"}
+          {isConnecting ? "Joining Galaxy..." : "Join Game"}
         </button>
       </div>
     </div>

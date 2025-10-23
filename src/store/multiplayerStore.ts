@@ -3,32 +3,40 @@ import { Player } from "../types/game.types";
 
 interface MultiplayerStore {
   isConnected: boolean;
-  currentRoom: string | null;
+  currentGalaxy: string | null;
   playerName: string;
   players: Player[];
   showConnectionDialog: boolean;
+  playerHomeSystemId: string | null; // Current player's home system
+  playerHomePlanetId: string | null; // Current player's home planet
 
   // Actions
   setConnected: (connected: boolean) => void;
-  setCurrentRoom: (roomId: string | null) => void;
+  setCurrentGalaxy: (galaxyId: string | null) => void;
   setPlayerName: (name: string) => void;
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   setShowConnectionDialog: (show: boolean) => void;
+  setPlayerHomeSystemId: (systemId: string | null) => void;
+  setPlayerHomePlanetId: (planetId: string | null) => void;
 }
 
 export const useMultiplayerStore = create<MultiplayerStore>((set, get) => ({
   isConnected: false,
-  currentRoom: null,
+  currentGalaxy: null,
   playerName: "",
   players: [],
   showConnectionDialog: false,
+  playerHomeSystemId: null,
+  playerHomePlanetId: null,
 
   setConnected: (connected) => set({ isConnected: connected }),
-  setCurrentRoom: (roomId) => set({ currentRoom: roomId }),
+  setCurrentGalaxy: (galaxyId) => set({ currentGalaxy: galaxyId }),
   setPlayerName: (name) => set({ playerName: name }),
   setShowConnectionDialog: (show) => set({ showConnectionDialog: show }),
+  setPlayerHomeSystemId: (systemId) => set({ playerHomeSystemId: systemId }),
+  setPlayerHomePlanetId: (planetId) => set({ playerHomePlanetId: planetId }),
 
   addPlayer: (player) =>
     set((state) => ({

@@ -1,0 +1,295 @@
+{
+  "red_dwarf": {
+    "name": "Red Dwarf (M-type)",
+    "description": "Small, cool stars that make up the majority of stars in the galaxy",
+    "visual": {
+      "color": "#ff6b6b",
+      "glowColor": "#ff4444",
+      "size": 0.4,
+      "temperature": 3500,
+      "luminosity": 0.1
+    },
+    "habitableZone": {
+      "min": 0.1,
+      "max": 0.3
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 2,
+        "max": 5
+      },
+      "types": {
+        "terrestrial": 0.4,
+        "desert_world": 0.2,
+        "ice_world": 0.25,
+        "dwarf_planet": 0.1,
+        "lava_world": 0.05
+      },
+      "gasGiantProbability": 0.1
+    },
+    "systemAge": "ancient"
+  },
+  "orange_star": {
+    "name": "Orange Dwarf (K-type)",
+    "description": "Stable, long-lived stars slightly cooler than our Sun",
+    "visual": {
+      "color": "#ff8c42",
+      "glowColor": "#ff7722",
+      "size": 0.5,
+      "temperature": 4500,
+      "luminosity": 0.4
+    },
+    "habitableZone": {
+      "min": 0.4,
+      "max": 0.9
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 3,
+        "max": 6
+      },
+      "types": {
+        "terrestrial": 0.25,
+        "desert_world": 0.15,
+        "earth_like": 0.15,
+        "ice_world": 0.15,
+        "ocean_world": 0.1,
+        "gas_giant": 0.15,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.3
+    },
+    "systemAge": "mature"
+  },
+  "yellow_star": {
+    "name": "Yellow Star (G-type)",
+    "description": "Sun-like stars, ideal for supporting life",
+    "visual": {
+      "color": "#ffd700",
+      "glowColor": "#ffcc00",
+      "size": 0.6,
+      "temperature": 5800,
+      "luminosity": 1.0
+    },
+    "habitableZone": {
+      "min": 0.8,
+      "max": 1.5
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 4,
+        "max": 8
+      },
+      "types": {
+        "terrestrial": 0.2,
+        "desert_world": 0.1,
+        "earth_like": 0.2,
+        "ice_world": 0.1,
+        "ocean_world": 0.15,
+        "gas_giant": 0.15,
+        "ice_giant": 0.05,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.4
+    },
+    "systemAge": "mature"
+  },
+  "white_star": {
+    "name": "White Star (F-type)",
+    "description": "Hot, bright stars that age quickly",
+    "visual": {
+      "color": "#f0f8ff",
+      "glowColor": "#e0e8ff",
+      "size": 0.7,
+      "temperature": 7000,
+      "luminosity": 2.5
+    },
+    "habitableZone": {
+      "min": 1.2,
+      "max": 2.5
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 5,
+        "max": 9
+      },
+      "types": {
+        "terrestrial": 0.15,
+        "desert_world": 0.2,
+        "lava_world": 0.1,
+        "ice_world": 0.15,
+        "gas_giant": 0.2,
+        "ice_giant": 0.15,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.5
+    },
+    "systemAge": "young"
+  },
+  "blue_giant": {
+    "name": "Blue Giant (O/B-type)",
+    "description": "Massive, extremely hot and bright stars with short lifespans",
+    "visual": {
+      "color": "#4a9eff",
+      "glowColor": "#3080ff",
+      "size": 0.9,
+      "temperature": 20000,
+      "luminosity": 10.0
+    },
+    "habitableZone": {
+      "min": 3.0,
+      "max": 6.0
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 6,
+        "max": 12
+      },
+      "types": {
+        "terrestrial": 0.1,
+        "lava_world": 0.15,
+        "ice_world": 0.15,
+        "gas_giant": 0.3,
+        "ice_giant": 0.2,
+        "dwarf_planet": 0.1
+      },
+      "gasGiantProbability": 0.7
+    },
+    "systemAge": "young"
+  },
+  "red_giant": {
+    "name": "Red Giant",
+    "description": "Dying stars that have expanded to enormous sizes",
+    "visual": {
+      "color": "#ff4444",
+      "glowColor": "#ff2222",
+      "size": 1.2,
+      "temperature": 4000,
+      "luminosity": 100.0
+    },
+    "habitableZone": {
+      "min": 8.0,
+      "max": 15.0
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 3,
+        "max": 7
+      },
+      "types": {
+        "lava_world": 0.2,
+        "desert_world": 0.2,
+        "ice_world": 0.2,
+        "gas_giant": 0.2,
+        "ice_giant": 0.15,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.5
+    },
+    "systemAge": "old"
+  },
+  "white_dwarf": {
+    "name": "White Dwarf",
+    "description": "Dense remnants of dead stars, slowly cooling",
+    "visual": {
+      "color": "#f0f0f0",
+      "glowColor": "#e8e8e8",
+      "size": 0.3,
+      "temperature": 8000,
+      "luminosity": 0.01
+    },
+    "habitableZone": {
+      "min": 0.005,
+      "max": 0.02
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 1,
+        "max": 4
+      },
+      "types": {
+        "dwarf_planet": 0.4,
+        "ice_world": 0.3,
+        "terrestrial": 0.2,
+        "desert_world": 0.1
+      },
+      "gasGiantProbability": 0.05
+    },
+    "systemAge": "ancient"
+  },
+  "binary_star": {
+    "name": "Binary Star System",
+    "description": "Two stars orbiting their common center of mass",
+    "visual": {
+      "color": "#ffd700",
+      "glowColor": "#ffcc00",
+      "size": 0.5,
+      "temperature": 5800,
+      "luminosity": 1.2
+    },
+    "companion": {
+      "possibleTypes": ["orange_star", "red_dwarf", "white_star"],
+      "orbitalDistance": 3.0,
+      "orbitalSpeed": 0.15
+    },
+    "habitableZone": {
+      "min": 1.2,
+      "max": 2.5
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 3,
+        "max": 7
+      },
+      "types": {
+        "terrestrial": 0.2,
+        "desert_world": 0.15,
+        "earth_like": 0.1,
+        "ice_world": 0.15,
+        "ocean_world": 0.1,
+        "gas_giant": 0.2,
+        "ice_giant": 0.05,
+        "dwarf_planet": 0.05
+      },
+      "gasGiantProbability": 0.45
+    },
+    "systemAge": "mature"
+  },
+  "black_hole": {
+    "name": "Black Hole",
+    "description": "An infinitely dense singularity from a collapsed massive star",
+    "visual": {
+      "color": "#000000",
+      "glowColor": "#1a1a2e",
+      "size": 0.8,
+      "temperature": 1000000,
+      "luminosity": 0.0
+    },
+    "blackHoleProperties": {
+      "accretionDiskColor": "#ff6b35",
+      "accretionDiskInnerRadius": 1.5,
+      "accretionDiskOuterRadius": 3.5,
+      "eventHorizonRadius": 0.8,
+      "hawkingRadiation": true
+    },
+    "habitableZone": {
+      "min": 8.0,
+      "max": 20.0
+    },
+    "planetGeneration": {
+      "count": {
+        "min": 1,
+        "max": 3
+      },
+      "types": {
+        "barren_world": 0.3,
+        "frozen_world": 0.25,
+        "ice_world": 0.2,
+        "dwarf_planet": 0.15,
+        "ice_giant": 0.1
+      },
+      "gasGiantProbability": 0.1
+    },
+    "systemAge": "ancient"
+  }
+}
