@@ -34,12 +34,21 @@ const Spaceship: React.FC<SpaceshipProps> = ({ spaceship }) => {
   };
 
   return (
-    <group position={spaceship.position} onClick={handleClick}>
+    <group position={spaceship.position}>
       {/* Main ship body - bright glowing sphere */}
       <Sphere
         ref={meshRef}
         args={[spaceship.size * 0.33, 16, 16]}
         position={[0, 0, 0]}
+        onClick={handleClick}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "auto";
+        }}
       >
         <meshBasicMaterial
           color={spaceship.color}
@@ -49,8 +58,12 @@ const Spaceship: React.FC<SpaceshipProps> = ({ spaceship }) => {
         />
       </Sphere>
 
-      {/* Inner glow - brighter core */}
-      <Sphere args={[spaceship.size * 0.33 * 0.6, 12, 12]} position={[0, 0, 0]}>
+      {/* Inner glow - brighter core - non-interactive */}
+      <Sphere
+        args={[spaceship.size * 0.33 * 0.6, 12, 12]}
+        position={[0, 0, 0]}
+        raycast={() => null}
+      >
         <meshBasicMaterial
           color={spaceship.color}
           transparent
@@ -59,8 +72,12 @@ const Spaceship: React.FC<SpaceshipProps> = ({ spaceship }) => {
         />
       </Sphere>
 
-      {/* Outer glow - soft halo */}
-      <Sphere args={[spaceship.size * 0.33 * 2, 16, 16]} position={[0, 0, 0]}>
+      {/* Outer glow - soft halo - non-interactive */}
+      <Sphere
+        args={[spaceship.size * 0.33 * 2, 16, 16]}
+        position={[0, 0, 0]}
+        raycast={() => null}
+      >
         <meshBasicMaterial
           color={spaceship.color}
           transparent
@@ -69,9 +86,13 @@ const Spaceship: React.FC<SpaceshipProps> = ({ spaceship }) => {
         />
       </Sphere>
 
-      {/* Selection indicator */}
+      {/* Selection indicator - non-interactive */}
       {isSelected && (
-        <Sphere args={[spaceship.size * 0.33 * 3, 16, 16]} position={[0, 0, 0]}>
+        <Sphere
+          args={[spaceship.size * 0.33 * 3, 16, 16]}
+          position={[0, 0, 0]}
+          raycast={() => null}
+        >
           <meshBasicMaterial
             color="#ffffff"
             transparent

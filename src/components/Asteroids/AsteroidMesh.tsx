@@ -243,12 +243,7 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
   const isSelected = selectedId === asteroid.id;
 
   return (
-    <group
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-    >
+    <group>
       {/* Main asteroid mesh */}
       <mesh
         ref={meshRef}
@@ -264,11 +259,19 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
           debugAsteroidSize(asteroid.size);
           onClick?.();
         }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "auto";
+        }}
       />
 
-      {/* Selection highlight */}
+      {/* Selection highlight - non-interactive */}
       {isSelected && (
-        <mesh position={[0, 0, 0]}>
+        <mesh position={[0, 0, 0]} raycast={() => null}>
           <sphereGeometry args={[baseRadius * visibilityScale * 1.1, 16, 16]} />
           <meshBasicMaterial
             color="#00ff00"

@@ -141,6 +141,7 @@ export function createPlanet(
     },
     continents,
     cities,
+    volcanoes: [], // Empty array to maintain compatibility with saved data
     temperatureZones: {
       polar: 0.15,
       temperate: 0.45,

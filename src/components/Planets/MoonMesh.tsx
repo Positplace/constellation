@@ -59,7 +59,19 @@ export const MoonMesh: React.FC<MoonMeshProps> = ({
 
   return (
     <group>
-      <mesh onClick={handleClick} castShadow receiveShadow>
+      <mesh
+        onClick={handleClick}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "auto";
+        }}
+        castShadow
+        receiveShadow
+      >
         <sphereGeometry args={[moonRadiusUnits, 16, 16]} />
         <meshPhongMaterial
           color={moonColor}

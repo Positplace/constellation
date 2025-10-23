@@ -60,6 +60,14 @@ const CometMesh: React.FC<CometMeshProps> = ({
           e.stopPropagation();
           onClick?.();
         }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "auto";
+        }}
         scale={[1.5, 0.8, 0.9]} // Elongated ellipsoid
       >
         {/* Use icosahedron for bumpy, irregular surface */}

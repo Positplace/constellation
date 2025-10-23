@@ -50,14 +50,24 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
   const glowIntensity = hasStrongGlow ? (isWaterPlanet ? 0.95 : 1.0) : 0.6;
 
   return (
-    <group
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-    >
+    <group>
       {/* Main planet sphere */}
-      <mesh castShadow receiveShadow>
+      <mesh
+        castShadow
+        receiveShadow
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = "auto";
+        }}
+      >
         <sphereGeometry args={[radiusUnits, 128, 128]} />
         <meshPhongMaterial
           map={map}
@@ -79,9 +89,9 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
         />
       </mesh>
 
-      {/* Atmosphere */}
+      {/* Atmosphere - non-interactive */}
       {planet.atmosphere.present && (
-        <mesh>
+        <mesh raycast={() => null}>
           <sphereGeometry args={[radiusUnits * 1.06, 64, 64]} />
           <meshBasicMaterial
             color={planet.atmosphere.color}
@@ -92,8 +102,8 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
         </mesh>
       )}
 
-      {/* Inner glow - subtle atmospheric rim */}
-      <mesh>
+      {/* Inner glow - subtle atmospheric rim - non-interactive */}
+      <mesh raycast={() => null}>
         <sphereGeometry args={[radiusUnits * 1.08, 32, 32]} />
         <meshBasicMaterial
           color={glowColor}
@@ -104,8 +114,8 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
         />
       </mesh>
 
-      {/* Outer glow - soft halo */}
-      <mesh>
+      {/* Outer glow - soft halo - non-interactive */}
+      <mesh raycast={() => null}>
         <sphereGeometry args={[radiusUnits * 1.15, 32, 32]} />
         <meshBasicMaterial
           color={glowColor}
@@ -116,9 +126,9 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
         />
       </mesh>
 
-      {/* Extended glow for gas giants */}
+      {/* Extended glow for gas giants - non-interactive */}
       {hasStrongGlow && (
-        <mesh>
+        <mesh raycast={() => null}>
           <sphereGeometry args={[radiusUnits * 1.25, 32, 32]} />
           <meshBasicMaterial
             color={glowColor}
