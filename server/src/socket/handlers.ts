@@ -74,17 +74,6 @@ export function setupSocketHandlers(
     }
   });
 
-  // Handle turn progression
-  socket.on("next-turn", () => {
-    const galaxy = getPlayerGalaxy(socket, galaxies);
-    if (galaxy) {
-      galaxy.nextTurn();
-      socket
-        .to(galaxy.id)
-        .emit("turn-progressed", { turn: galaxy.gameState.currentTurn });
-    }
-  });
-
   // Handle play/pause toggle
   socket.on("toggle-play-pause", () => {
     const galaxy = getPlayerGalaxy(socket, galaxies);

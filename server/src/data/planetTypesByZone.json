@@ -18,12 +18,13 @@
   "goldilocks": {
     "description": "Habitable zone - Perfect for life",
     "planetTypes": [
-      { "type": "earth_like", "weight": 30, "cumulativeMax": 30 },
-      { "type": "ocean_world", "weight": 25, "cumulativeMax": 55 },
-      { "type": "terrestrial", "weight": 15, "cumulativeMax": 70 },
-      { "type": "desert_world", "weight": 15, "cumulativeMax": 85 },
-      { "type": "ice_world", "weight": 10, "cumulativeMax": 95 },
-      { "type": "gas_giant", "weight": 1, "cumulativeMax": 100 }
+      { "type": "earth_like", "weight": 25, "cumulativeMax": 25 },
+      { "type": "ocean_world", "weight": 22, "cumulativeMax": 47 },
+      { "type": "jungle_world", "weight": 18, "cumulativeMax": 65 },
+      { "type": "terrestrial", "weight": 13, "cumulativeMax": 78 },
+      { "type": "desert_world", "weight": 12, "cumulativeMax": 90 },
+      { "type": "ice_world", "weight": 8, "cumulativeMax": 98 },
+      { "type": "gas_giant", "weight": 2, "cumulativeMax": 100 }
     ]
   },
   "cold": {

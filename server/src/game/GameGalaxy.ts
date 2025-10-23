@@ -11,6 +11,41 @@ import {
   calculateConnectedSystemPosition,
 } from "../utils/systemFactory";
 import { saveGameGalaxy, loadGameGalaxy } from "./GamePersistence";
+import { PlanetType } from "../types/planet.types";
+
+/**
+ * Helper function for weighted random selection
+ * Uses a better hash function for seed-based randomness
+ */
+function weightedRandomSelect(
+  weights: Record<string, number>,
+  seed: number
+): string {
+  const entries = Object.entries(weights);
+  const totalWeight = entries.reduce((sum, [_, w]) => sum + w, 0);
+
+  // Better hash function for seed-based randomness (MurmurHash3-inspired)
+  let hash = seed;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+
+  // Convert to 0-1 range
+  const random = Math.abs(hash) / 0xffffffff;
+  const target = random * totalWeight;
+
+  let cumulative = 0;
+  for (const [key, weight] of entries) {
+    cumulative += weight;
+    if (target < cumulative) {
+      return key;
+    }
+  }
+
+  return entries[0][0]; // Fallback to first option
+}
 
 export class GameGalaxy {
   public id: string;
@@ -49,7 +84,6 @@ export class GameGalaxy {
       players: [],
       solarSystems: [],
       tunnels: [],
-      currentTurn: 1,
       isPlaying: false,
       gameTime: 0,
       activeView: "solar",
@@ -95,16 +129,25 @@ export class GameGalaxy {
       const homeSystem = this.generateHomeSystemForPlayer(player);
       player.homeSystemId = homeSystem.id;
 
-      // Find habitable planet in home system
-      const habitablePlanet = homeSystem.planets.find(
-        (p) => p.type === "earth_like" || p.type === "ocean_world"
+      // Find habitable planet in home system - recognize all habitable types
+      const habitablePlanetTypes: PlanetType[] = [
+        "earth_like",
+        "ocean_world",
+        "terrestrial",
+        "desert_world",
+        "jungle_world",
+        "ice_world",
+      ];
+
+      const habitablePlanet = homeSystem.planets.find((p) =>
+        habitablePlanetTypes.includes(p.type)
       );
       if (habitablePlanet) {
         player.homePlanetId = habitablePlanet.id;
         // Mark planet as having life
         habitablePlanet.hasLife = true;
         console.log(
-          `🏠 Home planet: ${habitablePlanet.name} in ${homeSystem.name}`
+          `🏠 Home planet: ${habitablePlanet.name} (${habitablePlanet.type}) in ${homeSystem.name}`
         );
       }
     }
@@ -128,11 +171,6 @@ export class GameGalaxy {
 
   addTunnel(tunnel: Tunnel): void {
     this.gameState.tunnels.push(tunnel);
-    this.persist();
-  }
-
-  nextTurn(): void {
-    this.gameState.currentTurn++;
     this.persist();
   }
 
@@ -165,30 +203,71 @@ export class GameGalaxy {
       Math.sin(angle) * distance,
     ];
 
-    // Generate a yellow star system (good for life)
+    // Randomly select a suitable star type for life-bearing systems
+    // Yellow stars are most common, but red dwarfs and white dwarfs can support life too
+    const starTypeWeights = {
+      yellow_star: 50, // Most Earth-like conditions
+      red_dwarf: 35, // Smaller, cooler, but can have habitable zones
+      white_dwarf: 15, // Rare but interesting
+    };
+    const selectedStarType = weightedRandomSelect(
+      starTypeWeights,
+      seed
+    ) as StarType;
+
+    // Generate the home system with selected star type
     const homeSystem = generateSolarSystem(
-      "yellow_star",
+      selectedStarType,
       seed,
       position,
       player.name + "'s Home"
     );
 
+    // Define interesting habitable planet types for home worlds
+    const habitablePlanetTypes: PlanetType[] = [
+      "earth_like",
+      "ocean_world",
+      "terrestrial",
+      "desert_world",
+      "jungle_world",
+      "ice_world",
+    ];
+
     // Ensure at least one habitable planet exists
-    let hasHabitablePlanet = homeSystem.planets.some(
-      (p) => p.type === "earth_like" || p.type === "ocean_world"
+    let hasHabitablePlanet = homeSystem.planets.some((p) =>
+      habitablePlanetTypes.includes(p.type)
     );
 
-    // If no habitable planet, convert the first planet to earth_like
+    // If no habitable planet, convert the first suitable planet to a random habitable type
     if (!hasHabitablePlanet && homeSystem.planets.length > 0) {
       const planetToConvert = homeSystem.planets[0];
-      planetToConvert.type = "earth_like";
-      planetToConvert.name = "Earth"; // or generate a name
-      console.log(`🌍 Converted ${planetToConvert.name} to earth_like planet`);
+
+      // Randomly select a habitable planet type with varied weights
+      const planetTypeWeights = {
+        earth_like: 18, // Balanced Earth-like world
+        ocean_world: 22, // Water-dominated world
+        terrestrial: 18, // Rocky world with varied terrain
+        desert_world: 18, // Arid but habitable world
+        jungle_world: 14, // Dense vegetation world
+        ice_world: 10, // Cold, harsh but survivable world
+      };
+
+      const selectedPlanetType = weightedRandomSelect(
+        planetTypeWeights,
+        seed + 1000
+      ) as PlanetType;
+      planetToConvert.type = selectedPlanetType;
+
+      console.log(
+        `🌍 Converted ${planetToConvert.name} to ${selectedPlanetType} home world`
+      );
     }
 
     this.gameState.solarSystems.push(homeSystem);
     console.log(
-      `🏠 Generated home system: ${homeSystem.name} at [${position
+      `🏠 Generated home system: ${
+        homeSystem.name
+      } (${selectedStarType}) at [${position
         .map((p) => p.toFixed(1))
         .join(", ")}]`
     );

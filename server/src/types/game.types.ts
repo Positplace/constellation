@@ -85,7 +85,6 @@ export interface GameState {
   players: Player[];
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
-  currentTurn: number;
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
   activeView: "solar" | "constellation";

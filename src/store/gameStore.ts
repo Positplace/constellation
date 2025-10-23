@@ -40,7 +40,6 @@ interface GameStore {
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
   currentSystemId: string | null;
-  currentTurn: number;
   isPlaying: boolean;
   gameTime: number; // Real-time game time in seconds
   timeScale: number; // 0..1 smooth playback factor
@@ -60,7 +59,6 @@ interface GameStore {
     starType?: StarType
   ) => SolarSystem;
   canAddConnection: (systemId: string) => boolean;
-  nextTurn: () => void;
   togglePlayPause: () => void;
   updateGameTime: (time: number) => void;
   setTimeScale: (scale: number) => void;
@@ -95,7 +93,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   solarSystems: [],
   tunnels: [],
   currentSystemId: null,
-  currentTurn: 1,
   isPlaying: false,
   gameTime: 0,
   timeScale: 0,
@@ -150,12 +147,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     throw new Error(
       "System generation must be requested from server via socket"
     );
-  },
-
-  nextTurn: () => {
-    set((state) => ({
-      currentTurn: state.currentTurn + 1,
-    }));
   },
 
   togglePlayPause: () => {

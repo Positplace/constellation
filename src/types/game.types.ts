@@ -100,7 +100,6 @@ export interface GameState {
   players: Player[];
   solarSystems: SolarSystem[];
   tunnels: Tunnel[];
-  currentTurn: number;
   activeView: "solar" | "constellation";
 }
 

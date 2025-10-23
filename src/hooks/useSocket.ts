@@ -50,6 +50,8 @@ export const useSocket = () => {
         console.log("👥 Players in galaxy:", data.gameState?.players);
         console.log("🏠 Player home system:", data.playerHomeSystemId);
         setCurrentGalaxy(data.galaxyId);
+        // Explicitly close the connection dialog
+        useMultiplayerStore.getState().setShowConnectionDialog(false);
 
         // Store player's home system and planet IDs
         if (data.playerHomeSystemId) {
@@ -125,11 +127,6 @@ export const useSocket = () => {
       socket.on("tunnel-constructed", (data) => {
         console.log("Tunnel constructed:", data.tunnel);
         // Add tunnel to game state
-      });
-
-      socket.on("turn-progressed", (data) => {
-        console.log("Turn progressed to:", data.turn);
-        // Update turn counter
       });
 
       socket.on("play-state-changed", (data) => {
@@ -286,12 +283,6 @@ export const useSocket = () => {
     }
   };
 
-  const nextTurn = () => {
-    if (socketRef.current) {
-      socketRef.current.emit("next-turn");
-    }
-  };
-
   const togglePlayPauseSocket = () => {
     if (socketRef.current) {
       socketRef.current.emit("toggle-play-pause");
@@ -374,7 +365,6 @@ export const useSocket = () => {
     joinGalaxy,
     changeView,
     constructTunnel,
-    nextTurn,
     togglePlayPauseSocket,
     updateGameTimeSocket,
     emitGenerateSystem,
