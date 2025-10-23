@@ -103,6 +103,7 @@ function calculateOrbitalParameters(
   habitableZoneMin: number,
   habitableZoneMax: number,
   systemOuterBoundary: number,
+  starSize: number,
   seed: number
 ) {
   let perihelion: number;
@@ -110,13 +111,16 @@ function calculateOrbitalParameters(
   let eccentricity: number;
   let inclination: number;
 
+  // Minimum safe perihelion: 1.5x star radius to prevent orbit inside star
+  // This allows for close grazing passes but prevents collisions
+  const minSafePerihelion = starSize * 1.5;
+
   switch (type) {
     case "short_period":
       // Short-period comets: 3-20 year orbits, perihelion near inner system
-      perihelion = randomRange(
-        habitableZoneMin * 0.3,
-        habitableZoneMin * 1.5,
-        seed
+      perihelion = Math.max(
+        minSafePerihelion,
+        randomRange(habitableZoneMin * 0.3, habitableZoneMin * 1.5, seed)
       );
       aphelion = randomRange(
         systemOuterBoundary * 0.8,
@@ -129,10 +133,9 @@ function calculateOrbitalParameters(
 
     case "halley_type":
       // Halley-type: 20-200 year orbits, moderate eccentricity
-      perihelion = randomRange(
-        habitableZoneMin * 0.5,
-        habitableZoneMax * 0.8,
-        seed
+      perihelion = Math.max(
+        minSafePerihelion,
+        randomRange(habitableZoneMin * 0.5, habitableZoneMax * 0.8, seed)
       );
       aphelion = randomRange(
         systemOuterBoundary * 1.5,
@@ -145,10 +148,9 @@ function calculateOrbitalParameters(
 
     case "long_period":
       // Long-period comets: 200+ year orbits, very eccentric
-      perihelion = randomRange(
-        habitableZoneMin * 0.4,
-        habitableZoneMax * 1.0,
-        seed
+      perihelion = Math.max(
+        minSafePerihelion,
+        randomRange(habitableZoneMin * 0.4, habitableZoneMax * 1.0, seed)
       );
       aphelion = randomRange(
         systemOuterBoundary * 3,
@@ -186,6 +188,7 @@ export function generateComet(params: CometGenerationParams): CometData {
     habitableZoneMin,
     habitableZoneMax,
     systemOuterBoundary,
+    starSize,
     seed,
   } = params;
 
@@ -198,6 +201,7 @@ export function generateComet(params: CometGenerationParams): CometData {
     habitableZoneMin,
     habitableZoneMax,
     systemOuterBoundary,
+    starSize,
     seed
   );
 
@@ -286,6 +290,7 @@ export function generateSystemComets(
   habitableZoneMax: number,
   systemOuterBoundary: number,
   starType: string,
+  starSize: number,
   seed: number
 ): CometData[] {
   const comets: CometData[] = [];
@@ -336,6 +341,7 @@ export function generateSystemComets(
       habitableZoneMin,
       habitableZoneMax,
       systemOuterBoundary,
+      starSize,
       seed: cometSeed,
     });
 

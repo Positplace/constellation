@@ -1,5 +1,6 @@
 import starConfigs from "../data/starConfigs.json";
 import generationConfig from "../data/generationConfig.json";
+import planetTypesByZone from "../data/planetTypesByZone.json";
 import { SolarSystem, StarType, StarData } from "../types/game.types";
 import { PlanetData, PlanetType } from "../types/planet.types";
 import { createPlanet } from "./planetFactory";
@@ -136,55 +137,39 @@ function selectPlanetTypeByZone(
   const coldZone = habitableZoneMax * 1.5;
   const outerZone = habitableZoneMax * 2.5;
 
-  // ZONE 1: INFERNO ZONE (< 50% of habitable zone min) - Always hot!
+  // Determine which zone we're in
+  let zoneName: keyof typeof planetTypesByZone;
+
   if (orbitalDistance < infernoZone) {
-    // Extremely hot - lava, volcanic, or barren worlds
-    if (rand < 50) return "lava_world";
-    if (rand < 80) return "volcanic_world";
-    return "barren_world";
-  }
-
-  // ZONE 2: HOT ZONE (50%-85% of habitable zone min) - Too hot for comfort
-  if (orbitalDistance < hotZone) {
-    if (rand < 40) return "volcanic_world";
-    if (rand < 70) return "desert_world";
-    return "barren_world";
-  }
-
-  // ZONE 3: GOLDILOCKS ZONE (habitable zone) - Perfect for life!
-  if (
+    zoneName = "inferno";
+  } else if (orbitalDistance < hotZone) {
+    zoneName = "hot";
+  } else if (
     orbitalDistance >= habitableZoneMin &&
     orbitalDistance <= habitableZoneMax
   ) {
-    if (rand < 30) return "earth_like";
-    if (rand < 55) return "ocean_world";
-    if (rand < 70) return "terrestrial"; // Habitable terrestrial
-    if (rand < 85) return "desert_world"; // Mars-like
-    if (rand < 95) return "ice_world"; // Cold edge
-    return "gas_giant";
+    zoneName = "goldilocks";
+  } else if (orbitalDistance < coldZone) {
+    zoneName = "cold";
+  } else if (orbitalDistance < outerZone) {
+    zoneName = "outer";
+  } else {
+    zoneName = "deep_space";
   }
 
-  // ZONE 4: COLD ZONE (100%-150% of habitable zone max) - Getting chilly
-  if (orbitalDistance < coldZone) {
-    if (rand < 40) return "ice_world";
-    if (rand < 60) return "frozen_world";
-    if (rand < 85) return "gas_giant"; // Jupiter-like
-    return "terrestrial";
+  // Get planet types for this zone
+  const zoneConfig = planetTypesByZone[zoneName];
+
+  // Select planet type based on cumulative probabilities
+  for (const planetTypeConfig of zoneConfig.planetTypes) {
+    if (rand < planetTypeConfig.cumulativeMax) {
+      return planetTypeConfig.type as PlanetType;
+    }
   }
 
-  // ZONE 5: OUTER ZONE (150%-250% of habitable zone max) - Very cold
-  if (orbitalDistance < outerZone) {
-    if (rand < 40) return "ice_giant"; // Neptune/Uranus
-    if (rand < 75) return "gas_giant"; // Saturn-like
-    if (rand < 90) return "frozen_world";
-    return "ice_world";
-  }
-
-  // ZONE 6: DEEP SPACE (> 250% of habitable zone max) - Frozen wasteland
-  if (rand < 50) return "frozen_world";
-  if (rand < 75) return "dwarf_planet";
-  if (rand < 90) return "ice_world";
-  return "ice_giant";
+  // Fallback to last type in the list (should never happen if probabilities sum to 100)
+  return zoneConfig.planetTypes[zoneConfig.planetTypes.length - 1]
+    .type as PlanetType;
 }
 
 /**
@@ -533,6 +518,7 @@ export function generateSolarSystem(
     habitableZoneMax,
     outerBoundary,
     selectedStarType,
+    star.size,
     systemSeed
   );
 

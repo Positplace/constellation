@@ -47,5 +47,6 @@ export interface CometGenerationParams {
   habitableZoneMin: number; // To determine perihelion
   habitableZoneMax: number; // To determine aphelion range
   systemOuterBoundary: number; // Maximum extent of system
+  starSize: number; // Visual radius of the star (to prevent orbits inside star)
   seed: number;
 }
