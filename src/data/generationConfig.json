@@ -1,7 +1,7 @@
 {
   "starTypeWeights": {
-    "red_dwarf": 40,
-    "orange_star": 20,
+    "red_dwarf": 30,
+    "orange_star": 10,
     "yellow_star": 15,
     "white_star": 10,
     "blue_giant": 5,
@@ -132,4 +132,3 @@
     }
   }
 }
-
