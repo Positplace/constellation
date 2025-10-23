@@ -70,6 +70,7 @@ export interface SolarSystem {
   nebulae?: NebulaData[]; // Optional nebulae
   dysonSphere?: DysonSphereData; // Optional Dyson Sphere megastructure (very rare)
   connections: string[]; // IDs of connected systems
+  maxConnections: number; // Maximum connections this system can have (1-5)
   discovered: boolean;
   colonized: boolean;
   seed: number;

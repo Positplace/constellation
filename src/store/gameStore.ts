@@ -149,7 +149,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   canAddConnection: (systemId: string) => {
     const system = get().solarSystems.find((s) => s.id === systemId);
     if (!system) return false;
-    return system.connections.length < 3;
+    return system.connections.length < system.maxConnections;
   },
 
   generateAndAddSystem: (fromSystemId?: string, starType?: StarType) => {
@@ -393,8 +393,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ),
         }));
 
+        // Migrate old solar systems to add maxConnections if missing
+        const migratedSystems = (data.solarSystems || []).map((system: any) => {
+          if (!system.maxConnections) {
+            // Default to 3 for backward compatibility with old saves
+            return { ...system, maxConnections: 3 };
+          }
+          return system;
+        });
+
         set({
-          solarSystems: data.solarSystems || [],
+          solarSystems: migratedSystems,
           tunnels: data.tunnels || [],
           currentSystemId: data.currentSystemId || null,
           currentTurn: data.currentTurn || 1,
@@ -640,6 +649,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newSystem.colonized = oldSystem.colonized;
       newSystem.connections = oldSystem.connections;
       newSystem.discovered = oldSystem.discovered;
+      // Preserve maxConnections if it existed, otherwise keep the newly generated one
+      if (oldSystem.maxConnections) {
+        newSystem.maxConnections = oldSystem.maxConnections;
+      }
       return newSystem;
     });
 

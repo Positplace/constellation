@@ -4,6 +4,7 @@ import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import Planet from "../Planets/Planet";
 import TunnelGate from "./TunnelGate";
+import UndiscoveredGate from "./UndiscoveredGate";
 import TravelAnimation from "./TravelAnimation";
 import Starfield from "../Background/Starfield";
 import { AsteroidBelt } from "../Asteroids/AsteroidBelt";
@@ -32,6 +33,7 @@ const SolarSystemView: React.FC = () => {
     startTime: number;
     initialCameraPos?: THREE.Vector3;
     initialCameraTarget?: THREE.Vector3;
+    isNewSystem?: boolean; // Track if this is a newly discovered system
   } | null>(null);
   // Track selection; camera distance should remain user-controlled
   const {
@@ -43,6 +45,8 @@ const SolarSystemView: React.FC = () => {
     setSelectedObject,
     setCurrentSystem,
     spaceships,
+    generateAndAddSystem,
+    canAddConnection,
   } = useGameStore();
   const { emitPlanetSelected, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
@@ -600,8 +604,31 @@ const SolarSystemView: React.FC = () => {
             ? 4 * progress * progress * progress
             : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-        // Get the exit gate position
-        const exitGatePos = new THREE.Vector3(...travelState.gatePosition);
+        // Calculate the exit gate position in the DESTINATION system
+        // We need to find where the gate back to the origin system is located
+        let exitGatePos = new THREE.Vector3(...travelState.gatePosition);
+
+        if (currentSystem) {
+          // Find the index of the connection back to the origin system
+          const connectionIndex = currentSystem.connections.indexOf(
+            travelState.fromSystemId
+          );
+
+          if (connectionIndex !== -1) {
+            // Calculate gate position using the same logic as the gate rendering
+            const totalGates = currentSystem.maxConnections;
+            const angleStep = (Math.PI * 2) / totalGates;
+            const angle = connectionIndex * angleStep;
+            const gateDistance = 15;
+
+            exitGatePos = new THREE.Vector3(
+              Math.cos(angle) * gateDistance,
+              0,
+              Math.sin(angle) * gateDistance
+            );
+          }
+        }
+
         const finalTarget = new THREE.Vector3(0, 0, 0);
 
         // Calculate final position to maintain original camera angle and distance
@@ -623,15 +650,11 @@ const SolarSystemView: React.FC = () => {
           finalPos = finalTarget.clone().add(originalOffset);
         }
 
-        // Start slightly ahead of the gate
+        // Start slightly ahead of the gate (10% offset toward center)
         const startPos = exitGatePos
           .clone()
           .add(
-            new THREE.Vector3(
-              -travelState.gatePosition[0] * 0.1,
-              0,
-              -travelState.gatePosition[2] * 0.1
-            )
+            new THREE.Vector3(-exitGatePos.x * 0.1, 0, -exitGatePos.z * 0.1)
           );
 
         // Interpolate position
@@ -1021,27 +1044,97 @@ const SolarSystemView: React.FC = () => {
     });
   };
 
+  const handleUndiscoveredGateClick = (
+    gatePosition: [number, number, number]
+  ) => {
+    if (!currentSystemId || !controlsRef.current) return;
+
+    const currentSys = currentSystem;
+    if (!currentSys) return;
+
+    // Check if we can add more connections
+    if (!canAddConnection(currentSystemId)) {
+      alert(
+        `This system has reached the maximum of ${currentSys.maxConnections} connections!`
+      );
+      return;
+    }
+
+    const controls = controlsRef.current;
+    const cam = controls.object as THREE.PerspectiveCamera;
+
+    try {
+      // Generate new system WITHOUT connecting it yet - we'll connect during warp phase
+      const newSystem = generateAndAddSystem(currentSystemId);
+      console.log(
+        `Generated new system: ${newSystem.name} (ID: ${newSystem.id})`
+      );
+
+      // Clear selection when traveling
+      setSelectedObject(null);
+
+      // Start travel animation with approach phase, marking it as a new system
+      setTravelState({
+        active: true,
+        fromSystemId: currentSystemId,
+        toSystemId: newSystem.id,
+        gatePosition,
+        phase: "approach",
+        startTime: Date.now(),
+        initialCameraPos: cam.position.clone(),
+        initialCameraTarget: controls.target.clone(),
+        isNewSystem: true, // Mark this as a newly discovered system
+      });
+
+      // Emit to server if connected
+      if (isConnected) {
+        // TODO: emit system generated event
+      }
+    } catch (error) {
+      console.error("Failed to generate system:", error);
+      alert("Failed to generate new system");
+    }
+  };
+
   const completeTravelAnimation = () => {
     // Clear travel state
     setTravelState(null);
   };
 
-  // Calculate tunnel gate data for connected systems
-  const tunnelGates = useMemo(() => {
-    if (!currentSystem) return [];
+  // Calculate tunnel gate data for connected systems and undiscovered gates
+  const { tunnelGates, undiscoveredGates } = useMemo(() => {
+    if (!currentSystem) return { tunnelGates: [], undiscoveredGates: [] };
 
-    return currentSystem?.connections
+    // If we're traveling to a newly discovered system from THIS system, hide that connection and show it as undiscovered
+    // Only apply this filter when we're still in the origin system (not after we've arrived at destination)
+    const pendingSystemId =
+      travelState?.isNewSystem && travelState.fromSystemId === currentSystemId
+        ? travelState.toSystemId
+        : null;
+
+    // Calculate total gates needed (connected + undiscovered)
+    const totalGates = currentSystem.maxConnections;
+
+    // Filter out the pending connection when counting (only in origin system during travel)
+    const actualConnections = currentSystem.connections.filter(
+      (id) => id !== pendingSystemId
+    );
+    const connectedCount = actualConnections.length;
+    const undiscoveredCount = totalGates - connectedCount;
+
+    // Calculate angle step for evenly spacing all gates
+    const angleStep = (Math.PI * 2) / totalGates;
+    const gateDistance = 15; // Distance from sun
+
+    // Connected gates (excluding the pending one)
+    const connectedGates = actualConnections
       .map((connectedSystemId, index) => {
         const connectedSystem = solarSystems.find(
           (s) => s.id === connectedSystemId
         );
         if (!connectedSystem) return null;
 
-        // Calculate position for tunnel gate (evenly spaced around the system)
-        const angleStep =
-          (Math.PI * 2) / (currentSystem?.connections?.length || 1);
         const angle = index * angleStep;
-        const gateDistance = 15; // Distance from sun
         const position: [number, number, number] = [
           Math.cos(angle) * gateDistance,
           0,
@@ -1068,7 +1161,26 @@ const SolarSystemView: React.FC = () => {
       connectedSystemName: string;
       connectedStarColor: string;
     }>;
-  }, [currentSystem, solarSystems]);
+
+    // Undiscovered gates (start after connected gates)
+    // This will include the pending connection as undiscovered during travel
+    const undiscovered = Array.from({ length: undiscoveredCount }, (_, i) => {
+      const gateIndex = connectedCount + i;
+      const angle = gateIndex * angleStep;
+      const position: [number, number, number] = [
+        Math.cos(angle) * gateDistance,
+        0,
+        Math.sin(angle) * gateDistance,
+      ];
+
+      return {
+        id: `undiscovered-${gateIndex}`,
+        position,
+      };
+    });
+
+    return { tunnelGates: connectedGates, undiscoveredGates: undiscovered };
+  }, [currentSystem, solarSystems, travelState, currentSystemId]);
 
   // Determine if we're in the tunnel phase
   const isInTunnelPhase = travelState?.active && travelState.phase === "warp";
@@ -1096,8 +1208,16 @@ const SolarSystemView: React.FC = () => {
                 emitCurrentSystemChanged(travelState.toSystemId);
               }
             }
+            // Clear isNewSystem flag when we arrive - the discovery is complete!
             setTravelState((prev) =>
-              prev ? { ...prev, phase: "exit", startTime: Date.now() } : null
+              prev
+                ? {
+                    ...prev,
+                    phase: "exit",
+                    startTime: Date.now(),
+                    isNewSystem: false,
+                  }
+                : null
             );
           }}
         />
@@ -1428,6 +1548,15 @@ const SolarSystemView: React.FC = () => {
           connectedSystemName={gate.connectedSystemName}
           connectedStarColor={gate.connectedStarColor}
           onClick={() => handleTravelToSystem(gate.id, gate.position)}
+        />
+      ))}
+
+      {/* Undiscovered Gates for future connections */}
+      {undiscoveredGates.map((gate) => (
+        <UndiscoveredGate
+          key={gate.id}
+          position={gate.position}
+          onClick={() => handleUndiscoveredGateClick(gate.position)}
         />
       ))}
 

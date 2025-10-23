@@ -21,6 +21,7 @@ const ConstellationView: React.FC = () => {
     constellationCameraState,
     saveConstellationCameraState,
     updateSystemPosition,
+    clearSavedGame,
   } = useGameStore();
   const { emitSystemGenerated, emitCurrentSystemChanged } = useSocket();
   const { isConnected } = useMultiplayerStore();
@@ -38,8 +39,13 @@ const ConstellationView: React.FC = () => {
   const handleExplore = () => {
     if (!currentSystemId) return;
 
+    const currentSystem = solarSystems.find((s) => s.id === currentSystemId);
     if (!canAddConnection(currentSystemId)) {
-      alert("This system has reached the maximum of 3 connections!");
+      alert(
+        `This system has reached the maximum of ${
+          currentSystem?.maxConnections || 3
+        } connections!`
+      );
       return;
     }
 
@@ -299,7 +305,13 @@ const ConstellationView: React.FC = () => {
                   </mesh>
 
                   {/* Polar jet - top */}
-                  <mesh position={[0, isDragging ? 0.5 : isSelected ? 0.4 : 0.35, 0]}>
+                  <mesh
+                    position={[
+                      0,
+                      isDragging ? 0.5 : isSelected ? 0.4 : 0.35,
+                      0,
+                    ]}
+                  >
                     <cylinderGeometry
                       args={[
                         0.02,
@@ -317,7 +329,13 @@ const ConstellationView: React.FC = () => {
                   </mesh>
 
                   {/* Polar jet - bottom */}
-                  <mesh position={[0, isDragging ? -0.5 : isSelected ? -0.4 : -0.35, 0]}>
+                  <mesh
+                    position={[
+                      0,
+                      isDragging ? -0.5 : isSelected ? -0.4 : -0.35,
+                      0,
+                    ]}
+                  >
                     <cylinderGeometry
                       args={[
                         0.01,
@@ -336,7 +354,11 @@ const ConstellationView: React.FC = () => {
 
                   {/* Hawking radiation glow */}
                   <Sphere
-                    args={[isDragging ? 0.25 : isSelected ? 0.22 : 0.18, 16, 16]}
+                    args={[
+                      isDragging ? 0.25 : isSelected ? 0.22 : 0.18,
+                      16,
+                      16,
+                    ]}
                   >
                     <meshBasicMaterial
                       color="#4a5fff"
@@ -358,7 +380,11 @@ const ConstellationView: React.FC = () => {
 
                   {/* Primary star glow */}
                   <Sphere
-                    args={[isDragging ? 0.35 : isSelected ? 0.28 : 0.22, 16, 16]}
+                    args={[
+                      isDragging ? 0.35 : isSelected ? 0.28 : 0.22,
+                      16,
+                      16,
+                    ]}
                     position={[-0.08, 0, 0]}
                   >
                     <meshBasicMaterial
@@ -379,7 +405,11 @@ const ConstellationView: React.FC = () => {
 
                   {/* Companion star glow */}
                   <Sphere
-                    args={[isDragging ? 0.28 : isSelected ? 0.22 : 0.18, 16, 16]}
+                    args={[
+                      isDragging ? 0.28 : isSelected ? 0.22 : 0.18,
+                      16,
+                      16,
+                    ]}
                     position={[0.08, 0, 0]}
                   >
                     <meshBasicMaterial
@@ -564,7 +594,7 @@ const ConstellationView: React.FC = () => {
       <ambientLight intensity={0.3} />
       <pointLight position={[0, 0, 0]} intensity={1} color="#ffffff" />
 
-      {/* Explore Button */}
+      {/* Control Buttons */}
       <Html fullscreen>
         <div
           style={{
@@ -573,8 +603,13 @@ const ConstellationView: React.FC = () => {
             right: "20px",
             zIndex: 10,
             pointerEvents: draggingSystemId ? "none" : "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            alignItems: "flex-end",
           }}
         >
+          {/* Explore Button */}
           <button
             onClick={handleExplore}
             disabled={!canExplore}
@@ -622,9 +657,51 @@ const ConstellationView: React.FC = () => {
                   marginLeft: "4px",
                 }}
               >
-                ({currentSystem.connections.length}/3)
+                ({currentSystem.connections.length}/
+                {currentSystem.maxConnections})
               </span>
             )}
+          </button>
+
+          {/* Reset Button */}
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Are you sure you want to reset the game? This will clear all progress and return to the starting system."
+                )
+              ) {
+                clearSavedGame();
+              }
+            }}
+            style={{
+              background: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
+              color: "white",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: "8px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)",
+              transition: "all 0.3s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow =
+                "0 6px 20px rgba(220, 38, 38, 0.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 4px 15px rgba(220, 38, 38, 0.4)";
+            }}
+          >
+            <span style={{ fontSize: "16px" }}>🔄</span>
+            <span>Reset Game</span>
           </button>
         </div>
       </Html>

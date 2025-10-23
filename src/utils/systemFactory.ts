@@ -584,6 +584,16 @@ export function generateSolarSystem(
     );
   }
 
+  // Determine max connections (1-5) based on weighted random
+  // 1 = dead end/start (15%), 2 = low connectivity (25%), 3 = normal (35%), 4 = hub (20%), 5 = super node (5%)
+  const connectionRoll = randomRange(0, 100, systemSeed + 8888);
+  let maxConnections: number;
+  if (connectionRoll < 15) maxConnections = 1;
+  else if (connectionRoll < 40) maxConnections = 2;
+  else if (connectionRoll < 75) maxConnections = 3;
+  else if (connectionRoll < 95) maxConnections = 4;
+  else maxConnections = 5;
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: systemId,
@@ -596,6 +606,7 @@ export function generateSolarSystem(
     nebulae: nebulae.length > 0 ? nebulae : undefined,
     dysonSphere,
     connections: [],
+    maxConnections,
     discovered: true,
     colonized: false,
     seed: systemSeed,
