@@ -211,12 +211,12 @@ export function generateSolarSystem(
     for (const type of starTypes) {
       totalWeight += (weights as any)[type];
     }
-    
+
     // Select using weighted random
     const roll = randomRange(0, totalWeight, systemSeed);
     let currentWeight = 0;
     selectedStarType = "yellow_star"; // Default fallback
-    
+
     for (const type of starTypes) {
       currentWeight += (weights as any)[type];
       if (roll < currentWeight) {
@@ -553,8 +553,19 @@ export function generateSolarSystem(
   const dysonRoll = randomRange(0, 1, systemSeed + 9999);
 
   // Get star-specific multiplier from config
-  const starMultiplier = (dysonConfig.starTypeMultipliers as any)[selectedStarType] || 1.0;
+  // Use ?? instead of || to allow 0.0 values (|| treats 0 as falsy)
+  const starMultiplier =
+    (dysonConfig.starTypeMultipliers as any)[selectedStarType] ?? 1.0;
   const dysonChance = dysonConfig.baseChance * starMultiplier;
+
+  // Debug: Show Dyson sphere check for black holes
+  if (selectedStarType === "black_hole") {
+    console.log(
+      `🕳️ Dyson check for black hole: multiplier=${starMultiplier}, chance=${dysonChance}, roll=${dysonRoll.toFixed(
+        3
+      )}`
+    );
+  }
 
   if (dysonChance > 0 && dysonRoll < dysonChance) {
     // Random completion from config range

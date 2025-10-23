@@ -125,6 +125,7 @@ const SolarSystemView: React.FC = () => {
     if (!currentSystem) return 12;
 
     const starSize = currentSystem.star.size;
+    const isBlackHole = currentSystem.star.type === "black_hole";
     let maxDistance = 0;
 
     // Check planets
@@ -141,6 +142,37 @@ const SolarSystemView: React.FC = () => {
         const visualDistance = belt.outerRadius * 1.5;
         maxDistance = Math.max(maxDistance, visualDistance);
       }
+    }
+
+    // Black holes need special handling - they have large accretion disks and gravitational lensing
+    if (isBlackHole) {
+      // Account for accretion disk size (typically ~3.5 star radius)
+      const accretionDiskSize = starSize * 3.5;
+      const blackHoleMinDistance = accretionDiskSize * 4; // Give plenty of space to see the lensing effects
+
+      if (maxDistance > 0) {
+        const cameraDistance = Math.max(
+          blackHoleMinDistance,
+          maxDistance * 1.5
+        );
+        console.log(
+          `🕳️ Black hole camera: accretionDisk=${accretionDiskSize.toFixed(
+            2
+          )}, maxDist=${maxDistance.toFixed(
+            2
+          )}, camera=${cameraDistance.toFixed(2)}`
+        );
+        return cameraDistance;
+      }
+
+      // Even if no objects, black hole needs more distance to be fully visible
+      const cameraDistance = Math.max(blackHoleMinDistance, 12);
+      console.log(
+        `🕳️ Black hole camera (empty system): accretionDisk=${accretionDiskSize.toFixed(
+          2
+        )}, camera=${cameraDistance.toFixed(2)}`
+      );
+      return cameraDistance;
     }
 
     // If we have objects, zoom to show them all
