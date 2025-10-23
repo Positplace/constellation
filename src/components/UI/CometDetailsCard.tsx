@@ -57,10 +57,7 @@ export const CometDetailsCard: React.FC<CometDetailsCardProps> = ({
       : "text-gray-400";
 
   return (
-    <div
-      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-      style={{ pointerEvents: "auto" }}
-    >
+    <div className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pointer-events-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -223,7 +220,8 @@ export const CometDetailsCard: React.FC<CometDetailsCardProps> = ({
             <div className="text-xs text-gray-300 space-y-1">
               <div>Length: ~{(comet.tail.length * 100000).toFixed(0)} km</div>
               <div className="text-gray-400">
-                Beautiful plume of gas and dust ionized by solar radiation, pointing away from the star
+                Beautiful plume of gas and dust ionized by solar radiation,
+                pointing away from the star
               </div>
             </div>
           </div>

@@ -52,10 +52,7 @@ export const AsteroidDetailsCard: React.FC<AsteroidDetailsCardProps> = ({
       : Math.floor(seededRandom(asteroid.seed + 888) * 500);
 
   return (
-    <div
-      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-      style={{ pointerEvents: "auto" }}
-    >
+    <div className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pointer-events-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>

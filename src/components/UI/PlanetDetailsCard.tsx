@@ -82,10 +82,7 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
     return destinations;
   };
   return (
-    <div
-      className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-      style={{ pointerEvents: "auto" }}
-    >
+    <div className="fixed bottom-4 left-4 z-[60] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 w-96 max-h-[70vh] text-white shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pointer-events-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -388,8 +385,7 @@ const LaunchShipDialog: React.FC<{
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80]"
-      style={{ pointerEvents: "auto" }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] pointer-events-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();

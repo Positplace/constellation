@@ -240,10 +240,7 @@ const HUD: React.FC = () => {
     <>
       {/* Bottom Right - System Outline */}
       {activeView === "solar" && currentSystem && (
-        <div
-          className="fixed bottom-4 right-4 z-[60]"
-          style={{ pointerEvents: "auto" }}
-        >
+        <div className="fixed bottom-4 right-4 z-[60] pointer-events-auto">
           <div className="bg-black/90 border-2 border-cyan-500 rounded px-3 py-2 text-xs text-white shadow-2xl max-h-[40vh] overflow-y-auto min-w-[200px] max-w-[250px]">
             <div className="space-y-0.5">
               {/* Sun */}
@@ -373,7 +370,7 @@ const HUD: React.FC = () => {
       )}
 
       {/* Top Right - Game Controls */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4 z-50 pointer-events-auto">
         <div className="glass-panel p-4 space-y-3">
           <div className="text-sm text-white/70">
             <div className="flex items-center space-x-3">
@@ -571,7 +568,7 @@ const LaunchShipDialog: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 pointer-events-auto">
       <div
         className="bg-gray-900 border border-white/20 rounded-lg p-4 max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}

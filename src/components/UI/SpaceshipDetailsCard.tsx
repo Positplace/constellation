@@ -199,7 +199,7 @@ export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
   const statusInfo = getStatusInfo();
 
   return (
-    <div className="fixed bottom-4 left-4 w-80 bg-black/90 border border-white/20 rounded-lg p-4 text-white shadow-2xl z-50">
+    <div className="fixed bottom-4 left-4 w-80 bg-black/90 border border-white/20 rounded-lg p-4 text-white shadow-2xl z-50 pointer-events-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-cyan-300">Spaceship Status</h2>

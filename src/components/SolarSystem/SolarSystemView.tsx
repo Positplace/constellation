@@ -675,7 +675,8 @@ const SolarSystemView: React.FC = () => {
   });
 
   useEffect(() => {
-    if (controlsRef.current && selectedPos) {
+    // Don't immediately jump camera if a zoom animation is active
+    if (controlsRef.current && selectedPos && !zoomAnimRef.current.active) {
       const controls = controlsRef.current;
       const cam = controls.object as THREE.PerspectiveCamera;
       // Preserve current camera offset vector relative to target
@@ -1274,6 +1275,14 @@ const SolarSystemView: React.FC = () => {
               e.stopPropagation();
               setSelectedObject({ id: currentSystem.star.id, type: "sun" });
             }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = "auto";
+            }}
           >
             <meshBasicMaterial color={SUN_COLOR} />
           </Sphere>
@@ -1283,10 +1292,7 @@ const SolarSystemView: React.FC = () => {
             args={[SUN_RADIUS_UNITS * 1.15, 32, 32]}
             position={[0, 0, 0]}
             renderOrder={10}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-            }}
+            raycast={() => null}
           >
             <meshBasicMaterial
               color={SUN_COLOR}
@@ -1303,10 +1309,7 @@ const SolarSystemView: React.FC = () => {
             args={[SUN_RADIUS_UNITS * 1.4, 32, 32]}
             position={[0, 0, 0]}
             renderOrder={10}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-            }}
+            raycast={() => null}
           >
             <meshBasicMaterial
               color={SUN_GLOW_COLOR}
@@ -1323,10 +1326,7 @@ const SolarSystemView: React.FC = () => {
             args={[SUN_RADIUS_UNITS * 1.8, 32, 32]}
             position={[0, 0, 0]}
             renderOrder={10}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-            }}
+            raycast={() => null}
           >
             <meshBasicMaterial
               color={SUN_GLOW_COLOR}
@@ -1343,10 +1343,7 @@ const SolarSystemView: React.FC = () => {
             args={[SUN_RADIUS_UNITS * 2.5, 32, 32]}
             position={[0, 0, 0]}
             renderOrder={10}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedObject({ id: currentSystem.star.id, type: "sun" });
-            }}
+            raycast={() => null}
           >
             <meshBasicMaterial
               color={SUN_GLOW_COLOR}
@@ -1616,7 +1613,7 @@ const SolarSystemView: React.FC = () => {
       {/* {process.env.NODE_ENV === "development" && <SimpleAsteroidTest />} */}
 
       {/* Star Name Display - Top of screen */}
-      <Html fullscreen>
+      <Html fullscreen style={{ pointerEvents: "none" }}>
         <div
           style={{
             position: "absolute",

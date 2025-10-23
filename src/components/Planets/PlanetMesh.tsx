@@ -141,7 +141,7 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
       )}
 
       {/* Rotation marker - a small dot to make rotation visible */}
-      <mesh position={[radiusUnits * 0.95, 0, 0]}>
+      <mesh position={[radiusUnits * 0.95, 0, 0]} raycast={() => null}>
         <sphereGeometry args={[radiusUnits * 0.05, 16, 16]} />
         <meshBasicMaterial color="#ff0000" />
       </mesh>
