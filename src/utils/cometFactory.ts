@@ -6,55 +6,23 @@ import {
   CometComposition,
   CometTailData,
 } from "../types/comet.types";
-
-// Comet name components for procedural generation
-const COMET_PREFIXES = [
-  "Halley's",
-  "Swift",
-  "Tuttle's",
-  "Encke's",
-  "Brorsen",
-  "Biela's",
-  "Faye's",
-  "D'Arrest",
-  "Tempel",
-  "Giacobini",
-  "Brooks",
-  "Finlay",
-  "Lexell's",
-  "Olbers",
-  "Pons",
-  "Westphal",
-  "Hale",
-  "Kohoutek",
-  "Hyakutake",
-  "McNaught",
-];
-
-const COMET_SUFFIXES = [
-  "Comet",
-  "Wanderer",
-  "Visitor",
-  "Traveler",
-  "Runner",
-  "Streak",
-  "Flash",
-  "Bolt",
-];
+import generationConfig from "../data/generationConfig.json";
+import cometNamesConfig from "../data/names/cometNames.json";
 
 /**
- * Generate a comet name
+ * Generate a comet name from config
  */
 function generateCometName(seed: number, type: CometType): string {
-  const prefixIndex = seed % COMET_PREFIXES.length;
+  const prefixIndex = seed % cometNamesConfig.prefixes.length;
   const suffixIndex =
-    Math.floor(seed / COMET_PREFIXES.length) % COMET_SUFFIXES.length;
+    Math.floor(seed / cometNamesConfig.prefixes.length) %
+    cometNamesConfig.suffixes.length;
 
   if (type === "long_period" && seed % 3 === 0) {
-    return `C/${1900 + (seed % 200)}-${COMET_PREFIXES[prefixIndex]}`;
+    return `C/${1900 + (seed % 200)}-${cometNamesConfig.prefixes[prefixIndex]}`;
   }
 
-  return `${COMET_PREFIXES[prefixIndex]} ${COMET_SUFFIXES[suffixIndex]}`;
+  return `${cometNamesConfig.prefixes[prefixIndex]} ${cometNamesConfig.suffixes[suffixIndex]}`;
 }
 
 /**
@@ -322,70 +290,29 @@ export function generateSystemComets(
 ): CometData[] {
   const comets: CometData[] = [];
 
-  // Determine number of comets based on star type
-  // Older, more stable systems have fewer active comets
-  let cometCount = 0;
-  let shortPeriodChance = 0;
-  let halleyTypeChance = 0;
-  let longPeriodChance = 0;
+  // Get comet configuration from JSON
+  const cometConfig =
+    (generationConfig.cometGeneration as any)[starType] ||
+    (generationConfig.cometGeneration as any)["yellow_star"];
 
-  switch (starType) {
-    case "red_dwarf":
-    case "white_dwarf":
-      // Old systems, few comets left
-      cometCount = randomInt(0, 1, seed);
-      shortPeriodChance = 0.5;
-      halleyTypeChance = 0.3;
-      longPeriodChance = 0.2;
-      break;
+  // Determine number of comets based on configuration
+  const cometCount = randomInt(
+    cometConfig.count.min,
+    cometConfig.count.max,
+    seed
+  );
 
-    case "orange_star":
-    case "yellow_star":
-      // Mature systems, moderate comet activity
-      cometCount = randomInt(1, 2, seed);
-      shortPeriodChance = 0.4;
-      halleyTypeChance = 0.35;
-      longPeriodChance = 0.25;
-      break;
+  // Get type weights from configuration
+  const shortPeriodChance = cometConfig.typeWeights.short_period;
+  const halleyTypeChance = cometConfig.typeWeights.halley_type;
+  const longPeriodChance = cometConfig.typeWeights.long_period;
 
-    case "white_star":
-    case "blue_giant":
-      // Young systems, slightly more comets
-      cometCount = randomInt(1, 2, seed);
-      shortPeriodChance = 0.3;
-      halleyTypeChance = 0.3;
-      longPeriodChance = 0.4;
-      break;
-
-    case "red_giant":
-      // Dying star, comets mostly vaporized or ejected
-      cometCount = randomInt(0, 1, seed);
-      shortPeriodChance = 0.1;
-      halleyTypeChance = 0.2;
-      longPeriodChance = 0.7;
-      break;
-
-    case "binary_star":
-      // Binary systems can have disrupted comet populations
-      cometCount = randomInt(1, 2, seed);
-      shortPeriodChance = 0.2;
-      halleyTypeChance = 0.4;
-      longPeriodChance = 0.4;
-      break;
-
-    case "black_hole":
-      // Black holes rarely have comets (most were accreted or ejected)
-      cometCount = randomInt(0, 1, seed);
-      shortPeriodChance = 0.0;
-      halleyTypeChance = 0.2;
-      longPeriodChance = 0.8;
-      break;
-
-    default:
-      cometCount = randomInt(0, 2, seed);
-      shortPeriodChance = 0.4;
-      halleyTypeChance = 0.3;
-      longPeriodChance = 0.3;
+  // Apply global rarity multiplier
+  if (
+    randomRange(0, 1, seed + 99999) >
+    generationConfig.cometGeneration.globalRarityMultiplier
+  ) {
+    return [];
   }
 
   // Generate comets

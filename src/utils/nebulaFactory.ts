@@ -1,4 +1,5 @@
 import nebulaConfigs from "../data/nebulaConfigs.json";
+import generationConfig from "../data/generationConfig.json";
 import { NebulaData, NebulaType, NebulaConfig } from "../types/nebula.types";
 import { randomRange, randomInt } from "./noiseUtils";
 import { StarType } from "../types/game.types";
@@ -25,13 +26,13 @@ export function generateSystemNebulae(
     const nebulaType = nebulaTypes[i];
     const config = (nebulaConfigs as any)[nebulaType] as NebulaConfig;
 
-    // Check if this nebula type prefers this star type
+    // Check if this nebula type prefers this star type using config
     let rarityMultiplier = 1;
     if (config.preferredStarTypes && config.preferredStarTypes.length > 0) {
       if (config.preferredStarTypes.includes(starType)) {
-        rarityMultiplier = 2; // Double the chance for preferred star types
+        rarityMultiplier = generationConfig.nebulaGeneration.rarityMultipliers.preferredStarType;
       } else {
-        rarityMultiplier = 0.5; // Half the chance for non-preferred star types
+        rarityMultiplier = generationConfig.nebulaGeneration.rarityMultipliers.nonPreferredStarType;
       }
     }
 

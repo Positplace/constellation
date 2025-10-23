@@ -1,5 +1,7 @@
 import { randomInt, randomRange } from "./noiseUtils";
 import { SIMPLE_ASTEROID_SIZES } from "./asteroidSizingSimple";
+import generationConfig from "../data/generationConfig.json";
+import asteroidNamesConfig from "../data/names/asteroidNames.json";
 import {
   AsteroidData,
   AsteroidBeltData,
@@ -9,83 +11,12 @@ import {
   ResourceData,
 } from "../types/asteroid.types";
 
-// Material distribution based on belt type and location
-const MATERIAL_DISTRIBUTIONS = {
-  inner: {
-    silicate: 70,
-    iron: 25,
-    nickel: 3,
-    carbonaceous: 1,
-    ice: 0,
-    platinum: 0.5,
-    gold: 0.3,
-    rare_earth: 0.2,
-  },
-  outer: {
-    silicate: 15,
-    iron: 5,
-    nickel: 1,
-    carbonaceous: 40,
-    ice: 35,
-    platinum: 1,
-    gold: 0.5,
-    rare_earth: 2.5,
-  },
-};
-
-// Rare metals that can be found in asteroids
-const RARE_METALS = {
-  platinum: ["Platinum", "Palladium", "Iridium", "Rhodium"],
-  gold: ["Gold", "Silver"],
-  rare_earth: ["Neodymium", "Dysprosium", "Terbium", "Yttrium"],
-};
-
 /**
- * Generate a random asteroid name
+ * Generate a random asteroid name from config
  */
 function generateAsteroidName(seed: number): string {
-  const prefixes = [
-    "Alpha",
-    "Beta",
-    "Gamma",
-    "Delta",
-    "Epsilon",
-    "Zeta",
-    "Eta",
-    "Theta",
-    "Iota",
-    "Kappa",
-    "Lambda",
-    "Mu",
-    "Nu",
-    "Xi",
-    "Omicron",
-    "Pi",
-    "Sigma",
-    "Tau",
-    "Upsilon",
-    "Phi",
-    "Chi",
-    "Psi",
-    "Omega",
-  ];
-
-  const suffixes = [
-    "Rock",
-    "Stone",
-    "Boulder",
-    "Chunk",
-    "Fragment",
-    "Shard",
-    "Debris",
-    "Chip",
-    "Pebble",
-    "Grain",
-    "Mass",
-    "Node",
-    "Core",
-    "Vein",
-  ];
+  const prefixes = asteroidNamesConfig.prefixes;
+  const suffixes = asteroidNamesConfig.suffixes;
 
   const prefixIndex = seed % prefixes.length;
   const suffixIndex = Math.floor(seed / prefixes.length) % suffixes.length;
@@ -94,13 +25,13 @@ function generateAsteroidName(seed: number): string {
 }
 
 /**
- * Select material type based on belt type and probability distribution
+ * Select material type based on belt type and probability distribution from config
  */
 function selectMaterialType(
   beltType: "inner" | "outer",
   seed: number
 ): MaterialType {
-  const distribution = MATERIAL_DISTRIBUTIONS[beltType];
+  const distribution = (generationConfig.asteroidMaterials as any)[beltType];
   let total = 0;
   for (const type in distribution) {
     total += distribution[type as MaterialType];
@@ -140,17 +71,28 @@ function generateResources(material: MaterialType, seed: number): ResourceData {
 
   if (material === "platinum" || randomRange(0, 100, seed + 200) < 2) {
     rareMetals.push(
-      ...RARE_METALS.platinum.slice(0, randomInt(1, 3, seed + 300))
+      ...asteroidNamesConfig.rareMetals.platinum.slice(
+        0,
+        randomInt(1, 3, seed + 300)
+      )
     );
   }
 
   if (material === "gold" || randomRange(0, 100, seed + 400) < 1.5) {
-    rareMetals.push(...RARE_METALS.gold.slice(0, randomInt(1, 2, seed + 500)));
+    rareMetals.push(
+      ...asteroidNamesConfig.rareMetals.gold.slice(
+        0,
+        randomInt(1, 2, seed + 500)
+      )
+    );
   }
 
   if (material === "rare_earth" || randomRange(0, 100, seed + 600) < 1) {
     rareMetals.push(
-      ...RARE_METALS.rare_earth.slice(0, randomInt(1, 3, seed + 700))
+      ...asteroidNamesConfig.rareMetals.rare_earth.slice(
+        0,
+        randomInt(1, 3, seed + 700)
+      )
     );
   }
 
@@ -283,7 +225,7 @@ export function generateAsteroidBelt(
     asteroidCount,
     asteroids,
     seed,
-    materialDistribution: MATERIAL_DISTRIBUTIONS[beltType],
+    materialDistribution: (generationConfig.asteroidMaterials as any)[beltType],
   };
 }
 

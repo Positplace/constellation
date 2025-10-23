@@ -1,4 +1,5 @@
 import starConfigs from "../data/starConfigs.json";
+import generationConfig from "../data/generationConfig.json";
 import { SolarSystem, StarType, StarData } from "../types/game.types";
 import { PlanetData, PlanetType } from "../types/planet.types";
 import { createPlanet } from "./planetFactory";
@@ -198,18 +199,32 @@ export function generateSolarSystem(
   const systemSeed = seed ?? Math.floor(Math.random() * 1e9);
 
   // Select random star type if not provided
-  const starTypes: StarType[] = [
-    "red_dwarf",
-    "orange_star",
-    "yellow_star",
-    "white_star",
-    "blue_giant",
-    "red_giant",
-    "white_dwarf",
-    "binary_star",
-    "black_hole",
-  ];
-  const selectedStarType = starType ?? starTypes[systemSeed % starTypes.length];
+  // Select star type using weighted probabilities from config
+  let selectedStarType: StarType;
+  if (starType) {
+    selectedStarType = starType;
+  } else {
+    // Build weighted list from config
+    const weights = generationConfig.starTypeWeights;
+    const starTypes = Object.keys(weights) as StarType[];
+    let totalWeight = 0;
+    for (const type of starTypes) {
+      totalWeight += (weights as any)[type];
+    }
+    
+    // Select using weighted random
+    const roll = randomRange(0, totalWeight, systemSeed);
+    let currentWeight = 0;
+    selectedStarType = "yellow_star"; // Default fallback
+    
+    for (const type of starTypes) {
+      currentWeight += (weights as any)[type];
+      if (roll < currentWeight) {
+        selectedStarType = type;
+        break;
+      }
+    }
+  }
 
   // Get star configuration
   const starConfig = (starConfigs as any)[selectedStarType];
@@ -532,35 +547,30 @@ export function generateSolarSystem(
   //   console.log(`🌌 ${systemName}: ${nebulae.length} nebula(e)`);
   // }
 
-  // Generate Dyson Sphere (very rare, 3% chance)
-  // More likely for advanced star types (white stars, blue giants)
-  // Never for black holes
+  // Generate Dyson Sphere using configuration
   let dysonSphere = undefined;
+  const dysonConfig = generationConfig.dysonSphere;
   const dysonRoll = randomRange(0, 1, systemSeed + 9999);
 
-  if (selectedStarType !== "black_hole") {
-    let dysonChance = 0.03; // Base 3% chance
+  // Get star-specific multiplier from config
+  const starMultiplier = (dysonConfig.starTypeMultipliers as any)[selectedStarType] || 1.0;
+  const dysonChance = dysonConfig.baseChance * starMultiplier;
 
-    // Increase chance for more advanced star types
-    if (
-      selectedStarType === "white_star" ||
-      selectedStarType === "blue_giant"
-    ) {
-      dysonChance = 0.05; // 5% for advanced stars
-    } else if (selectedStarType === "yellow_star") {
-      dysonChance = 0.04; // 4% for yellow stars
-    }
-
-    if (dysonRoll < dysonChance) {
-      // Random completion between 5% and 90%
-      const completion = Math.floor(randomRange(5, 90, systemSeed + 10000));
-      dysonSphere = {
-        completionPercentage: completion,
-      };
-      console.log(
-        `🛸 ${systemName}: Dyson Sphere detected! ${completion}% complete`
-      );
-    }
+  if (dysonChance > 0 && dysonRoll < dysonChance) {
+    // Random completion from config range
+    const completion = Math.floor(
+      randomRange(
+        dysonConfig.completion.min,
+        dysonConfig.completion.max,
+        systemSeed + 10000
+      )
+    );
+    dysonSphere = {
+      completionPercentage: completion,
+    };
+    console.log(
+      `🛸 ${systemName}: Dyson Sphere detected! ${completion}% complete`
+    );
   }
 
   // Create solar system

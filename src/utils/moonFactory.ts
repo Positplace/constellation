@@ -191,16 +191,35 @@ export function generateMoonsForPlanet(
 
     const sizeKm = (minSize + powerLaw * (maxSize - minSize)) * EARTH_RADIUS_KM;
 
-    // Orbital distance: much closer and denser for better visibility
-    // Moons should be progressively spaced, with inner moons very close
+    // Orbital distance: calculate based on BOTH planet size and moon size
     const planetRadiusRender = (planet.radius / EARTH_RADIUS_KM) * 0.16; // Approximate render size
+    const moonRadiusRender = (sizeKm / EARTH_RADIUS_KM) * 0.16; // Moon render size
 
-    // Start close to the planet and space out progressively
-    // For gas giants: first moon at ~1.5x planet radius, each subsequent moon further out
-    const minDistance = planetRadiusRender * 1.5; // Start very close
-    const spacing = planetRadiusRender * 0.4; // Tighter spacing between moons
+    // Calculate moon-to-planet size ratio to determine spacing needs
+    const sizeRatio = moonRadiusRender / planetRadiusRender;
 
-    // Simple constant spacing to keep moons dense and close together
+    // Gas giants and ice giants get tighter, more compact moon systems
+    const isGasGiant =
+      planet.type === "gas_giant" || planet.type === "ice_giant";
+    const compactnessFactor = isGasGiant ? 0.7 : 1.0; // Gas giants get 30% tighter spacing
+
+    // Base minimum distance (close for small moons, even closer for gas giants)
+    const baseMinDistance = planetRadiusRender * (isGasGiant ? 1.3 : 1.5);
+
+    // Add extra distance based on moon size - only large moons get pushed out significantly
+    // Small moons (< 10% planet size): minimal extra distance
+    // Large moons (> 30% planet size): substantial extra distance
+    const sizeBasedPushout =
+      planetRadiusRender * Math.pow(sizeRatio, 1.5) * 8 * compactnessFactor;
+    const minDistance = baseMinDistance + sizeBasedPushout;
+
+    // Spacing between moons should also consider moon size
+    // Gas giants get tighter spacing to create dense moon systems like Jupiter/Saturn
+    const baseSpacing = planetRadiusRender * (isGasGiant ? 0.25 : 0.4);
+    const moonSizeMultiplier = 1 + sizeRatio * (isGasGiant ? 2 : 3); // Less size-based spacing for gas giants
+    const spacing = baseSpacing * moonSizeMultiplier;
+
+    // Calculate orbital distance with progressive spacing
     const orbitalDistance = minDistance + spacing * i;
 
     // Add small random variation to avoid perfect alignment
@@ -295,12 +314,13 @@ export function generateMoonsForPlanet(
         : isFirstMoon && moonCount > 3
         ? " [PRIMARY]"
         : "";
+    const sizePercentage = ((sizeKm / planet.radius) * 100).toFixed(1);
     console.log(
       `Moon ${i + 1}/${moonCount} for ${
         planet.name
       } (${sizeCategory}): type=${moonType}, size=${(sizeKm / 1000).toFixed(
         0
-      )}km, orbitalDistance=${finalOrbitalDistance.toFixed(
+      )}km (${sizePercentage}% of planet), orbitalDist=${finalOrbitalDistance.toFixed(
         3
       )} units${specialTag}`
     );
