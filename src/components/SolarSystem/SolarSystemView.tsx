@@ -1733,7 +1733,16 @@ const SolarSystemView: React.FC = () => {
 
       {/* Lighting - ambient light tinted by star color for atmosphere */}
       <ambientLight
-        intensity={currentSystem.star.type === "black_hole" ? 0.1 : 0.5}
+        intensity={
+          currentSystem.star.type === "black_hole"
+            ? 0.1
+            : currentSystem.dysonSphere
+            ? // Reduce ambient light based on Dyson sphere completion (0-100%)
+              // At 0%: full light (0.5), at 100%: minimal light (0.05)
+              0.5 *
+              (1 - (currentSystem.dysonSphere.completionPercentage / 100) * 0.9)
+            : 0.5
+        }
         color={currentSystem.star.type === "black_hole" ? "#1a1a2e" : SUN_COLOR}
       />
       {/* Primary star light (or accretion disk light for black holes) */}
