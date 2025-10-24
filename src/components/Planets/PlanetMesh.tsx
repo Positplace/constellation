@@ -4,6 +4,7 @@ import { PlanetData } from "../../types/planet.types";
 import { generateSurfaceTextures } from "../../utils/textureGenerators";
 import { CityLights } from "./CityLights";
 import { RoadNetwork } from "./RoadNetwork";
+import { SpaceLift } from "./SpaceLift";
 
 interface PlanetMeshProps {
   planet: PlanetData;
@@ -219,6 +220,11 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
           renderScale={renderScale}
           sunPosition={sunPosition}
         />
+      )}
+
+      {/* Space lift (space elevator) on home worlds */}
+      {planet.hasSpaceElevator && (
+        <SpaceLift planet={planet} renderScale={renderScale} />
       )}
     </group>
   );

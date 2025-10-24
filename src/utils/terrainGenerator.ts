@@ -342,5 +342,30 @@ export function generateCities(options: GenerateCitiesOptions): CityData[] {
     });
   });
 
+  // Designate the largest city as the capital and make it bigger and brighter
+  if (cities.length > 0) {
+    // Find the largest city (by size)
+    let capitalIndex = 0;
+    let largestSize = cities[0].size;
+
+    for (let i = 1; i < cities.length; i++) {
+      if (cities[i].size > largestSize) {
+        largestSize = cities[i].size;
+        capitalIndex = i;
+      }
+    }
+
+    // Make the capital even bigger and brighter
+    cities[capitalIndex].isCapital = true;
+    cities[capitalIndex].size = Math.min(0.12, cities[capitalIndex].size * 1.5); // 50% bigger
+    cities[capitalIndex].population = Math.floor(
+      cities[capitalIndex].population * 2
+    ); // Double population
+    cities[capitalIndex].glowIntensity = 1.0; // Maximum brightness
+    cities[capitalIndex].glowColor = "#ffffaa"; // Brighter yellow
+    cities[capitalIndex].type = "metropolis"; // Ensure it's a metropolis
+    cities[capitalIndex].technology = 1.0; // Maximum tech level
+  }
+
   return cities;
 }

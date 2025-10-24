@@ -144,8 +144,9 @@ export class GameGalaxy {
       );
       if (habitablePlanet) {
         player.homePlanetId = habitablePlanet.id;
-        // Mark planet as having life
+        // Mark planet as having life and add space elevator
         habitablePlanet.hasLife = true;
+        habitablePlanet.hasSpaceElevator = true;
         console.log(
           `🏠 Home planet: ${habitablePlanet.name} (${habitablePlanet.type}) in ${homeSystem.name}`
         );
@@ -308,6 +309,10 @@ export class GameGalaxy {
           } satellites for home planet ${homePlanet.name}`
         );
       }
+
+      // Add space elevator to home world
+      homePlanet.hasSpaceElevator = true;
+      console.log(`🚡 Added space elevator to home planet ${homePlanet.name}`);
     }
 
     this.gameState.solarSystems.push(homeSystem);

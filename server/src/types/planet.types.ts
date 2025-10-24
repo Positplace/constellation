@@ -46,6 +46,7 @@ export interface PlanetData {
   // Life and colonization
   hasLife?: boolean; // Whether the planet has native life
   colonized?: boolean; // Whether the planet is colonized by a player
+  hasSpaceElevator?: boolean; // Whether the planet has a space elevator (home worlds)
 
   // Generation seed for reproducibility
   seed: number;
@@ -169,6 +170,7 @@ export interface CityData {
   glowIntensity: number; // 0-1
   glowColor: string; // hex color
   lightPattern: "grid" | "organic" | "sparse" | "dense";
+  isCapital?: boolean; // Capital city for home worlds
 }
 
 export interface SatelliteData {
