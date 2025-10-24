@@ -376,14 +376,19 @@ export class GameGalaxy {
       // Only consider systems that:
       // 1. Are NOT the source system (no self-loops)
       // 2. Still have unexplored gates (connections.length < maxConnections)
-      // 3. Are NOT already connected to the source system
+      // 3. Are NOT already connected to the source system (check both directions)
       const discoverableSystems = this.getDiscoverableSystems(
         fromSystemId
       ).filter((system) => {
         // Double-check: never allow connecting to self
         if (system.id === fromSystemId) return false;
-        // Exclude already connected systems
-        return !fromSystem.connections.includes(system.id);
+        // Exclude already connected systems (check both directions since connections are bidirectional)
+        const alreadyConnectedFromSource = fromSystem.connections.includes(
+          system.id
+        );
+        const alreadyConnectedFromTarget =
+          system.connections.includes(fromSystemId);
+        return !alreadyConnectedFromSource && !alreadyConnectedFromTarget;
       });
 
       console.log(
