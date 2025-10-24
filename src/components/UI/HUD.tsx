@@ -280,12 +280,15 @@ const HUD: React.FC = () => {
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full inline-block ${
-                            planet.type === "gas_giant"
+                            // Planets with life (cities) show as bright green
+                            planet.surface?.cities?.length > 0
+                              ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]"
+                              : planet.type === "gas_giant"
                               ? "bg-orange-400"
                               : planet.type === "ice_giant"
                               ? "bg-blue-400"
                               : planet.type === "earth_like"
-                              ? "bg-green-400"
+                              ? "bg-green-300"
                               : planet.type === "ocean_world"
                               ? "bg-cyan-400"
                               : planet.type === "desert_world"

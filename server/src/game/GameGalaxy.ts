@@ -263,6 +263,53 @@ export class GameGalaxy {
       );
     }
 
+    // Find the home planet (first habitable one) and ensure it has cities and satellites
+    const homePlanet = homeSystem.planets.find((p) =>
+      habitablePlanetTypes.includes(p.type)
+    );
+
+    if (homePlanet) {
+      // Ensure home planet has cities if it doesn't already
+      if (
+        !homePlanet.surface.cities ||
+        homePlanet.surface.cities.length === 0
+      ) {
+        // Import city generation functions
+        const { generateCities } = require("../utils/terrainGenerator");
+
+        // Generate a good number of cities for home planet
+        const cityDensity = 0.05; // Higher density for home planet
+        homePlanet.surface.cities = generateCities({
+          seed: seed + 5000,
+          continents: homePlanet.surface.continents,
+          density: cityDensity,
+        });
+
+        console.log(
+          `🏙️  Generated ${homePlanet.surface.cities.length} cities for home planet ${homePlanet.name}`
+        );
+      }
+
+      // Ensure home planet has satellites if it has cities
+      if (
+        homePlanet.surface.cities.length > 0 &&
+        (!homePlanet.surface.satellites ||
+          homePlanet.surface.satellites.length === 0)
+      ) {
+        const { generateSatellites } = require("../utils/planetFactory");
+        homePlanet.surface.satellites = generateSatellites(
+          seed + 6000,
+          homePlanet.surface.cities
+        );
+
+        console.log(
+          `🛰️  Generated ${
+            homePlanet.surface.satellites?.length || 0
+          } satellites for home planet ${homePlanet.name}`
+        );
+      }
+    }
+
     this.gameState.solarSystems.push(homeSystem);
     console.log(
       `🏠 Generated home system: ${

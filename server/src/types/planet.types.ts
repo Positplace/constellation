@@ -96,6 +96,9 @@ export interface SurfaceData {
   // City data
   cities: CityData[];
 
+  // Satellite data
+  satellites?: SatelliteData[];
+
   // Temperature zones
   temperatureZones: {
     polar: number; // coverage 0-1
@@ -166,6 +169,26 @@ export interface CityData {
   glowIntensity: number; // 0-1
   glowColor: string; // hex color
   lightPattern: "grid" | "organic" | "sparse" | "dense";
+}
+
+export interface SatelliteData {
+  id: string;
+  name: string;
+  type:
+    | "communications"
+    | "observation"
+    | "navigation"
+    | "weather"
+    | "military"
+    | "research";
+  orbitalDistance: number; // in planet radii (renderScale units)
+  orbitalSpeed: number; // orbital speed multiplier
+  orbitalAngle: number; // starting angle in radians
+  orbitalInclination: number; // in degrees
+  size: number; // relative size
+  technology: number; // 0-1, tech level
+  launchDate?: number; // game time when launched
+  active: boolean;
 }
 
 export interface AtmosphereData {

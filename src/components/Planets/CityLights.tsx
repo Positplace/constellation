@@ -184,22 +184,21 @@ export const CityLights: React.FC<CityLightsProps> = ({
           // If no city here, discard early
           if (lights.a < 0.01) discard;
           
-          // Dark side: Show warm glowing lights
-          // Starts glowing at dusk (sunAlignment ~0.2) and fully bright at night
+          // Dark side: Show warm glowing lights (reduced intensity)
+          // Starts glowing at dusk (sunAlignment ~0.2) and moderately bright at night
           float darknessFactor = smoothstep(0.2, -0.15, sunAlignment);
-          vec3 nightLights = lights.rgb * darknessFactor;
+          vec3 nightLights = lights.rgb * darknessFactor * 0.5; // Reduced from full to 50%
           
-          // Lit side: Barely visible, only in the transition zone (twilight)
-          // Very subtle so cities blend into the surface during day
-          float twilightFactor = smoothstep(-0.15, 0.05, sunAlignment) * 
-                                 (1.0 - smoothstep(0.05, 0.25, sunAlignment));
-          vec3 dayMarkers = lights.rgb * twilightFactor * 0.15; // Very subtle
+          // Lit side: Visible but subtle markers
+          // Visible across the entire lit side, gradually fading
+          float dayFactor = smoothstep(-0.1, 0.3, sunAlignment);
+          vec3 dayMarkers = lights.rgb * dayFactor * 0.25; // Increased from 0.15 to 0.25
           
           // Combine both renderings
           vec3 finalColor = nightLights + dayMarkers;
           
-          // Alpha: Strong on dark side, very weak on lit side
-          float finalAlpha = lights.a * (darknessFactor + twilightFactor * 0.1);
+          // Alpha: Moderate on dark side, visible on lit side
+          float finalAlpha = lights.a * max(darknessFactor * 0.5, dayFactor * 0.25);
           
           // Discard if too faint
           if (finalAlpha < 0.02) discard;

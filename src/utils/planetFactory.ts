@@ -5,7 +5,7 @@ import {
   PlanetType,
   AppearanceData,
 } from "../types/planet.types";
-import { NoiseConfig, randomInt, randomRange } from "./noiseUtils";
+import { NoiseConfig, randomInt, randomRange, mulberry32 } from "./noiseUtils";
 import { generateAtmosphere } from "./atmosphereGenerator";
 import { generateContinents, generateCities } from "./terrainGenerator";
 import { generatePlanetName } from "./nameGenerator";
@@ -131,6 +131,9 @@ export function createPlanet(
     ? generateCities({ seed, continents, density: cityDensity })
     : []; // Empty array for uninhabitable planets
 
+  // Generate satellites for planets with cities
+  const satellites = cities.length > 0 ? generateSatellites(seed, cities) : [];
+
   const surface = {
     terrainCoverage: {
       ocean: oceanDefault,
@@ -152,6 +155,7 @@ export function createPlanet(
     },
     continents,
     cities,
+    satellites,
     volcanoes: [], // Empty array to maintain compatibility with saved data
     temperatureZones: {
       polar: 0.15,
@@ -247,4 +251,119 @@ export function createPlanet(
 function chooseColor(list: string[] | undefined, fallback: string): string {
   if (!list || list.length === 0) return fallback;
   return list[Math.floor(Math.random() * list.length)];
+}
+
+/**
+ * Generate artificial satellites for civilized planets
+ */
+function generateSatellites(
+  seed: number,
+  cities: import("../types/planet.types").CityData[]
+): import("../types/planet.types").SatelliteData[] {
+  if (cities.length === 0) return [];
+
+  const rng = mulberry32((seed + 99999) >>> 0);
+  const satellites: import("../types/planet.types").SatelliteData[] = [];
+
+  // Average technology level of cities
+  const avgTech =
+    cities.reduce((sum, c) => sum + c.technology, 0) / cities.length;
+
+  // Number of satellites based on tech level and city count
+  // Low tech: 1-3 satellites
+  // High tech: 5-15 satellites
+  const baseSatelliteCount = Math.floor(avgTech * 10 + 2);
+  const cityBonus = Math.min(5, Math.floor(cities.length / 20));
+  const count = Math.min(20, baseSatelliteCount + cityBonus);
+
+  const satelliteTypes: Array<{
+    type: import("../types/planet.types").SatelliteData["type"];
+    weight: number;
+  }> = [
+    { type: "communications", weight: 0.3 },
+    { type: "observation", weight: 0.25 },
+    { type: "navigation", weight: 0.2 },
+    { type: "weather", weight: 0.15 },
+    { type: "research", weight: 0.08 },
+    { type: "military", weight: 0.02 },
+  ];
+
+  for (let i = 0; i < count; i++) {
+    // Select satellite type based on weights
+    const roll = rng();
+    let cumulative = 0;
+    let selectedType: import("../types/planet.types").SatelliteData["type"] =
+      "communications";
+
+    for (const { type, weight } of satelliteTypes) {
+      cumulative += weight;
+      if (roll < cumulative) {
+        selectedType = type;
+        break;
+      }
+    }
+
+    // Orbital parameters
+    // Low Earth Orbit equivalent: 1.01-1.05 planet radii
+    // Medium orbit: 1.05-1.15 planet radii
+    // High orbit: 1.15-1.5 planet radii
+    let orbitalDistance: number;
+    if (selectedType === "weather" || selectedType === "observation") {
+      // Low orbit for detailed observation
+      orbitalDistance = 1.01 + rng() * 0.04;
+    } else if (
+      selectedType === "navigation" ||
+      selectedType === "communications"
+    ) {
+      // Medium orbit for coverage
+      orbitalDistance = 1.05 + rng() * 0.1;
+    } else {
+      // High orbit for research/military
+      orbitalDistance = 1.15 + rng() * 0.35;
+    }
+
+    // Faster orbit for closer satellites (Kepler's laws)
+    const orbitalSpeed = 3.0 / Math.sqrt(orbitalDistance);
+
+    // Much more varied orbital inclinations to cover the entire planet
+    // Mix of equatorial, mid-inclination, and polar orbits
+    const orbitType = rng();
+    let orbitalInclination: number;
+    if (orbitType < 0.3) {
+      // 30% equatorial (0-25 degrees)
+      orbitalInclination = rng() * 25;
+    } else if (orbitType < 0.6) {
+      // 30% mid-inclination (25-65 degrees)
+      orbitalInclination = 25 + rng() * 40;
+    } else {
+      // 40% polar/highly inclined (65-180 degrees)
+      orbitalInclination = 65 + rng() * 115;
+    }
+
+    // Random starting angle
+    const orbitalAngle = rng() * Math.PI * 2;
+
+    // Size varies by type
+    const size =
+      selectedType === "research" || selectedType === "military"
+        ? 0.003 + rng() * 0.002 // Larger
+        : 0.001 + rng() * 0.001; // Smaller
+
+    satellites.push({
+      id: `sat-${seed}-${i}`,
+      name: `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}-${
+        i + 1
+      }`,
+      type: selectedType,
+      orbitalDistance,
+      orbitalSpeed,
+      orbitalAngle,
+      orbitalInclination,
+      size,
+      technology: avgTech,
+      active: rng() < 0.95, // 95% active, 5% defunct
+    });
+  }
+
+  return satellites;
 }

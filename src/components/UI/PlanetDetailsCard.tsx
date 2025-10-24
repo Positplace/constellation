@@ -301,6 +301,9 @@ export const PlanetDetailsCard: React.FC<PlanetDetailsCardProps> = ({
           <div className="text-gray-400">Cities:</div>
           <div>{planet.surface.cities.length}</div>
 
+          <div className="text-gray-400">Satellites:</div>
+          <div>{planet.surface.satellites?.length || 0}</div>
+
           <div className="text-gray-400">Elevation:</div>
           <div>
             {planet.surface.elevation.minHeight.toFixed(0)}m to{" "}

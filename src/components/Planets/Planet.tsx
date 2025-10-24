@@ -6,6 +6,7 @@ import { PlanetMesh } from "./PlanetMesh";
 import { MoonOrbit } from "./MoonOrbit";
 import { MoonMesh } from "./MoonMesh";
 import { PlanetRings } from "./PlanetRings";
+import { SatelliteMesh } from "./SatelliteMesh";
 
 interface PlanetProps {
   planet: PlanetData;
@@ -141,6 +142,23 @@ export const Planet: React.FC<PlanetProps> = ({
               isSelected={selectedMoonId === moon.id}
               onClick={(moonPos) => handleMoonClick(moon.id, moonPos)}
             />
+          </MoonOrbit>
+        );
+      })}
+
+      {/* Artificial satellites orbiting the planet */}
+      {planet.surface?.satellites?.map((satellite) => {
+        return (
+          <MoonOrbit
+            key={satellite.id}
+            distance={satellite.orbitalDistance * renderScale}
+            speed={satellite.orbitalSpeed}
+            angle={satellite.orbitalAngle}
+            timeScale={timeScale}
+            showOrbit={false}
+            inclination={satellite.orbitalInclination}
+          >
+            <SatelliteMesh satellite={satellite} renderScale={renderScale} />
           </MoonOrbit>
         );
       })}
