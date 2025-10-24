@@ -12,6 +12,12 @@ const io = new Server(server, {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
   },
+  // Enable compression for large payloads
+  perMessageDeflate: {
+    threshold: 1024, // Compress messages larger than 1KB
+  },
+  // Increase max HTTP buffer size for large game states
+  maxHttpBufferSize: 10e6, // 10MB
 });
 
 // Middleware

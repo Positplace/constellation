@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { useMultiplayerStore } from "../../store/multiplayerStore";
 import { useSocket } from "../../hooks/useSocket";
-import { generateSolarSystem } from "../../utils/systemFactory";
 import PlanetDetailsCard from "./PlanetDetailsCard";
 import AsteroidDetailsCard from "./AsteroidDetailsCard";
 import { MoonDetailsCard } from "./MoonDetailsCard";
@@ -205,37 +204,6 @@ const HUD: React.FC = () => {
     }
   };
 
-  const handleRegenerateSystem = () => {
-    if (!currentSystem) return;
-
-    // Generate a new system with the same star type and position
-    const newSeed = Date.now();
-    const newSystem = generateSolarSystem(
-      currentSystem.star.type,
-      newSeed,
-      currentSystem.position,
-      currentSystem.name
-    );
-
-    // Preserve important metadata
-    newSystem.id = currentSystem.id;
-    newSystem.connections = currentSystem.connections;
-    newSystem.colonized = currentSystem.colonized;
-    newSystem.discovered = currentSystem.discovered;
-
-    // Update the system in the store
-    useGameStore.setState((state) => ({
-      solarSystems: state.solarSystems.map((s) =>
-        s.id === currentSystem.id ? newSystem : s
-      ),
-      // Remove all spaceships when regenerating a system
-      spaceships: [],
-    }));
-
-    // Note: In multiplayer mode, system regeneration should ideally go through the server
-    // For now, we regenerate locally (this won't sync to other players)
-  };
-
   return (
     <>
       {/* Bottom Right - System Outline */}
@@ -389,19 +357,6 @@ const HUD: React.FC = () => {
               </button>
               <div className="font-mono text-white">{formatTime(gameTime)}</div>
             </div>
-
-            {/* Regenerate System button - only show in solar view */}
-            {activeView === "solar" && currentSystem && (
-              <div className="mt-2">
-                <button
-                  onClick={handleRegenerateSystem}
-                  className="w-full px-3 py-2 rounded text-sm font-medium transition-colors bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white flex items-center justify-center gap-2"
-                >
-                  <span>🔄</span>
-                  <span>Regenerate System</span>
-                </button>
-              </div>
-            )}
 
             <div>Players: {players.length}</div>
             {currentGalaxy && (

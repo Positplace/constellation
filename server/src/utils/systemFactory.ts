@@ -57,7 +57,19 @@ const SYSTEM_NAMES = [
   "Castor",
 ];
 
-const SUFFIXES = [
+// Suffixes organized by connectivity level
+const ENDPOINT_SUFFIXES = [
+  "Outpost",
+  "Reach",
+  "Station",
+  "Frontier",
+  "Edge",
+  "Terminal",
+  "Beacon",
+  "Post",
+];
+
+const NORMAL_SUFFIXES = [
   "Prime",
   "Major",
   "Minor",
@@ -66,25 +78,50 @@ const SUFFIXES = [
   "Nova",
   "Antiqua",
   "System",
-  "Cluster",
-  "Nexus",
   "Haven",
-  "Outpost",
-  "Reach",
-  "Station",
+];
+
+const HUB_SUFFIXES = [
+  "Nexus",
+  "Hub",
+  "Cluster",
+  "Crossroads",
+  "Junction",
+  "Gateway",
+  "Confluence",
+  "Core",
 ];
 
 /**
- * Generate a random system name
+ * Generate a system name based on its connectivity
+ * @param seed Random seed for name generation
+ * @param maxConnections Maximum connections this system can have (1-5)
  */
-function generateSystemName(seed: number): string {
+function generateSystemName(seed: number, maxConnections: number = 3): string {
   const nameIndex = seed % SYSTEM_NAMES.length;
-  const suffixIndex = Math.floor(seed / SYSTEM_NAMES.length) % SUFFIXES.length;
 
-  if (seed % 3 === 0) {
+  // Select suffix pool based on connectivity
+  let suffixPool: string[];
+  if (maxConnections === 1) {
+    // Dead ends / Endpoints - use outpost-like names
+    suffixPool = ENDPOINT_SUFFIXES;
+  } else if (maxConnections >= 4) {
+    // High connectivity hubs - use nexus-like names
+    suffixPool = HUB_SUFFIXES;
+  } else {
+    // Normal connectivity - use standard names
+    suffixPool = NORMAL_SUFFIXES;
+  }
+
+  const suffixIndex =
+    Math.floor(seed / SYSTEM_NAMES.length) % suffixPool.length;
+
+  // 30% chance to have no suffix (just the base name)
+  if (seed % 10 < 3) {
     return SYSTEM_NAMES[nameIndex];
   }
-  return `${SYSTEM_NAMES[nameIndex]} ${SUFFIXES[suffixIndex]}`;
+
+  return `${SYSTEM_NAMES[nameIndex]} ${suffixPool[suffixIndex]}`;
 }
 
 /**
@@ -273,10 +310,7 @@ export function generateSolarSystem(
     };
   }
 
-  // Generate system name
-  const systemName = name ?? generateSystemName(systemSeed);
-
-  // Determine number of planets
+  // Determine number of planets (we'll generate the name after maxConnections is calculated)
   const planetCount = randomInt(
     starConfig.planetGeneration.count.min,
     starConfig.planetGeneration.count.max,
@@ -289,7 +323,7 @@ export function generateSolarSystem(
   const habitableZoneMax = starConfig.habitableZone.max;
 
   console.log(
-    `Generating ${systemName} (${selectedStarType}): ${planetCount} planets, habitable zone ${habitableZoneMin}-${habitableZoneMax} AU`
+    `Generating system (${selectedStarType}): ${planetCount} planets, habitable zone ${habitableZoneMin}-${habitableZoneMax} AU`
   );
 
   /**
@@ -529,15 +563,7 @@ export function generateSolarSystem(
     systemSeed
   );
 
-  // Log nebulae for debugging
-  if (nebulae.length > 0) {
-    console.log(`🌌 ${systemName}: ${nebulae.length} nebula(e)`);
-    nebulae.forEach((nebula, idx) => {
-      console.log(
-        `   Nebula ${idx}: type=${nebula.type}, color=${nebula.color}, opacity=${nebula.opacity}, size=${nebula.size}`
-      );
-    });
-  }
+  // (Nebula logging moved after name generation)
 
   // Generate Dyson Sphere using configuration
   let dysonSphere = undefined;
@@ -571,9 +597,7 @@ export function generateSolarSystem(
     dysonSphere = {
       completionPercentage: completion,
     };
-    console.log(
-      `🛸 ${systemName}: Dyson Sphere detected! ${completion}% complete`
-    );
+    // (Dyson sphere logging moved after name generation)
   }
 
   // Determine max connections (1-5) based on weighted random
@@ -586,10 +610,31 @@ export function generateSolarSystem(
   else if (connectionRoll < 95) maxConnections = 4;
   else maxConnections = 5;
 
+  // Generate system name based on connectivity (if not provided)
+  const finalSystemName =
+    name || generateSystemName(systemSeed, maxConnections);
+
+  // Log nebulae for debugging
+  if (nebulae.length > 0) {
+    console.log(`🌌 ${finalSystemName}: ${nebulae.length} nebula(e)`);
+    nebulae.forEach((nebula, idx) => {
+      console.log(
+        `   Nebula ${idx}: type=${nebula.type}, color=${nebula.color}, opacity=${nebula.opacity}, size=${nebula.size}`
+      );
+    });
+  }
+
+  // Log Dyson sphere if present
+  if (dysonSphere) {
+    console.log(
+      `🛸 ${finalSystemName}: Dyson Sphere detected! ${dysonSphere.completionPercentage}% complete`
+    );
+  }
+
   // Create solar system
   const solarSystem: SolarSystem = {
     id: systemId,
-    name: systemName,
+    name: finalSystemName,
     position: systemPosition,
     star,
     planets: planets as any[], // Convert PlanetData to Planet for now
@@ -602,6 +647,7 @@ export function generateSolarSystem(
     discovered: true,
     colonized: false,
     seed: systemSeed,
+    exploredBy: [], // Will be populated when players explore the system
   };
 
   return solarSystem;
@@ -612,20 +658,58 @@ export function generateSolarSystem(
  */
 export function calculateConnectedSystemPosition(
   fromPosition: [number, number, number],
-  seed: number
+  seed: number,
+  existingSystems?: Array<{ position: [number, number, number] }>
 ): [number, number, number] {
-  // Random angle
+  // Random angle in XZ plane
   const angle = randomRange(0, Math.PI * 2, seed);
 
-  // Random distance between 3 and 6 units
-  const distance = randomRange(3, 6, seed + 1);
+  // Shorter distance for more compact galaxy: 8-15 units
+  const distance = randomRange(8, 15, seed + 1);
 
-  // Random vertical offset
-  const verticalOffset = randomRange(-1, 1, seed + 2);
+  // Much flatter galaxy - reduce vertical spread to ±2 units
+  const verticalOffset = randomRange(-2, 2, seed + 2);
 
-  const x = fromPosition[0] + Math.cos(angle) * distance;
-  const y = fromPosition[1] + verticalOffset;
-  const z = fromPosition[2] + Math.sin(angle) * distance;
+  let x = fromPosition[0] + Math.cos(angle) * distance;
+  let y = fromPosition[1] + verticalOffset;
+  let z = fromPosition[2] + Math.sin(angle) * distance;
+
+  // If we have existing systems, try to avoid placing too close to them
+  if (existingSystems && existingSystems.length > 0) {
+    let attempts = 0;
+    const maxAttempts = 5;
+    const minDistance = 6; // Minimum distance from other systems
+
+    while (attempts < maxAttempts) {
+      let tooClose = false;
+
+      for (const sys of existingSystems) {
+        const dx = x - sys.position[0];
+        const dy = y - sys.position[1];
+        const dz = z - sys.position[2];
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (dist < minDistance) {
+          tooClose = true;
+          break;
+        }
+      }
+
+      if (!tooClose) {
+        break; // Found a good position
+      }
+
+      // Try a different angle if too close
+      attempts++;
+      const newAngle = randomRange(0, Math.PI * 2, seed + attempts * 100);
+      x = fromPosition[0] + Math.cos(newAngle) * distance;
+      z = fromPosition[2] + Math.sin(newAngle) * distance;
+    }
+  }
+
+  // Gradually pull systems toward the galactic plane (y=0) for easier viewing
+  const pullTowardsPlane = 0.3; // 30% pull towards y=0
+  y = y * (1 - pullTowardsPlane);
 
   return [x, y, z];
 }

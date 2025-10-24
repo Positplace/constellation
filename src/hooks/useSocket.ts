@@ -45,13 +45,21 @@ export const useSocket = () => {
 
       // Game events
       socket.on("galaxy-joined", (data) => {
+        const startTime = performance.now();
         console.log("🌌 Joined galaxy:", data.galaxyId);
         console.log("🎮 Game state received:", data.gameState);
         console.log("👥 Players in galaxy:", data.gameState?.players);
         console.log("🏠 Player home system:", data.playerHomeSystemId);
+
         setCurrentGalaxy(data.galaxyId);
-        // Explicitly close the connection dialog
+        // Close the connection dialog immediately
         useMultiplayerStore.getState().setShowConnectionDialog(false);
+
+        console.log(
+          `⏱️  Galaxy data received in ${(
+            performance.now() - startTime
+          ).toFixed(2)}ms`
+        );
 
         // Store player's home system and planet IDs
         if (data.playerHomeSystemId) {
@@ -109,6 +117,35 @@ export const useSocket = () => {
         }
       });
 
+      socket.on("additional-systems-loaded", (data) => {
+        console.log(
+          `📦 Received ${data.solarSystems.length} additional systems`
+        );
+
+        // Merge additional systems into existing game state
+        const currentState = useGameStore.getState();
+        const existingSystemIds = new Set(
+          currentState.solarSystems.map((s) => s.id)
+        );
+
+        // Only add systems that don't already exist
+        const newSystems = data.solarSystems.filter(
+          (s: any) => !existingSystemIds.has(s.id)
+        );
+
+        if (newSystems.length > 0) {
+          useGameStore.setState({
+            solarSystems: [...currentState.solarSystems, ...newSystems],
+            tunnels: [...currentState.tunnels, ...(data.tunnels || [])],
+          });
+          console.log(
+            `✅ Added ${newSystems.length} systems to game state (total: ${
+              currentState.solarSystems.length + newSystems.length
+            })`
+          );
+        }
+      });
+
       socket.on("player-joined", (data) => {
         console.log("Player joined:", data.player);
         addPlayer(data.player);
@@ -142,7 +179,10 @@ export const useSocket = () => {
       socket.on(
         "system-generated",
         (data: { system: any; tunnel?: any; updatedSourceSystem?: any }) => {
-          console.log("System generated:", data.system);
+          console.log("📡 System generated:", data.system.name);
+          console.log(
+            `   New system connections: [${data.system.connections.join(", ")}]`
+          );
 
           // Get current state
           let state = useGameStore.getState();
@@ -155,9 +195,26 @@ export const useSocket = () => {
           if (!systemExists) {
             // Only add if it's a new system
             console.log("✨ Adding new system:", data.system.name);
+            console.log(
+              `   System ${data.system.name} has ${
+                data.system.connections.length
+              } connections: [${data.system.connections.join(", ")}]`
+            );
             useGameStore.getState().addSolarSystem(data.system);
           } else {
-            console.log("🔗 Connecting to existing system:", data.system.name);
+            // Update existing system with new connections and exploredBy data
+            console.log(
+              `🔗 Connecting to existing system: ${data.system.name}`
+            );
+            console.log(
+              `   Updating existing system connections: [${data.system.connections.join(
+                ", "
+              )}]`
+            );
+            const updatedSystems = state.solarSystems.map((sys) =>
+              sys.id === data.system.id ? data.system : sys
+            );
+            useGameStore.setState({ solarSystems: updatedSystems });
           }
 
           // Refresh state after potential system addition
@@ -169,16 +226,27 @@ export const useSocket = () => {
               (t) => t.id === data.tunnel.id
             );
             if (!tunnelExists) {
-              console.log("Adding tunnel:", data.tunnel);
+              console.log(
+                `🔗 Adding tunnel: ${data.tunnel.from} → ${data.tunnel.to}`
+              );
               useGameStore.getState().addTunnel(data.tunnel);
             } else {
-              console.log("Tunnel already exists:", data.tunnel.id);
+              console.log("   Tunnel already exists:", data.tunnel.id);
             }
           }
 
           // Update the source system with new connections
           if (data.updatedSourceSystem) {
-            console.log("Updating source system connections");
+            console.log(
+              `🔄 Updating source system: ${data.updatedSourceSystem.name}`
+            );
+            console.log(
+              `   Source system now has ${
+                data.updatedSourceSystem.connections.length
+              } connections: [${data.updatedSourceSystem.connections.join(
+                ", "
+              )}]`
+            );
             // Refresh state again
             state = useGameStore.getState();
             const updatedSystems = state.solarSystems.map((sys) =>
@@ -187,6 +255,17 @@ export const useSocket = () => {
                 : sys
             );
             useGameStore.setState({ solarSystems: updatedSystems });
+
+            // Verify the update worked
+            const verifyState = useGameStore.getState();
+            const verifySystem = verifyState.solarSystems.find(
+              (s) => s.id === data.updatedSourceSystem.id
+            );
+            console.log(
+              `✅ Verified source system connections: [${verifySystem?.connections.join(
+                ", "
+              )}]`
+            );
           }
         }
       );

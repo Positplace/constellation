@@ -28,10 +28,19 @@ const ConnectionDialog: React.FC = () => {
     showConnectionDialog,
     setPlayerName: setStorePlayerName,
     setShowConnectionDialog,
+    isConnected,
   } = useMultiplayerStore();
 
   const handleConnect = async () => {
     if (!playerName.trim()) return;
+
+    // Check if socket is connected first
+    if (!isConnected) {
+      alert(
+        "Not connected to server. Please wait a moment and try again, or check if the server is running."
+      );
+      return;
+    }
 
     setIsConnecting(true);
     setStorePlayerName(playerName);
@@ -41,11 +50,7 @@ const ConnectionDialog: React.FC = () => {
     console.log(`🚀 Joining galaxy with UUID: ${playerUUID}`);
     joinGalaxy(galaxyId || "default", playerName, playerUUID);
 
-    // Wait a bit then stop the loading state
     // The dialog will close automatically when currentGalaxy is set by the server
-    setTimeout(() => {
-      setIsConnecting(false);
-    }, 1000);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -100,13 +105,25 @@ const ConnectionDialog: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleConnect}
-          disabled={!playerName.trim() || isConnecting}
-          className="w-full bg-space-600 hover:bg-space-700 disabled:bg-white/10 disabled:text-white/50 text-white py-3 px-4 rounded-md transition-colors font-medium"
-        >
-          {isConnecting ? "Joining Galaxy..." : "Join Game"}
-        </button>
+        <div className="space-y-2">
+          {!isConnected && (
+            <div className="text-yellow-400 text-sm text-center">
+              ⚠️ Connecting to server...
+            </div>
+          )}
+          {isConnected && (
+            <div className="text-green-400 text-sm text-center">
+              ✓ Connected to server
+            </div>
+          )}
+          <button
+            onClick={handleConnect}
+            disabled={!playerName.trim() || isConnecting || !isConnected}
+            className="w-full bg-space-600 hover:bg-space-700 disabled:bg-white/10 disabled:text-white/50 text-white py-3 px-4 rounded-md transition-colors font-medium"
+          >
+            {isConnecting ? "Joining Galaxy..." : "Join Game"}
+          </button>
+        </div>
       </div>
     </div>
   );

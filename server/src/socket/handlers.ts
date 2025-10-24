@@ -9,7 +9,7 @@ export function setupSocketHandlers(
   socket.on(
     "join-galaxy",
     (data: { galaxyId?: string; playerName: string; playerUUID: string }) => {
-      const { galaxyId, playerName, playerUUID } = data;
+      const { galaxyId, playerName, playerUUID: clientPlayerUUID } = data;
       const targetGalaxyId = galaxyId || "default";
 
       let galaxy = galaxies.get(targetGalaxyId);
@@ -18,20 +18,71 @@ export function setupSocketHandlers(
         galaxies.set(targetGalaxyId, galaxy);
       }
 
-      const success = galaxy.addPlayer(socket, playerName, playerUUID);
+      const success = galaxy.addPlayer(socket, playerName, clientPlayerUUID);
       if (success) {
         socket.join(targetGalaxyId);
         const player = galaxy.players.get(socket.id);
         console.log(
-          `👤 Player joined galaxy "${targetGalaxyId}": ${socket.id} - ${playerName} (UUID: ${playerUUID})`
+          `👤 Player joined galaxy "${targetGalaxyId}": ${socket.id} - ${playerName} (UUID: ${clientPlayerUUID})`
         );
 
-        // Send game state with player's home system ID
+        // Get full game state
+        const fullGameState = galaxy.getGameState();
+
+        // Filter systems based on player exploration (fog of war)
+        const playerUUID = player?.uuid;
+        const visibleSystems = fullGameState.solarSystems.filter((system) => {
+          return (
+            system.exploredBy && system.exploredBy.includes(playerUUID || "")
+          );
+        });
+
+        // Filter tunnels to only show connections between visible systems
+        const visibleSystemIds = new Set(visibleSystems.map((s) => s.id));
+        const visibleTunnels = (fullGameState.tunnels || []).filter(
+          (tunnel) =>
+            visibleSystemIds.has(tunnel.from) && visibleSystemIds.has(tunnel.to)
+        );
+
+        console.log(
+          `👁️  Player ${playerName} can see ${visibleSystems.length}/${fullGameState.solarSystems.length} systems`
+        );
+
+        // For initial load, only send player's home system for faster loading
+        const homeSystemId = player?.homeSystemId;
+        const homeSystem = visibleSystems.find((s) => s.id === homeSystemId);
+
+        // Create optimized initial game state with only home system
+        const initialGameState = {
+          ...fullGameState,
+          solarSystems: homeSystem ? [homeSystem] : [],
+          tunnels: [], // Send tunnels separately later
+        };
+
+        // Send initial minimal game state for fast loading
         socket.emit("galaxy-joined", {
           galaxyId: targetGalaxyId,
-          gameState: galaxy.getGameState(),
-          playerHomeSystemId: player?.homeSystemId, // Tell client where to start
+          gameState: initialGameState,
+          playerHomeSystemId: player?.homeSystemId,
         });
+
+        // Send the rest of the visible systems in a separate event after a short delay
+        // This allows the UI to render the home system first
+        setTimeout(() => {
+          if (visibleSystems.length > 1) {
+            const otherSystems = visibleSystems.filter(
+              (s) => s.id !== homeSystemId
+            );
+            socket.emit("additional-systems-loaded", {
+              solarSystems: otherSystems,
+              tunnels: visibleTunnels,
+            });
+            console.log(
+              `📦 Sent ${otherSystems.length} additional visible systems to ${playerName}`
+            );
+          }
+        }, 100); // Small delay to ensure first system renders first
+
         socket.to(targetGalaxyId).emit("player-joined", { player });
       } else {
         console.log(
@@ -103,9 +154,11 @@ export function setupSocketHandlers(
       const galaxy = getPlayerGalaxy(socket, galaxies);
       if (galaxy) {
         try {
+          const player = galaxy.players.get(socket.id);
           const newSystem = galaxy.generateSystem(
             data.fromSystemId,
-            data.starType as any
+            data.starType as any,
+            player?.uuid
           );
 
           // Find the tunnel and updated source system

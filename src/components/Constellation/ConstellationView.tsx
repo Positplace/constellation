@@ -28,6 +28,7 @@ const ConstellationView: React.FC = () => {
   const [draggingSystemId, setDraggingSystemId] = useState<string | null>(null);
   const orbitControlsRef = useRef<any>(null);
   const ringRotationRef = useRef(0);
+  const potentialConnectionPulseRef = useRef(0);
   const hasRestoredCamera = useRef(false);
   const dragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
   const dragPointRef = useRef(new THREE.Vector3());
@@ -189,6 +190,7 @@ const ConstellationView: React.FC = () => {
   // Animate ring rotation and handle WASD movement
   useFrame((state, delta) => {
     ringRotationRef.current += delta * 2; // Rotate at 2 radians per second
+    potentialConnectionPulseRef.current += delta * 3; // Pulse animation
 
     // WASD camera movement
     if (keysPressed.current.size > 0 && orbitControlsRef.current) {
@@ -587,6 +589,78 @@ const ConstellationView: React.FC = () => {
                 </mesh>
               )}
 
+              {/* Potential connection indicators */}
+              {system.connections.length < system.maxConnections && (
+                <>
+                  {Array.from({
+                    length: system.maxConnections - system.connections.length,
+                  }).map((_, idx) => {
+                    // Calculate angle for each potential connection stub
+                    const angleOffset = (Math.PI * 2) / system.maxConnections;
+                    const angle =
+                      angleOffset * (system.connections.length + idx);
+                    const length = 2.5; // Length of the stub
+                    const endX = Math.cos(angle) * length;
+                    const endY = Math.sin(angle) * length;
+
+                    // Pulsing opacity
+                    const pulseOpacity =
+                      0.3 + Math.sin(potentialConnectionPulseRef.current) * 0.2;
+                    const glowOpacity =
+                      0.2 +
+                      Math.sin(potentialConnectionPulseRef.current) * 0.15;
+
+                    return (
+                      <group key={`potential-${idx}`}>
+                        {/* Stub line */}
+                        <line>
+                          <bufferGeometry
+                            attach="geometry"
+                            onUpdate={(self) => {
+                              const positions = new Float32Array([
+                                0,
+                                0,
+                                0,
+                                endX,
+                                endY,
+                                0,
+                              ]);
+                              self.setAttribute(
+                                "position",
+                                new THREE.BufferAttribute(positions, 3)
+                              );
+                            }}
+                          />
+                          <lineBasicMaterial
+                            color="#4488ff"
+                            transparent
+                            opacity={pulseOpacity}
+                            linewidth={1}
+                          />
+                        </line>
+                        {/* Small sphere at the end */}
+                        <Sphere args={[0.1, 8, 8]} position={[endX, endY, 0]}>
+                          <meshBasicMaterial
+                            color="#4488ff"
+                            transparent
+                            opacity={pulseOpacity + 0.2}
+                          />
+                        </Sphere>
+                        {/* Pulsing glow at the end */}
+                        <Sphere args={[0.15, 8, 8]} position={[endX, endY, 0]}>
+                          <meshBasicMaterial
+                            color="#4488ff"
+                            transparent
+                            opacity={glowOpacity}
+                            blending={THREE.AdditiveBlending}
+                          />
+                        </Sphere>
+                      </group>
+                    );
+                  })}
+                </>
+              )}
+
               {/* Hover label with system name and star type */}
               {isHovered && (
                 <Html
@@ -628,6 +702,17 @@ const ConstellationView: React.FC = () => {
                     >
                       {system.star.type.replace(/_/g, " ").toUpperCase()}
                     </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#aaccff",
+                        marginTop: "4px",
+                        opacity: 1,
+                      }}
+                    >
+                      Connections: {system.connections.length}/
+                      {system.maxConnections}
+                    </div>
                   </div>
                 </Html>
               )}
@@ -640,7 +725,16 @@ const ConstellationView: React.FC = () => {
           const fromSystem = solarSystems.find((s) => s.id === tunnel.from);
           const toSystem = solarSystems.find((s) => s.id === tunnel.to);
 
-          if (!fromSystem || !toSystem) return null;
+          if (!fromSystem || !toSystem) {
+            console.warn(
+              `⚠️ Tunnel ${tunnel.id} references missing systems - from: ${
+                tunnel.from
+              } (${fromSystem ? "exists" : "missing"}), to: ${tunnel.to} (${
+                toSystem ? "exists" : "missing"
+              })`
+            );
+            return null;
+          }
 
           return (
             <TunnelConnection

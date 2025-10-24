@@ -8,10 +8,7 @@ import {
   StarType,
   SelectedObject,
 } from "../types/game.types";
-import {
-  generateSolarSystem,
-  calculateConnectedSystemPosition,
-} from "../utils/systemFactory";
+import { calculateConnectedSystemPosition } from "../utils/systemFactory";
 import { SpaceshipData, ObjectType } from "../types/spaceship.types";
 import {
   createSpaceship,
@@ -123,12 +120,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   addTunnel: (tunnel) => {
-    set((state) => ({
-      tunnels: [...state.tunnels, tunnel],
-    }));
+    console.log(`🔗 Adding tunnel: ${tunnel.from} → ${tunnel.to}`);
+    set((state) => {
+      const existingTunnel = state.tunnels.find((t) => t.id === tunnel.id);
+      if (existingTunnel) {
+        console.warn(`   ⚠️  Tunnel ${tunnel.id} already exists, skipping`);
+        return state;
+      }
+      return {
+        tunnels: [...state.tunnels, tunnel],
+      };
+    });
+    console.log(`   Total tunnels now: ${get().tunnels.length}`);
   },
 
   setCurrentSystem: (id) => {
+    const system = get().solarSystems.find((s) => s.id === id);
+    if (system) {
+      console.log(`🎯 Switching to system: ${system.name}`);
+      console.log(
+        `   System has ${system.connections.length}/${
+          system.maxConnections
+        } connections: [${system.connections.join(", ")}]`
+      );
+    }
     set({ currentSystemId: id, selectedObject: null });
   },
 

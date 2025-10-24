@@ -1,3 +1,8 @@
+/**
+ * ⚠️ DEPRECATED: Client-side generation is deprecated for gameplay.
+ * See: /src/utils/README_GENERATION.md
+ */
+
 import configs from "../data/planetConfigs.json";
 import {
   PlanetData,

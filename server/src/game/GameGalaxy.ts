@@ -52,6 +52,7 @@ export class GameGalaxy {
   public players: Map<string, Player>;
   public gameState: GameState;
   public maxPlayers: number = 8;
+  private persistTimeout: NodeJS.Timeout | null = null;
 
   constructor(galaxyId: string) {
     this.id = galaxyId;
@@ -155,6 +156,7 @@ export class GameGalaxy {
 
     this.players.set(socket.id, player);
     this.gameState.players = Array.from(this.players.values());
+    // Don't block - save will happen async in background
     this.persist();
 
     return true;
@@ -195,12 +197,12 @@ export class GameGalaxy {
     const seed =
       Date.now() + this.gameState.solarSystems.length + Math.random() * 1000;
 
-    // Calculate position for new home system (spread them out in galaxy)
+    // Calculate position for new home system (compact spiral pattern)
     const angle = this.gameState.solarSystems.length * 137.5 * (Math.PI / 180); // Golden angle
-    const distance = 50 + this.gameState.solarSystems.length * 30; // Spiral outward
+    const distance = 25 + this.gameState.solarSystems.length * 12; // Tighter spiral: 25 + 12*N instead of 50 + 30*N
     const position: [number, number, number] = [
       Math.cos(angle) * distance,
-      (Math.random() - 0.5) * 20, // Some vertical variation
+      (Math.random() - 0.5) * 4, // Much flatter: ±2 units instead of ±10
       Math.sin(angle) * distance,
     ];
 
@@ -315,6 +317,9 @@ export class GameGalaxy {
       console.log(`🚡 Added space elevator to home planet ${homePlanet.name}`);
     }
 
+    // Mark system as explored by this player
+    homeSystem.exploredBy = [player.uuid];
+
     this.gameState.solarSystems.push(homeSystem);
     console.log(
       `🏠 Generated home system: ${
@@ -345,7 +350,11 @@ export class GameGalaxy {
    * Generate a new solar system connected to an existing one
    * Randomly chooses between generating a new system or connecting to existing
    */
-  generateSystem(fromSystemId?: string, starType?: StarType): SolarSystem {
+  generateSystem(
+    fromSystemId?: string,
+    starType?: StarType,
+    playerUUID?: string
+  ): SolarSystem {
     const seed = Date.now() + this.gameState.solarSystems.length;
     let position: [number, number, number] = [0, 0, 0];
     let targetSystem: SolarSystem;
@@ -377,6 +386,19 @@ export class GameGalaxy {
         return !fromSystem.connections.includes(system.id);
       });
 
+      console.log(
+        `🔍 Discoverable systems from ${fromSystem.name}: ${discoverableSystems.length} available`
+      );
+      if (discoverableSystems.length > 0) {
+        console.log(
+          `   Available: ${discoverableSystems
+            .map(
+              (s) => `${s.name} (${s.connections.length}/${s.maxConnections})`
+            )
+            .join(", ")}`
+        );
+      }
+
       // 40% chance to connect to existing system if available
       const shouldConnectToExisting =
         discoverableSystems.length > 0 && Math.random() < 0.4;
@@ -392,9 +414,48 @@ export class GameGalaxy {
           `🔗 Connecting to existing system: ${targetSystem.name} (has ${targetSystem.connections.length}/${targetSystem.maxConnections} connections)`
         );
       } else {
-        // Generate new system
-        position = calculateConnectedSystemPosition(fromSystem.position, seed);
-        targetSystem = generateSolarSystem(starType, seed, position);
+        // Generate new system with unique name
+        position = calculateConnectedSystemPosition(
+          fromSystem.position,
+          seed,
+          this.gameState.solarSystems
+        );
+        let generatedSystem = generateSolarSystem(starType, seed, position);
+
+        // Check for duplicate names and regenerate if needed
+        let attempts = 0;
+        const maxAttempts = 10;
+        while (
+          this.gameState.solarSystems.some(
+            (s) => s.name === generatedSystem.name
+          ) &&
+          attempts < maxAttempts
+        ) {
+          console.warn(
+            `⚠️  Duplicate system name detected: ${generatedSystem.name}, regenerating...`
+          );
+          attempts++;
+          const newSeed = seed + attempts * 1000;
+          generatedSystem = generateSolarSystem(starType, newSeed, position);
+        }
+
+        if (attempts >= maxAttempts) {
+          // Append a unique suffix if we couldn't generate a unique name
+          generatedSystem.name = `${generatedSystem.name} ${
+            this.gameState.solarSystems.length + 1
+          }`;
+          console.warn(
+            `⚠️  Could not generate unique name after ${maxAttempts} attempts, using: ${generatedSystem.name}`
+          );
+        }
+
+        targetSystem = generatedSystem;
+
+        // Mark as explored by the requesting player
+        if (playerUUID) {
+          targetSystem.exploredBy = [playerUUID];
+        }
+
         this.gameState.solarSystems.push(targetSystem);
 
         console.log(`✨ Generated new system: ${targetSystem.name}`);
@@ -422,6 +483,20 @@ export class GameGalaxy {
         targetSystem.connections.push(fromSystemId);
       }
 
+      // Share visibility between connected systems
+      // All players who explored the source system can now see the target system
+      // and vice versa
+      const fromExplorers = fromSystem.exploredBy || [];
+      const toExplorers = targetSystem.exploredBy || [];
+      const allExplorers = [...new Set([...fromExplorers, ...toExplorers])];
+
+      fromSystem.exploredBy = allExplorers;
+      targetSystem.exploredBy = allExplorers;
+
+      console.log(
+        `👁️  Shared visibility: ${allExplorers.length} player(s) can now see both ${fromSystem.name} and ${targetSystem.name}`
+      );
+
       this.gameState.tunnels.push(tunnel);
 
       console.log(
@@ -439,9 +514,29 @@ export class GameGalaxy {
   }
 
   /**
-   * Persist the game state to disk
+   * Persist the game state to disk (debounced to avoid excessive writes)
    */
   persist(): void {
+    // Clear any existing timeout
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+    }
+
+    // Debounce: wait 500ms before actually saving
+    this.persistTimeout = setTimeout(() => {
+      saveGameGalaxy(this.id, this.gameState);
+      this.persistTimeout = null;
+    }, 500);
+  }
+
+  /**
+   * Force immediate persist without debouncing (use sparingly)
+   */
+  persistImmediate(): void {
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
     saveGameGalaxy(this.id, this.gameState);
   }
 

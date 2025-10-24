@@ -557,13 +557,11 @@ const SolarSystemView: React.FC = () => {
       const cam = controls.object as THREE.PerspectiveCamera;
 
       if (travelState.phase === "approach") {
-        // Phase 1: Fly to the gate (1.5 seconds)
-        const duration = 1500;
+        // Phase 1: Fly to the gate (2 seconds for smoother animation)
+        const duration = 2000;
         const progress = Math.min(elapsed / duration, 1);
-        const eased =
-          progress < 0.5
-            ? 4 * progress * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        // Use smoothstep for a more continuous, less jittery easing
+        const eased = progress * progress * (3 - 2 * progress);
 
         // Calculate target position near the gate
         const gatePos = new THREE.Vector3(...travelState.gatePosition);
@@ -573,7 +571,7 @@ const SolarSystemView: React.FC = () => {
           .normalize();
         const targetPos = gatePos
           .clone()
-          .sub(directionToGate.multiplyScalar(3)); // Stop 3 units before gate
+          .sub(directionToGate.multiplyScalar(0.8)); // Stop much closer - 0.8 units before gate
 
         // Animate camera position to gate
         if (travelState.initialCameraPos) {
@@ -607,13 +605,11 @@ const SolarSystemView: React.FC = () => {
           });
         }
       } else if (travelState.phase === "exit") {
-        // Phase 3: Exit from gate to overview (1.5 seconds)
-        const duration = 1500;
+        // Phase 3: Exit from gate to overview (2 seconds for smoother animation)
+        const duration = 2000;
         const progress = Math.min(elapsed / duration, 1);
-        const eased =
-          progress < 0.5
-            ? 4 * progress * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        // Use smoothstep for a more continuous, less jittery easing
+        const eased = progress * progress * (3 - 2 * progress);
 
         // Calculate the exit gate position in the DESTINATION system
         // We need to find where the gate back to the origin system is located
@@ -769,8 +765,8 @@ const SolarSystemView: React.FC = () => {
         : null
     );
 
-    // Calculate minimum animation time (e.g., 1.5 seconds for approach phase)
-    const MINIMUM_APPROACH_TIME = 1500; // ms
+    // Calculate minimum animation time (2 seconds for approach phase)
+    const MINIMUM_APPROACH_TIME = 2000; // ms
     const elapsedTime = Date.now() - pendingSystemGeneration.requestTime;
     const remainingTime = Math.max(0, MINIMUM_APPROACH_TIME - elapsedTime);
 
@@ -1224,6 +1220,17 @@ const SolarSystemView: React.FC = () => {
   const { tunnelGates, undiscoveredGates } = useMemo(() => {
     if (!currentSystem) return { tunnelGates: [], undiscoveredGates: [] };
 
+    // DEBUG: Log current system connections
+    console.log(`🌟 Current System: ${currentSystem.name}`);
+    console.log(
+      `   Connections (${currentSystem.connections.length}/${
+        currentSystem.maxConnections
+      }): [${currentSystem.connections.join(", ")}]`
+    );
+    console.log(
+      `   Available systems: [${solarSystems.map((s) => s.name).join(", ")}]`
+    );
+
     // Find systems that should remain hidden during discovery
     const systemsToHide = new Set<string>();
 
@@ -1233,6 +1240,9 @@ const SolarSystemView: React.FC = () => {
       travelState.fromSystemId === currentSystemId
     ) {
       if (travelState.toSystemId && travelState.toSystemId !== "pending") {
+        console.log(
+          `   🙈 Hiding system during travel: ${travelState.toSystemId}`
+        );
         systemsToHide.add(travelState.toSystemId);
       }
     }
@@ -1243,6 +1253,9 @@ const SolarSystemView: React.FC = () => {
       pendingSystemGeneration.fromSystemId === currentSystemId &&
       pendingSystemGeneration.generatedSystemId
     ) {
+      console.log(
+        `   🙈 Hiding system during generation: ${pendingSystemGeneration.generatedSystemId}`
+      );
       systemsToHide.add(pendingSystemGeneration.generatedSystemId);
     }
 
@@ -1253,8 +1266,24 @@ const SolarSystemView: React.FC = () => {
     const actualConnections = currentSystem.connections.filter(
       (id) => !systemsToHide.has(id)
     );
+    console.log(
+      `   👁️  Visible connections (${
+        actualConnections.length
+      }): [${actualConnections.join(", ")}]`
+    );
+    if (systemsToHide.size > 0) {
+      console.log(
+        `   🙈 Hidden systems (${systemsToHide.size}): [${Array.from(
+          systemsToHide
+        ).join(", ")}]`
+      );
+    }
+
     const connectedCount = actualConnections.length;
     const undiscoveredCount = totalGates - connectedCount;
+    console.log(
+      `   🚪 Gates: ${connectedCount} discovered + ${undiscoveredCount} undiscovered = ${totalGates} total`
+    );
 
     // Calculate angle step for evenly spacing all gates
     const angleStep = (Math.PI * 2) / totalGates;
@@ -1304,7 +1333,15 @@ const SolarSystemView: React.FC = () => {
         const connectedSystem = solarSystems.find(
           (s) => s.id === connectedSystemId
         );
-        if (!connectedSystem) return null;
+        if (!connectedSystem) {
+          console.warn(
+            `   ⚠️  Connection to system ${connectedSystemId} but system not found in solarSystems array!`
+          );
+          return null;
+        }
+        console.log(
+          `   ✅ Creating gate ${index} → ${connectedSystem.name} (${connectedSystemId})`
+        );
 
         const angle = index * angleStep;
         const position: [number, number, number] = [

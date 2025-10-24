@@ -1,3 +1,8 @@
+/**
+ * ⚠️ DEPRECATED: Client-side generation is deprecated for gameplay.
+ * See: /src/utils/README_GENERATION.md
+ */
+
 import nebulaConfigs from "../data/nebulaConfigs.json";
 import generationConfig from "../data/generationConfig.json";
 import { NebulaData, NebulaType, NebulaConfig } from "../types/nebula.types";
@@ -30,9 +35,12 @@ export function generateSystemNebulae(
     let rarityMultiplier = 1;
     if (config.preferredStarTypes && config.preferredStarTypes.length > 0) {
       if (config.preferredStarTypes.includes(starType)) {
-        rarityMultiplier = generationConfig.nebulaGeneration.rarityMultipliers.preferredStarType;
+        rarityMultiplier =
+          generationConfig.nebulaGeneration.rarityMultipliers.preferredStarType;
       } else {
-        rarityMultiplier = generationConfig.nebulaGeneration.rarityMultipliers.nonPreferredStarType;
+        rarityMultiplier =
+          generationConfig.nebulaGeneration.rarityMultipliers
+            .nonPreferredStarType;
       }
     }
 

@@ -1,3 +1,8 @@
+/**
+ * ⚠️ DEPRECATED: Client-side generation is deprecated for gameplay.
+ * See: /src/utils/README_GENERATION.md
+ */
+
 import { randomInt, randomRange } from "./noiseUtils";
 import {
   PlanetData,
@@ -203,8 +208,17 @@ export function generateMoonsForPlanet(
       planet.type === "gas_giant" || planet.type === "ice_giant";
     const compactnessFactor = isGasGiant ? 0.7 : 1.0; // Gas giants get 30% tighter spacing
 
+    // Check if planet has a space elevator (home worlds only)
+    // Space elevator extends to radiusUnits * 1.8 (base + 0.8 lift height)
+    // Moons must orbit beyond this to avoid collision
+    const hasSpaceElevator = planet.hasSpaceElevator || false;
+    const spaceElevatorClearance = hasSpaceElevator ? 2.0 : 0; // 2.0 = 1.8 + safety buffer
+
     // Base minimum distance (close for small moons, even closer for gas giants)
-    const baseMinDistance = planetRadiusRender * (isGasGiant ? 1.3 : 1.5);
+    // But ensure moons stay clear of space elevator if present
+    const baseMinDistance =
+      planetRadiusRender *
+      Math.max(isGasGiant ? 1.3 : 1.5, spaceElevatorClearance);
 
     // Add extra distance based on moon size - only large moons get pushed out significantly
     // Small moons (< 10% planet size): minimal extra distance

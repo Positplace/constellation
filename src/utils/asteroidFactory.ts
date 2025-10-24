@@ -1,3 +1,8 @@
+/**
+ * ⚠️ DEPRECATED: Client-side generation is deprecated for gameplay.
+ * See: /src/utils/README_GENERATION.md
+ */
+
 import { randomInt, randomRange } from "./noiseUtils";
 import { SIMPLE_ASTEROID_SIZES } from "./asteroidSizingSimple";
 import generationConfig from "../data/generationConfig.json";

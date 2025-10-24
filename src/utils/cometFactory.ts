@@ -1,3 +1,10 @@
+/**
+ * ⚠️ DEPRECATED: Client-side generation is deprecated for gameplay.
+ * See: /src/utils/README_GENERATION.md
+ *
+ * NOTE: updateCometTail() is still used and NOT deprecated.
+ */
+
 import { randomInt, randomRange } from "./noiseUtils";
 import {
   CometData,

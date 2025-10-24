@@ -70,6 +70,7 @@ export interface SolarSystem {
   discovered: boolean;
   colonized: boolean;
   seed: number;
+  exploredBy: string[]; // Array of player UUIDs who have explored this system
 }
 
 export interface Tunnel {
