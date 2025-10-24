@@ -199,87 +199,98 @@ export const SpaceshipDetailsCard: React.FC<SpaceshipDetailsCardProps> = ({
   const statusInfo = getStatusInfo();
 
   return (
-    <div className="fixed bottom-4 left-4 w-80 bg-black/90 border border-white/20 rounded-lg p-4 text-white shadow-2xl z-50 pointer-events-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-cyan-300">Spaceship Status</h2>
+    <div className="fixed bottom-4 left-4 w-80 bg-black/90 border border-white/20 rounded-lg text-white shadow-2xl z-50 pointer-events-auto flex flex-col max-h-[70vh]">
+      {/* Close Button - Sticky */}
+      {onClose && (
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white transition-colors bg-black/90 rounded-full w-6 h-6 flex items-center justify-center"
         >
           ✕
         </button>
-      </div>
+      )}
 
-      {/* Ship Info */}
-      <div className="space-y-3">
-        <div>
-          <div className="text-sm text-gray-400">Ship ID</div>
-          <div className="font-mono text-sm">{spaceship.id}</div>
+      {/* Scrollable Content */}
+      <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent p-4">
+        {/* Header */}
+        <div className="mb-4 pr-8">
+          <h2 className="text-lg font-bold text-cyan-300">Spaceship Status</h2>
         </div>
 
-        <div>
-          <div className="text-sm text-gray-400">Current Status</div>
-          <div className="text-cyan-300 font-semibold">{statusInfo.status}</div>
-          <div className="text-sm text-gray-300">{statusInfo.description}</div>
-        </div>
-
-        {/* Progress Bar */}
-        <div>
-          <div className="text-sm text-gray-400 mb-1">Progress</div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-cyan-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${statusInfo.progress * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Origin and Destination */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Ship Info */}
+        <div className="space-y-3">
           <div>
-            <div className="text-sm text-gray-400">Origin</div>
-            <div className="text-sm">
-              {getObjectName(spaceship.origin.id, spaceship.origin.type)}
+            <div className="text-sm text-gray-400">Ship ID</div>
+            <div className="font-mono text-sm">{spaceship.id}</div>
+          </div>
+
+          <div>
+            <div className="text-sm text-gray-400">Current Status</div>
+            <div className="text-cyan-300 font-semibold">
+              {statusInfo.status}
+            </div>
+            <div className="text-sm text-gray-300">
+              {statusInfo.description}
             </div>
           </div>
+
+          {/* Progress Bar */}
           <div>
-            <div className="text-sm text-gray-400">Destination</div>
-            <div className="text-sm">
-              {getObjectName(
-                spaceship.destination.id,
-                spaceship.destination.type
-              )}
+            <div className="text-sm text-gray-400 mb-1">Progress</div>
+            <div className="w-full bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-cyan-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${statusInfo.progress * 100}%` }}
+              />
             </div>
           </div>
-        </div>
 
-        {/* ETA */}
-        {statusInfo.eta && (
-          <div>
-            <div className="text-sm text-gray-400">ETA</div>
-            <div className="text-sm text-yellow-300">{statusInfo.eta}</div>
+          {/* Origin and Destination */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-sm text-gray-400">Origin</div>
+              <div className="text-sm">
+                {getObjectName(spaceship.origin.id, spaceship.origin.type)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-400">Destination</div>
+              <div className="text-sm">
+                {getObjectName(
+                  spaceship.destination.id,
+                  spaceship.destination.type
+                )}
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Change Destination Button */}
-        <div className="pt-3 border-t border-white/10">
-          <button
-            onClick={() => {
-              if (onLaunchShip) {
-                onLaunchShip({
-                  id: spaceship.id,
-                  type: "spaceship",
-                  name: `Spaceship ${spaceship.id.slice(-6)}`,
-                });
-              } else {
-                setShowDestinationDialog(true);
-              }
-            }}
-            className="w-full px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded text-sm font-medium transition-colors"
-          >
-            Change Destination
-          </button>
+          {/* ETA */}
+          {statusInfo.eta && (
+            <div>
+              <div className="text-sm text-gray-400">ETA</div>
+              <div className="text-sm text-yellow-300">{statusInfo.eta}</div>
+            </div>
+          )}
+
+          {/* Change Destination Button */}
+          <div className="pt-3 border-t border-white/10">
+            <button
+              onClick={() => {
+                if (onLaunchShip) {
+                  onLaunchShip({
+                    id: spaceship.id,
+                    type: "spaceship",
+                    name: `Spaceship ${spaceship.id.slice(-6)}`,
+                  });
+                } else {
+                  setShowDestinationDialog(true);
+                }
+              }}
+              className="w-full px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded text-sm font-medium transition-colors"
+            >
+              Change Destination
+            </button>
+          </div>
         </div>
       </div>
 

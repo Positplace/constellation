@@ -134,7 +134,6 @@ export const AsteroidBelt: React.FC<AsteroidBeltProps> = ({
             asteroid={asteroid}
             renderScale={getSimpleRenderScale()} // Use SIMPLE sizing
             timeScale={timeScale}
-            selectedId={selectedId}
             shadowIntensity={shadowIntensity}
             onClick={() => {
               if (onAsteroidSelect) {

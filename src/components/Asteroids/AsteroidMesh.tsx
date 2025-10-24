@@ -16,7 +16,6 @@ interface AsteroidMeshProps {
   renderScale?: number;
   onClick?: () => void;
   timeScale?: number;
-  selectedId?: string;
   shadowIntensity?: number; // 0-1, controls shadow casting intensity
 }
 
@@ -184,7 +183,6 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
   renderScale,
   onClick,
   timeScale = 1,
-  selectedId,
   shadowIntensity = 1,
 }) => {
   // Use SIMPLE render scale calculation
@@ -248,8 +246,6 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
     }
   });
 
-  const isSelected = selectedId === asteroid.id;
-
   return (
     <group>
       {/* Main asteroid mesh */}
@@ -276,20 +272,6 @@ export const AsteroidMesh: React.FC<AsteroidMeshProps> = ({
           document.body.style.cursor = "auto";
         }}
       />
-
-      {/* Selection highlight - non-interactive */}
-      {isSelected && (
-        <mesh position={[0, 0, 0]} raycast={() => null}>
-          <sphereGeometry args={[baseRadius * visibilityScale * 1.1, 16, 16]} />
-          <meshBasicMaterial
-            color="#00ff00"
-            transparent
-            opacity={0.3}
-            side={THREE.BackSide}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      )}
 
       {/* Subtle glow for rare metal asteroids */}
       {(asteroid.material === "platinum" ||
