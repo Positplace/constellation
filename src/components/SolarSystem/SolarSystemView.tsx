@@ -23,7 +23,6 @@ import DysonSphere from "./DysonSphere";
 const SolarSystemView: React.FC = () => {
   const sunRef = useRef<THREE.Mesh>(null);
   const controlsRef = useRef<any>(null);
-  const lastCameraUpdateRef = useRef<number>(0);
   const [selectedPos, setSelectedPos] = useState<THREE.Vector3 | null>(null);
   const [pendingSystemGeneration, setPendingSystemGeneration] = useState<{
     fromSystemId: string;
@@ -721,21 +720,7 @@ const SolarSystemView: React.FC = () => {
     }
   });
 
-  useEffect(() => {
-    // Don't immediately jump camera if a zoom animation is active
-    if (controlsRef.current && selectedPos && !zoomAnimRef.current.active) {
-      const controls = controlsRef.current;
-      const cam = controls.object as THREE.PerspectiveCamera;
-      // Preserve current camera offset vector relative to target
-      const offset = cam.position.clone().sub(controls.target);
-      const distance = offset.length();
-      const dir =
-        offset.length() > 0 ? offset.normalize() : new THREE.Vector3(0, 0, 1);
-      controls.target.copy(selectedPos);
-      cam.position.copy(selectedPos.clone().add(dir.multiplyScalar(distance)));
-      controls.update();
-    }
-  }, [selectedPos]);
+  // Removed - camera following now handled in useFrame for smoother tracking
 
   // Handle new system generation completion
   useEffect(() => {
@@ -812,49 +797,72 @@ const SolarSystemView: React.FC = () => {
   const easeInOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-  // Animate zoom toward selected planet when a zoom is active
-  useFrame(() => {
+  // Animate zoom and handle smooth camera following
+  useFrame((_state, delta) => {
     if (!controlsRef.current) return;
     const anim = zoomAnimRef.current;
-    if (!anim.active) return;
-
-    const now = performance.now();
-    const t = Math.min(1, (now - anim.start) / anim.duration);
-    const k = easeInOutCubic(t);
-
     const controls = controlsRef.current;
     const cam = controls.object as THREE.PerspectiveCamera;
 
-    // If animating to/from specific targets (zoom out to overview)
-    if (anim.fromTarget && anim.toTarget) {
-      // Interpolate target position
-      const currentTarget = new THREE.Vector3().lerpVectors(
-        anim.fromTarget,
-        anim.toTarget,
-        k
-      );
-      controls.target.copy(currentTarget);
+    // Handle zoom animation
+    if (anim.active) {
+      const now = performance.now();
+      const t = Math.min(1, (now - anim.start) / anim.duration);
+      const k = easeInOutCubic(t);
 
-      // Interpolate distance
-      const dist =
-        anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
-      cam.position.copy(
-        currentTarget.clone().add(anim.dir.clone().multiplyScalar(dist))
-      );
+      // If animating to/from specific targets (zoom out to overview)
+      if (anim.fromTarget && anim.toTarget) {
+        // Interpolate target position
+        const currentTarget = new THREE.Vector3().lerpVectors(
+          anim.fromTarget,
+          anim.toTarget,
+          k
+        );
+        controls.target.copy(currentTarget);
+
+        // Interpolate distance
+        const dist =
+          anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
+        cam.position.copy(
+          currentTarget.clone().add(anim.dir.clone().multiplyScalar(dist))
+        );
+      } else if (selectedPos) {
+        // Keep tracking the moving selected planet (zoom in)
+        controls.target.copy(selectedPos);
+        const dist =
+          anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
+        cam.position.copy(
+          selectedPos.clone().add(anim.dir.clone().multiplyScalar(dist))
+        );
+      }
+
+      controls.update();
+
+      if (t >= 1) {
+        anim.active = false;
+      }
     } else if (selectedPos) {
-      // Keep tracking the moving selected planet (zoom in)
-      controls.target.copy(selectedPos);
-      const dist =
-        anim.fromDistance + (anim.toDistance - anim.fromDistance) * k;
+      // Smooth camera following when not zooming
+      // Use lerp for smooth interpolation instead of immediate updates
+      const lerpFactor = Math.min(1, delta * 10); // Adjust smoothness (higher = snappier)
+
+      // Calculate current offset
+      const currentOffset = cam.position.clone().sub(controls.target);
+      const currentDistance = currentOffset.length();
+      const currentDir =
+        currentOffset.length() > 0
+          ? currentOffset.clone().normalize()
+          : new THREE.Vector3(0, 0, 1);
+
+      // Smoothly interpolate target toward selected position
+      controls.target.lerp(selectedPos, lerpFactor);
+
+      // Maintain camera offset/direction while following
       cam.position.copy(
-        selectedPos.clone().add(anim.dir.clone().multiplyScalar(dist))
+        controls.target.clone().add(currentDir.multiplyScalar(currentDistance))
       );
-    }
 
-    controls.update();
-
-    if (t >= 1) {
-      anim.active = false;
+      controls.update();
     }
   });
 
@@ -1116,41 +1124,17 @@ const SolarSystemView: React.FC = () => {
     }
   };
 
-  // Camera following for selected spaceship (throttled)
+  // Update selectedPos for spaceship following (actual camera movement handled in useFrame)
   useEffect(() => {
-    if (!selectedSpaceshipId || !controlsRef.current) return;
+    if (!selectedSpaceshipId) return;
 
     const selectedSpaceship = spaceships.find(
       (s) => s.id === selectedSpaceshipId
     );
     if (!selectedSpaceship) return;
 
-    // Throttle camera updates to avoid performance issues
-    const now = Date.now();
-    if (now - lastCameraUpdateRef.current < 33) {
-      // ~30fps max
-      return;
-    }
-    lastCameraUpdateRef.current = now;
-
-    // Update camera target to follow the spaceship
+    // Update selected position - the useFrame hook will handle smooth camera following
     setSelectedPos(selectedSpaceship.position.clone());
-
-    // Focus on the spaceship with appropriate distance
-    const controls = controlsRef.current;
-    const targetPosition = selectedSpaceship.position.clone();
-
-    // Smooth camera movement to spaceship
-    const currentTarget = controls.target.clone();
-    const direction = targetPosition.clone().sub(currentTarget);
-    const distance = direction.length();
-
-    if (distance > 0.1) {
-      // Smooth interpolation to spaceship position
-      const lerpFactor = Math.min(0.1, 1.0); // Faster following
-      controls.target.lerp(targetPosition, lerpFactor);
-      controls.update();
-    }
   }, [selectedSpaceshipId, spaceships]);
 
   const handleTravelToSystem = (
