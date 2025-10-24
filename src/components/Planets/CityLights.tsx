@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { PlanetData } from "../../types/planet.types";
+import { generateSurfaceTextures } from "../../utils/textureGenerators";
 
 interface CityLightsProps {
   planet: PlanetData;
@@ -12,7 +13,8 @@ interface CityLightsProps {
 const EARTH_RADIUS_KM = 6371;
 
 /**
- * Renders city lights on the dark side of a planet
+ * Renders cities on planets as glowing lights on the dark side
+ * and bright visible markers on the lit side
  */
 export const CityLights: React.FC<CityLightsProps> = ({
   planet,
@@ -24,9 +26,25 @@ export const CityLights: React.FC<CityLightsProps> = ({
 
   // Only render cities if they exist
   const cities = planet.surface?.cities || [];
-  if (cities.length === 0) return null;
+
+  if (cities.length === 0) {
+    return null;
+  }
 
   const radiusUnits = (planet.radius / EARTH_RADIUS_KM) * renderScale;
+
+  // Get the same displacement map used by the planet mesh
+  const { displacementMap } = useMemo(
+    () => generateSurfaceTextures(planet),
+    [planet.id]
+  );
+
+  // Cleanup displacement map
+  useEffect(() => {
+    return () => {
+      displacementMap.dispose();
+    };
+  }, [displacementMap]);
 
   // Create city lights texture
   const cityLightsTexture = useMemo(() => {
@@ -58,19 +76,19 @@ export const CityLights: React.FC<CityLightsProps> = ({
       const x = u * canvas.width;
       const y = v * canvas.height;
 
-      // Size based on city size and population
-      const radius = Math.max(2, city.size * 50);
+      // Size based on city size and population (increased for better visibility)
+      const radius = Math.max(3, city.size * 80);
 
       // Create gradient for glow effect
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
 
       // Use city's glow color or default to warm yellow
       const color = city.glowColor || "#ffdd88";
-      const intensity = city.glowIntensity || 0.8;
+      const intensity = city.glowIntensity || 1.0;
 
       gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
-      gradient.addColorStop(0.3, hexToRgba(color, intensity * 0.7));
-      gradient.addColorStop(0.6, hexToRgba(color, intensity * 0.3));
+      gradient.addColorStop(0.3, hexToRgba(color, intensity * 0.8));
+      gradient.addColorStop(0.6, hexToRgba(color, intensity * 0.5));
       gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
       ctx.fillStyle = gradient;
@@ -102,7 +120,7 @@ export const CityLights: React.FC<CityLightsProps> = ({
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     return texture;
-  }, [cities, planet.id]);
+  }, [cities, planet.id, planet.name]);
 
   // Cleanup texture
   useEffect(() => {
@@ -111,23 +129,38 @@ export const CityLights: React.FC<CityLightsProps> = ({
     };
   }, [cityLightsTexture]);
 
-  // Custom shader to only show lights on dark side
+  // Custom shader to show cities on both lit and dark sides
+  // Dark side: Glowing warm lights
+  // Lit side: Bright visible markers
   const shaderMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
         cityLights: { value: cityLightsTexture },
         sunPosition: { value: sunPosition.clone() },
+        displacementMap: { value: displacementMap },
+        displacementScale: { value: 0.015 }, // Match the planet mesh
       },
       vertexShader: `
+        uniform sampler2D displacementMap;
+        uniform float displacementScale;
+        
         varying vec2 vUv;
         varying vec3 vNormal;
         varying vec3 vPosition;
 
         void main() {
           vUv = uv;
-          vNormal = normalize(normalMatrix * normal);
-          vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          
+          // Sample displacement map to get elevation
+          float displacement = texture2D(displacementMap, uv).r;
+          
+          // Apply displacement along the normal
+          vec3 displacedPosition = position + normal * displacement * displacementScale;
+          
+          // Transform normal to WORLD SPACE (not view space) so lighting is independent of camera
+          vNormal = normalize(mat3(modelMatrix) * normal);
+          vPosition = (modelMatrix * vec4(displacedPosition, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
         }
       `,
       fragmentShader: `
@@ -145,16 +178,31 @@ export const CityLights: React.FC<CityLightsProps> = ({
           // Calculate how much the surface faces the sun (-1 to 1)
           float sunAlignment = dot(vNormal, lightDir);
           
-          // Only show lights on dark side (when sunAlignment < 0)
-          // Fade in smoothly around the terminator
-          float darknessFactor = smoothstep(0.15, -0.1, sunAlignment);
-          
           // Sample city lights texture
           vec4 lights = texture2D(cityLights, vUv);
           
-          // Apply darkness factor
-          vec3 finalColor = lights.rgb * darknessFactor;
-          float finalAlpha = lights.a * darknessFactor;
+          // If no city here, discard early
+          if (lights.a < 0.01) discard;
+          
+          // Dark side: Show warm glowing lights
+          // Starts glowing at dusk (sunAlignment ~0.2) and fully bright at night
+          float darknessFactor = smoothstep(0.2, -0.15, sunAlignment);
+          vec3 nightLights = lights.rgb * darknessFactor;
+          
+          // Lit side: Barely visible, only in the transition zone (twilight)
+          // Very subtle so cities blend into the surface during day
+          float twilightFactor = smoothstep(-0.15, 0.05, sunAlignment) * 
+                                 (1.0 - smoothstep(0.05, 0.25, sunAlignment));
+          vec3 dayMarkers = lights.rgb * twilightFactor * 0.15; // Very subtle
+          
+          // Combine both renderings
+          vec3 finalColor = nightLights + dayMarkers;
+          
+          // Alpha: Strong on dark side, very weak on lit side
+          float finalAlpha = lights.a * (darknessFactor + twilightFactor * 0.1);
+          
+          // Discard if too faint
+          if (finalAlpha < 0.02) discard;
           
           gl_FragColor = vec4(finalColor, finalAlpha);
         }
@@ -164,7 +212,7 @@ export const CityLights: React.FC<CityLightsProps> = ({
       depthWrite: false,
       side: THREE.FrontSide,
     });
-  }, [cityLightsTexture, sunPosition]);
+  }, [cityLightsTexture, sunPosition, displacementMap]);
 
   // Update sun position uniform every frame
   useFrame(() => {
@@ -185,7 +233,7 @@ export const CityLights: React.FC<CityLightsProps> = ({
       ref={meshRef}
       raycast={() => null} // Non-interactive
     >
-      <sphereGeometry args={[radiusUnits * 1.001, 128, 128]} />
+      <sphereGeometry args={[radiusUnits * 1.002, 128, 128]} />
       <primitive ref={materialRef} object={shaderMaterial} attach="material" />
     </mesh>
   );

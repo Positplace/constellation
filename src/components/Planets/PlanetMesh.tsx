@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { PlanetData } from "../../types/planet.types";
 import { generateSurfaceTextures } from "../../utils/textureGenerators";
 import { CityLights } from "./CityLights";
+import { RoadNetwork } from "./RoadNetwork";
 
 interface PlanetMeshProps {
   planet: PlanetData;
@@ -203,11 +204,22 @@ export const PlanetMesh: React.FC<PlanetMeshProps> = ({
       </mesh>
 
       {/* City lights - glowing on dark side */}
-      <CityLights
-        planet={planet}
-        renderScale={renderScale}
-        sunPosition={sunPosition}
-      />
+      {planet.surface?.cities && planet.surface.cities.length > 0 && (
+        <CityLights
+          planet={planet}
+          renderScale={renderScale}
+          sunPosition={sunPosition}
+        />
+      )}
+
+      {/* Road network connecting cities */}
+      {planet.surface?.cities && planet.surface.cities.length > 1 && (
+        <RoadNetwork
+          planet={planet}
+          renderScale={renderScale}
+          sunPosition={sunPosition}
+        />
+      )}
     </group>
   );
 };

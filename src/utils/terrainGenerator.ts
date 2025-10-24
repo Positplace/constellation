@@ -198,6 +198,68 @@ export function generateContinents(
   return continents;
 }
 
+/**
+ * Check if a point is inside a polygon using ray casting algorithm
+ */
+function isPointInPolygon(
+  lat: number,
+  lng: number,
+  polygon: Array<{ lat: number; lng: number }>
+): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lng;
+    const yi = polygon[i].lat;
+    const xj = polygon[j].lng;
+    const yj = polygon[j].lat;
+
+    const intersect =
+      yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Generate a random point within a continent's boundaries
+ */
+function generatePointInContinent(
+  continent: ContinentData,
+  rng: () => number
+): { lat: number; lng: number } {
+  const { centerLat, centerLng, size, controlPoints } = continent.shape;
+
+  // Calculate bounding box of control points
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+
+  controlPoints.forEach((p) => {
+    minLat = Math.min(minLat, p.lat);
+    maxLat = Math.max(maxLat, p.lat);
+    minLng = Math.min(minLng, p.lng);
+    maxLng = Math.max(maxLng, p.lng);
+  });
+
+  // Try to generate a point inside the continent (max 20 attempts)
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const lat = remap(rng(), 0, 1, minLat, maxLat);
+    const lng = remap(rng(), 0, 1, minLng, maxLng);
+
+    if (isPointInPolygon(lat, lng, controlPoints)) {
+      return { lat, lng };
+    }
+  }
+
+  // Fallback: use center with small jitter
+  const fallbackRadius = size * 3; // Much smaller jitter
+  return {
+    lat: centerLat + jitter(rng, fallbackRadius),
+    lng: centerLng + jitter(rng, fallbackRadius),
+  };
+}
+
 export function generateCities(options: GenerateCitiesOptions): CityData[] {
   const { seed, continents, density } = options;
   const rng = mulberry32((seed + 12345) >>> 0);
@@ -208,41 +270,76 @@ export function generateCities(options: GenerateCitiesOptions): CityData[] {
     const baseCount = Math.round(continent.shape.size * 20 * density * 100);
     const count = Math.max(1, Math.min(50, baseCount + Math.floor(rng() * 3)));
 
-    for (let i = 0; i < count; i++) {
-      // Place near center with jitter; larger jitter for larger continents
-      const latJitter = jitter(rng, 6 + continent.shape.size * 8);
-      const lngJitter = jitter(rng, 8 + continent.shape.size * 12);
-      const lat = continent.shape.centerLat + latJitter;
-      const lng = continent.shape.centerLng + lngJitter;
+    // Distribute city types based on continent size
+    // Larger continents get more major cities
+    const metropolisCount =
+      continent.shape.size > 0.5 ? Math.floor(count * 0.1) : 0;
+    const cityCount = Math.floor(count * 0.25);
+    const townCount = Math.floor(count * 0.35);
+    const settlementCount = count - metropolisCount - cityCount - townCount;
 
-      // City characteristics
-      const size = Math.max(0.01, Math.min(0.08, 0.02 + rng() * 0.06));
-      const population = Math.floor(10000 + rng() * 9_000_000 * size);
-      const glowIntensity = Math.max(0.2, Math.min(1, 0.5 + jitter(rng, 0.4)));
-      const glowColor = rng() < 0.5 ? "#ffff88" : "#ffd966";
-      const types: CityData["type"][] = [
-        "metropolis",
-        "city",
-        "town",
-        "settlement",
-      ];
-      const type = choose(rng, types);
+    const cityTypes: Array<{ type: CityData["type"]; count: number }> = [
+      { type: "metropolis", count: metropolisCount },
+      { type: "city", count: cityCount },
+      { type: "town", count: townCount },
+      { type: "settlement", count: settlementCount },
+    ];
 
-      cities.push({
-        id: `ct-${seed}-${idx}-${i}`,
-        name: generateCityName(seed + idx * 100 + i),
-        lat,
-        lng,
-        size,
-        population,
-        type,
-        culture: rng() < 0.5 ? "coastal" : "inland",
-        technology: Math.max(0, Math.min(1, 0.5 + jitter(rng, 0.3))),
-        glowIntensity,
-        glowColor,
-        lightPattern: rng() < 0.5 ? "grid" : "organic",
-      });
-    }
+    let cityIndex = 0;
+    cityTypes.forEach(({ type, count: typeCount }) => {
+      for (let i = 0; i < typeCount; i++) {
+        // Generate point within continent boundaries
+        const { lat, lng } = generatePointInContinent(continent, rng);
+
+        // City characteristics based on type
+        let size: number;
+        let population: number;
+        let glowIntensity: number;
+
+        switch (type) {
+          case "metropolis":
+            size = remap(rng(), 0, 1, 0.06, 0.08);
+            population = Math.floor(remap(rng(), 0, 1, 5_000_000, 10_000_000));
+            glowIntensity = remap(rng(), 0, 1, 0.8, 1.0);
+            break;
+          case "city":
+            size = remap(rng(), 0, 1, 0.04, 0.06);
+            population = Math.floor(remap(rng(), 0, 1, 500_000, 5_000_000));
+            glowIntensity = remap(rng(), 0, 1, 0.6, 0.9);
+            break;
+          case "town":
+            size = remap(rng(), 0, 1, 0.02, 0.04);
+            population = Math.floor(remap(rng(), 0, 1, 50_000, 500_000));
+            glowIntensity = remap(rng(), 0, 1, 0.4, 0.7);
+            break;
+          case "settlement":
+          default:
+            size = remap(rng(), 0, 1, 0.01, 0.02);
+            population = Math.floor(remap(rng(), 0, 1, 1_000, 50_000));
+            glowIntensity = remap(rng(), 0, 1, 0.2, 0.5);
+            break;
+        }
+
+        const glowColor = rng() < 0.5 ? "#ffff88" : "#ffd966";
+
+        cities.push({
+          id: `ct-${seed}-${idx}-${cityIndex}`,
+          name: generateCityName(seed + idx * 100 + cityIndex),
+          lat,
+          lng,
+          size,
+          population,
+          type,
+          culture: rng() < 0.5 ? "coastal" : "inland",
+          technology: Math.max(0, Math.min(1, 0.5 + jitter(rng, 0.3))),
+          glowIntensity,
+          glowColor,
+          lightPattern: rng() < 0.5 ? "grid" : "organic",
+        });
+
+        cityIndex++;
+      }
+    });
   });
 
   return cities;

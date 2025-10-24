@@ -125,7 +125,7 @@ export function createPlanet(
     "terrestrial", // Can have some settlements
   ];
   const shouldGenerateCities = habitablePlanetTypes.includes(type);
-  
+
   const cityDensity = cfg.surface.cityDensity?.default ?? 0.02;
   const cities = shouldGenerateCities
     ? generateCities({ seed, continents, density: cityDensity })
